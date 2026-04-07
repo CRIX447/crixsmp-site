@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>CRIX SMP | Official Site</title>
-  <!-- Preload critical assets -->
+  <!-- Preload Minecraft fonts from repo -->
   <link rel="preload" href="MinecraftRegular-Bmg3.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftBold-nMkI.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftItalic-R8Mo.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftBoldItalic-1yle.otf" as="font" crossorigin="anonymous">
-  <!-- FAVICON: fixed with explicit type and proper path -->
+  <!-- Favicon (crixsmplogo.png) - fixed -->
   <link rel="icon" type="image/png" href="crixsmplogo.png">
   <link rel="shortcut icon" href="crixsmplogo.png">
   <style>
-    /* ----- FONT FACE DEFINITIONS (matches repo filenames) ----- */
+    /* ---------- FONT FACE (exact filenames from repo) ---------- */
     @font-face {
       font-family: 'MinecraftRegular';
       src: url('MinecraftRegular-Bmg3.otf') format('opentype');
@@ -43,7 +43,7 @@
       font-display: swap;
     }
 
-    /* ----- RESET & GLOBAL - DARKER UI (deep black/charcoal) ----- */
+    /* ---------- GLOBAL DARK RESET ---------- */
     * {
       margin: 0;
       padding: 0;
@@ -51,9 +51,9 @@
     }
 
     body {
-      background: #03050b;
-      background-image: radial-gradient(circle at 25% 40%, #0a0c14 2%, #010101 95%);
-      color: #e2e8f0;
+      background: #010101;
+      background-image: radial-gradient(circle at 15% 30%, #0a0c16 1%, #000000 98%);
+      color: #eef2ff;
       font-family: 'MinecraftRegular', 'Courier New', monospace;
       line-height: 1.5;
       min-height: 100vh;
@@ -69,90 +69,81 @@
       flex: 1;
     }
 
-    /* ----- TYPOGRAPHY WITH MINECRAFT FLAIR ----- */
+    /* ---------- TYPOGRAPHY & BRAND COLORS ---------- */
     h1, h2, h3, .logo-text, .nav-links a, .btn, .copyright {
       font-family: 'MinecraftBold', 'MinecraftRegular', monospace;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.01em;
     }
 
-    /* CRIX is BLUE / S.M.P is RED */
+    /* EXACT brand colors: Blue #2A43E0 for "CRIX", Red #FF2A1F for "S.M.P" */
     .crix-blue {
-      color: #3b82f6;
-      text-shadow: 0 0 3px #0f172a;
+      color: #2A43E0;
+      text-shadow: 0 0 4px rgba(42,67,224,0.4);
     }
     .smp-red {
-      color: #ef4444;
-      text-shadow: 0 0 2px #2c0e0e;
+      color: #FF2A1F;
+      text-shadow: 0 0 3px rgba(255,42,31,0.3);
     }
     h1 {
-      font-size: 3.2rem;
-      margin-bottom: 0.5rem;
+      font-size: 3.4rem;
+      margin-bottom: 0.75rem;
       line-height: 1.2;
     }
     h2 {
       font-size: 2rem;
-      border-left: 6px solid #ef4444;
+      border-left: 6px solid #FF2A1F;
       padding-left: 1rem;
       margin: 1.8rem 0 1rem;
-      color: #f1f5f9;
+      color: #ffffff;
     }
     h3 {
       font-size: 1.5rem;
-      color: #facc15;
+      color: #FFD966;
       margin: 1rem 0 0.5rem;
-      font-family: 'MinecraftBold', monospace;
-    }
-    .highlight {
-      color: #60a5fa;
     }
 
-    /* ----- HEADER / NAV (ultra dark) ----- */
+    /* ---------- DARKER UI / HEADER ---------- */
     .navbar {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      background: #080b14ee;
+      background: #070b14ee;
       backdrop-filter: blur(12px);
-      border-radius: 38px;
+      border-radius: 42px;
       padding: 0.7rem 2rem;
       margin-bottom: 2.5rem;
-      border: 1px solid #1e2a3e;
-      box-shadow: 0 10px 25px -8px black;
+      border: 1px solid #1f2a44;
+      box-shadow: 0 12px 28px -10px black;
     }
-
     .logo-area {
       display: flex;
       align-items: center;
       gap: 1rem;
     }
-
     .logo-img {
       height: 54px;
       width: auto;
       filter: drop-shadow(0 2px 4px black);
-      transition: transform 0.2s ease;
+      transition: transform 0.2s;
     }
     .logo-img:hover {
       transform: scale(1.02);
     }
-
     .logo-text {
-      font-size: 1.8rem;
-      background: linear-gradient(135deg, #3b82f6, #ef4444);
+      font-size: 1.9rem;
+      background: linear-gradient(135deg, #2A43E0, #FF2A1F);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       font-weight: bold;
     }
-
     .nav-links {
       display: flex;
       gap: 1.5rem;
       align-items: center;
       flex-wrap: wrap;
     }
-
     .nav-links a {
       color: #cbd5e6;
       text-decoration: none;
@@ -161,13 +152,12 @@
       transition: 0.2s;
       border-bottom: 2px solid transparent;
     }
-
     .nav-links a:hover {
-      border-bottom-color: #ef4444;
-      color: #ffffff;
+      border-bottom-color: #FF2A1F;
+      color: white;
     }
 
-    /* social icon buttons */
+    /* SOCIAL BUTTONS — icons fixed with proper inline fallback & real images */
     .social-icon {
       display: inline-flex;
       align-items: center;
@@ -176,14 +166,15 @@
       padding: 0.45rem 1.2rem;
       border-radius: 40px;
       transition: 0.2s;
+      text-decoration: none;
+      font-weight: bold;
     }
-
     .social-icon img {
       width: 22px;
       height: 22px;
       filter: brightness(0) invert(1);
+      object-fit: contain;
     }
-
     .social-icon.discord {
       background: #5865F2;
     }
@@ -195,28 +186,24 @@
       filter: brightness(1.05);
     }
 
-    /* ----- HERO SECTION (darker, refined)----- */
+    /* HERO SECTION (ultra dark) */
     .hero {
-      background: #0a0e17e0;
+      background: #0a0e17cc;
       backdrop-filter: blur(4px);
       border-radius: 48px;
       padding: 2.5rem 2rem;
       margin-bottom: 2rem;
-      border: 1px solid #1f2a3e;
+      border: 1px solid #202a44;
       box-shadow: 0 20px 30px -12px black;
     }
     .hero-content {
       text-align: center;
     }
-    .hero h1 {
-      font-size: 3.5rem;
-      margin-bottom: 1rem;
-    }
     .hero p {
       font-size: 1.2rem;
-      max-width: 700px;
+      max-width: 750px;
       margin: 0 auto 2rem;
-      color: #b9c7dd;
+      color: #cbd5f0;
     }
     .btn-group {
       display: flex;
@@ -237,55 +224,54 @@
       font-size: 1rem;
     }
     .btn-primary {
-      background: #ef4444;
-      border-color: #ff8888;
-      box-shadow: 0 4px 0 #7f1a1a;
+      background: #FF2A1F;
+      border-color: #ff6b5e;
+      box-shadow: 0 4px 0 #8b1a12;
     }
     .btn-primary:hover {
-      background: #dc2626;
+      background: #e01e12;
       transform: translateY(-2px);
     }
     .btn-secondary {
       background: #1f2a48;
-      border-color: #3b82f6;
+      border-color: #2A43E0;
     }
     .btn-secondary:hover {
       background: #2d3a6e;
       transform: translateY(-2px);
     }
 
-    /* features grid */
+    /* FEATURE GRID — only voice chat & donut style (no land claim, no custom mobs) */
     .features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1.8rem;
-      margin: 2rem 0 2.5rem;
+      margin: 2rem 0 2rem;
     }
     .card {
-      background: #0b0f1ad9;
+      background: #0b0f1ae6;
       backdrop-filter: blur(4px);
       border-radius: 28px;
       padding: 1.6rem;
-      border-left: 5px solid #3b82f6;
-      border-bottom: 2px solid #ef4444;
+      border-left: 5px solid #2A43E0;
+      border-bottom: 2px solid #FF2A1F;
       transition: all 0.2s;
     }
     .card:hover {
       transform: translateY(-6px);
-      background: #111827;
-      border-left-color: #ef4444;
+      background: #111a2a;
     }
     .card h3 {
-      color: #facc15;
+      color: #FFD966;
     }
 
-    /* server status panel + dynamic detection */
+    /* SERVER STATUS PANEL + DYNAMIC API */
     .status-panel {
       background: #03050ccc;
-      border-radius: 32px;
-      padding: 1.2rem 1.8rem;
-      margin: 1.8rem 0;
-      border: 1px solid #2c3e66;
+      border-radius: 36px;
+      padding: 1.2rem 2rem;
+      margin: 2rem 0 1.5rem;
+      border: 1px solid #2A43E0;
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
@@ -295,18 +281,19 @@
     .server-ip-display {
       background: #000000aa;
       font-family: monospace;
-      padding: 0.5rem 1.2rem;
-      border-radius: 28px;
+      padding: 0.6rem 1.4rem;
+      border-radius: 32px;
       font-size: 1.1rem;
       letter-spacing: 0.5px;
       word-break: break-all;
+      border-left: 3px solid #2A43E0;
     }
     .status-badge {
       display: flex;
       align-items: center;
       gap: 12px;
       background: #00000066;
-      padding: 0.4rem 1.2rem;
+      padding: 0.4rem 1.4rem;
       border-radius: 60px;
     }
     .status-led {
@@ -314,7 +301,7 @@
       height: 14px;
       border-radius: 50%;
       background: #6b7280;
-      box-shadow: 0 0 2px gray;
+      transition: all 0.2s;
     }
     .status-led.online {
       background: #22c55e;
@@ -322,21 +309,21 @@
       animation: pulse 1.5s infinite;
     }
     .status-led.offline {
-      background: #ef4444;
-      box-shadow: 0 0 4px #ef4444;
+      background: #FF2A1F;
+      box-shadow: 0 0 5px #FF2A1F;
     }
     @keyframes pulse {
-      0% { opacity: 0.5; transform: scale(0.9);}
+      0% { opacity: 0.6; transform: scale(0.9);}
       100% { opacity: 1; transform: scale(1.2);}
     }
 
-    /* download cards */
+    /* DOWNLOAD SECTION (only voice chat & fabric) */
     .download-section {
-      background: #070b12;
+      background: #070b14;
       border-radius: 36px;
       padding: 1.8rem;
       margin: 2rem 0;
-      border: 1px solid #2d3748;
+      border: 1px solid #2d3a60;
     }
     .download-grid {
       display: flex;
@@ -346,20 +333,20 @@
       justify-content: center;
     }
     .download-card {
-      background: #11161f;
+      background: #0f1622;
       border-radius: 28px;
       padding: 1.3rem 1.8rem;
       flex: 1;
       min-width: 200px;
       text-align: center;
       transition: 0.2s;
-      border-top: 3px solid #3b82f6;
+      border-top: 3px solid #2A43E0;
     }
     .download-card a {
       color: white;
       text-decoration: none;
       font-family: 'MinecraftBold', monospace;
-      background: #2563eb;
+      background: #2A43E0;
       display: inline-block;
       padding: 0.6rem 1.2rem;
       border-radius: 40px;
@@ -367,13 +354,14 @@
       transition: 0.2s;
     }
     .download-card a:hover {
-      background: #1d4ed8;
+      background: #1f36c2;
       transform: scale(1.02);
     }
-    /* footer */
+
+    /* FOOTER */
     .main-footer {
       background: #020408;
-      border-top: 1px solid #ef444433;
+      border-top: 1px solid #FF2A1F33;
       padding: 2rem 2rem 1.5rem;
       margin-top: 3rem;
       text-align: center;
@@ -381,7 +369,7 @@
     .copyright {
       font-family: 'MinecraftRegular', monospace;
       font-size: 0.85rem;
-      color: #6c757d;
+      color: #7e8aa2;
     }
     .footer-links {
       display: flex;
@@ -391,23 +379,17 @@
       flex-wrap: wrap;
     }
     .footer-links a {
-      color: #9ca3af;
+      color: #a0aec0;
       text-decoration: none;
       font-size: 0.9rem;
     }
     .footer-links a:hover {
-      color: #ef4444;
+      color: #FF2A1F;
     }
     @media (max-width: 760px) {
-      .site-wrapper {
-        padding: 1rem;
-      }
-      .hero h1 {
-        font-size: 2.2rem;
-      }
-      h2 {
-        font-size: 1.6rem;
-      }
+      .site-wrapper { padding: 1rem; }
+      .hero h1 { font-size: 2.2rem; }
+      h2 { font-size: 1.5rem; }
     }
   </style>
 </head>
@@ -415,109 +397,93 @@
 <div class="site-wrapper">
   <nav class="navbar">
     <div class="logo-area">
-      <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img" id="siteLogo" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%231e293b%22%2F%3E%3Ctext%20x%3D%2220%22%20y%3D%2270%22%20fill%3D%22%233b82f6%22%20font-size%3D%2250%22%3EC%3C%2Ftext%3E%3C%2Fsvg%3E';">
+      <!-- logo image: crixsmplogo.png -->
+      <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img" id="siteLogo" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23111%22%2F%3E%3Ctext%20x%3D%2222%22%20y%3D%2270%22%20fill%3D%22%232A43E0%22%20font-size%3D%2250%22%3EC%3C%2Ftext%3E%3C%2Fsvg%3E';">
       <span class="logo-text">CRIX SMP</span>
     </div>
     <div class="nav-links">
       <a href="#home">HOME</a>
       <a href="#features">FEATURES</a>
-      <a href="#downloads">DOWNLOADS</a>
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" rel="noopener noreferrer" class="social-icon discord">
-        <img src="discord.png" alt="discord" onerror="this.src='https://placehold.co/24x24/5865F2/white?text=D'"> Discord
+      <a href="#downloads">VOICE CHAT</a>
+      <a href="https://discord.gg/KufFPEptTG" target="_blank" rel="noopener noreferrer" class="social-icon discord" id="discordBtn">
+        <img src="discord.png" alt="Discord" id="discordImg" onerror="this.src='https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/discord.svg'; this.onerror=null;"> Discord
       </a>
-      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" rel="noopener noreferrer" class="social-icon youtube">
-        <img src="youtube.png" alt="youtube" onerror="this.src='https://placehold.co/24x24/FF0000/white?text=Y'"> YouTube
+      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" rel="noopener noreferrer" class="social-icon youtube" id="youtubeBtn">
+        <img src="youtube.png" alt="YouTube" id="youtubeImg" onerror="this.src='https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg'; this.onerror=null;"> YouTube
       </a>
     </div>
   </nav>
 
-  <!-- Hero section (CRIX IS BLUE, SMP IS RED) -->
+  <!-- Hero: CRIX (blue) / SMP (red) exact colors -->
   <section id="home">
     <div class="hero">
       <div class="hero-content">
-        <h1><span class="crix-blue">CRIX</span> <span class="smp-red">SMP</span></h1>
-        <p>Donut SMP style — less chaotic, more community. <strong>Dueling, Survival, Voice Chat, Bigger Shop & Bounties.</strong> Join the realm where legends craft their saga.</p>
+        <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
+        <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong><br>
+        No land claim, no custom mobs — pure community & proximity voice.</p>
         <div class="btn-group">
-          <a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary">⚔️ JOIN THE REALM</a>
-          <a href="#features" class="btn btn-secondary">📜 EXPLORE FEATURES</a>
+          <a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a>
+          <a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Server IP & live status checker (Port 19132 default bedrock) -->
+  <!-- LIVE SERVER STATUS (crixsmp.tropicalhosting.net) + BEDROCK PORT DETECTION -->
   <div class="status-panel" id="serverStatusBox">
     <div class="server-ip-display">
-      🧱 <strong>crixsmp.tropicalhosting.net</strong> (Default Bedrock Port: 19132)
+      🌐 <strong>crixsmp.tropicalhosting.net</strong>  |  Default Bedrock Port: 19132  |  Java Edition compatible
     </div>
     <div class="status-badge" id="statusBadge">
       <div class="status-led" id="statusLed"></div>
-      <span id="statusText">Checking server...</span>
+      <span id="statusText">Checking server status...</span>
     </div>
   </div>
 
-  <!-- Features section: dueling, survival, voice chat, bigger shop, bounties -->
+  <!-- FEATURES SECTION: only the actual features (dueling, survival, voice chat, bigger shop, bounties, donut spirit) -->
   <section id="features">
-    <h2>⚙️ CORE FEATURES</h2>
+    <h2>🔥 SERVER FEATURES</h2>
     <div class="features-grid">
-      <div class="card">
-        <h3>⚔️ DUELING SYSTEM</h3>
-        <p>1v1 arenas, ranked duels, and friendly challenges. Prove your PvP skills with rewards and leaderboards.</p>
-      </div>
-      <div class="card">
-        <h3>🌿 SURVIVAL+</h3>
-        <p>Enhanced vanilla survival with quality-of-life improvements, land claiming, and custom mobs.</p>
-      </div>
-      <div class="card">
-        <h3>🎙️ VOICE CHAT</h3>
-        <p>Proximity voice mod supported. Talk with friends and rivals — full immersion. (Simple Voice Chat mod)</p>
-      </div>
-      <div class="card">
-        <h3>🏪 BIGGER SHOP</h3>
-        <p>Massive admin & player-run shops. Trade rare items, blocks, and gear. Economy reimagined.</p>
-      </div>
-      <div class="card">
-        <h3>💰 BOUNTIES</h3>
-        <p>Place bounties on players' heads. Hunt or be hunted — earn coins and exclusive rewards.</p>
-      </div>
-      <div class="card">
-        <h3>🍩 DONUT SPIRIT</h3>
-        <p>Less chaotic, more cooperative. Inspired by donut SMP but with unique CRIX flavor.</p>
-      </div>
+      <div class="card"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, friendly challenges & duel leaderboards — prove your skill.</p></div>
+      <div class="card"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival with balanced economy, no land claims, no custom mobs — just classic fun.</p></div>
+      <div class="card"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice mod integration. Talk to nearby players — total immersion. (Simple Voice Chat)</p></div>
+      <div class="card"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player-run shops, rare items, trading hub — economy at its core.</p></div>
+      <div class="card"><h3>💰 BOUNTIES</h3><p>Place bounties on players, hunt or be hunted. Earn coins and exclusive tags.</p></div>
+      <div class="card"><h3>🍩 DONUT SPIRIT</h3><p>Inspired by donut SMP but less chaotic — cooperative vibes, epic builds, no drama.</p></div>
     </div>
   </section>
 
-  <!-- Downloads for Fabric & Simple Voice Chat -->
+  <!-- DOWNLOADS: Fabric + Simple Voice Chat (only required mods) -->
   <section id="downloads">
     <div class="download-section">
-      <h2 style="border-left-color: #3b82f6;">📥 REQUIRED MODS (Fabric)</h2>
-      <p style="margin-bottom: 0.5rem;">To experience full proximity voice chat on CRIX SMP, install Fabric Loader and Simple Voice Chat mod.</p>
+      <h2 style="border-left-color: #2A43E0;">🎙️ VOICE CHAT SETUP (No other mods)</h2>
+      <p style="margin-bottom: 0.5rem;">To enable proximity voice on CRIX SMP, install Fabric Loader + Simple Voice Chat mod. <strong>No extra mods required.</strong></p>
       <div class="download-grid">
         <div class="download-card">
           <h3>🧵 FABRIC LOADER</h3>
-          <p>Latest stable release (1.20+ / 1.21)</p>
+          <p>Latest for 1.20.4 / 1.21</p>
           <a href="https://fabricmc.net/use/" target="_blank" rel="noopener noreferrer">Download Fabric →</a>
         </div>
         <div class="download-card">
           <h3>🎤 SIMPLE VOICE CHAT</h3>
-          <p>Proximity & group voice — essential for CRIX SMP</p>
+          <p>Proximity & group voice (essential)</p>
           <a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank" rel="noopener noreferrer">Get Voice Chat →</a>
         </div>
         <div class="download-card">
           <h3>📦 FABRIC API</h3>
-          <p>Required for most mods (incl. voice chat)</p>
+          <p>Required dependency</p>
           <a href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener noreferrer">Fabric API →</a>
         </div>
       </div>
-      <p style="margin-top: 1rem; font-size: 0.85rem; color: #94a3b8;">💡 After installing Fabric, drop the Simple Voice Chat mod into your "mods" folder. Join with <strong>crixsmp.tropicalhosting.net</strong> (Java edition also supported).</p>
+      <p style="margin-top: 1rem; font-size: 0.85rem; color: #a0b4d7;">💡 After installation, put the Simple Voice Chat .jar into your "mods" folder. Connect to <strong>crixsmp.tropicalhosting.net</strong> (Java/Bedrock both work).</p>
     </div>
   </section>
 
-  <!-- community & discord/youtube embed style -->
-  <div style="background: #0a0f18; border-radius: 32px; padding: 1.6rem; margin: 1rem 0; text-align: center;">
-    <h3 style="margin: 0 0 0.8rem;">🌐 JOIN THE HUB</h3>
+  <!-- community widget -->
+  <div style="background: #070c14; border-radius: 32px; padding: 1.5rem; margin: 1rem 0; text-align: center;">
+    <h3 style="margin: 0 0 0.8rem;">🌐 JOIN THE COMMUNITY</h3>
     <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" style="background:#5865F2; padding:0.6rem 1.6rem; border-radius:40px; text-decoration:none; color:white; font-weight:bold;">💬 DISCORD COMMUNITY</a>
+      <a href="https://discord.gg/KufFPEptTG" target="_blank" style="background:#5865F2; padding:0.6rem 1.6rem; border-radius:40px; text-decoration:none; color:white; font-weight:bold;">💬 DISCORD SERVER</a>
       <a href="https://www.youtube.com/@CRIXSMP" target="_blank" style="background:#FF0000; padding:0.6rem 1.6rem; border-radius:40px; text-decoration:none; color:white; font-weight:bold;">▶️ SUBSCRIBE ON YOUTUBE</a>
     </div>
   </div>
@@ -527,82 +493,89 @@
   <div class="footer-links">
     <a href="#home">Home</a>
     <a href="#features">Features</a>
-    <a href="#downloads">Downloads</a>
+    <a href="#downloads">Voice Chat</a>
     <a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a>
     <a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a>
   </div>
   <div class="copyright">
     © 2023 2026 CRIXGAMING VR. ltd all rights reserved
   </div>
-  <div style="margin-top: 0.6rem; font-size: 0.7rem; color: #3b4252;">
-    CRIX SMP — donut-style, less chaos, more epic. Fabric & Voice Chat ready.
+  <div class="copyright" style="margin-top: 6px; font-size: 0.7rem;">
+    CRIX SMP — donut-style, only voice chat mod. No land claim, no custom mobs.
   </div>
 </footer>
 
 <script>
   (function() {
-    // fix favicon double ensure
-    const faviconLink = document.querySelector("link[rel='icon']");
-    if(faviconLink && faviconLink.href && !faviconLink.href.includes('crixsmplogo.png')){
-      faviconLink.href = 'crixsmplogo.png';
-    }
-    // dynamic server status checker for crixsmp.tropicalhosting.net (port 19132 default bedrock)
+    // 1. Force fix favicon & social icons if images missing (double ensure)
+    const fixIcon = () => {
+      const favicon = document.querySelector("link[rel='icon']");
+      if(favicon && !favicon.href.includes('crixsmplogo.png')) favicon.href = 'crixsmplogo.png';
+      // for discord/youtube images: if broken, we already have fallback via onerror using simple-icons CDN.
+      // but also manually ensure the img elements get correct src if empty
+      const discordImg = document.getElementById('discordImg');
+      const youtubeImg = document.getElementById('youtubeImg');
+      if(discordImg && (!discordImg.src || discordImg.src.includes('null'))) {
+        discordImg.src = 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/discord.svg';
+      }
+      if(youtubeImg && (!youtubeImg.src || youtubeImg.src.includes('null'))) {
+        youtubeImg.src = 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg';
+      }
+    };
+    fixIcon();
+
+    // 2. LIVE SERVER STATUS CHECKER for crixsmp.tropicalhosting.net (bedrock port detection via public API)
     const serverHost = 'crixsmp.tropicalhosting.net';
-    const bedrockPort = 19132;
-    const statusTextEl = document.getElementById('statusText');
-    const statusLedEl = document.getElementById('statusLed');
+    const statusText = document.getElementById('statusText');
+    const statusLed = document.getElementById('statusLed');
     
-    async function checkServerStatus() {
-      if(!statusTextEl) return;
-      statusTextEl.innerText = 'Pinging server...';
-      statusLedEl?.classList.remove('online', 'offline');
+    async function fetchServerStatus() {
+      if (!statusText) return;
+      statusText.innerText = '🌐 Fetching server stats...';
+      statusLed?.classList.remove('online', 'offline');
       try {
-        // Use a CORS-friendly approach: we call a free Minecraft server status API (mcapi.us or similar)
-        // Alternative: we use a public API to avoid CORS. We'll use api.mcsrvstat.us which is reliable.
-        const response = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' }
-        });
+        // Using mcapi.us for bedrock + java combined detection
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+        const response = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=19132`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!response.ok) throw new Error('API error');
         const data = await response.json();
         if (data && data.online === true) {
-          statusTextEl.innerHTML = `✅ ONLINE · ${data.players?.online || '?'} players online`;
-          statusLedEl?.classList.add('online');
-          statusLedEl?.classList.remove('offline');
+          const playerCount = data.players.now || '?';
+          statusText.innerHTML = `✅ ONLINE · ${playerCount} players online (Bedrock/Java)`;
+          statusLed?.classList.add('online');
+          statusLed?.classList.remove('offline');
         } else {
-          statusTextEl.innerHTML = `❌ OFFLINE · Server unreachable or offline`;
-          statusLedEl?.classList.add('offline');
-          statusLedEl?.classList.remove('online');
+          // fallback to secondary check using mcsrvstat
+          const backupRes = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`);
+          const backupData = await backupRes.json();
+          if (backupData && backupData.online === true) {
+            const playersOnline = backupData.players?.online || '?';
+            statusText.innerHTML = `✅ ONLINE · ${playersOnline} players online (via mcsrvstat)`;
+            statusLed?.classList.add('online');
+            statusLed?.classList.remove('offline');
+          } else {
+            statusText.innerHTML = `❌ OFFLINE · Server unreachable or offline`;
+            statusLed?.classList.add('offline');
+            statusLed?.classList.remove('online');
+          }
         }
       } catch (err) {
-        console.warn('Status check fallback:', err);
-        // fallback: second attempt using another public API (mcsrvstat sometimes works)
-        try {
-          const fallbackRes = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=${bedrockPort}`);
-          const fallbackData = await fallbackRes.json();
-          if (fallbackData && fallbackData.online) {
-            statusTextEl.innerHTML = `✅ ONLINE · ${fallbackData.players.now || '?'} online (Bedrock)`;
-            statusLedEl?.classList.add('online');
-            statusLedEl?.classList.remove('offline');
-          } else {
-            throw new Error('offline');
-          }
-        } catch (e) {
-          statusTextEl.innerHTML = `⚠️ STATUS UNKNOWN · Could not reach server (try direct connect)`;
-          statusLedEl?.classList.remove('online', 'offline');
-          statusLedEl?.style.background = '#f59e0b';
-        }
+        console.warn("Status check error:", err);
+        statusText.innerHTML = `⚠️ STATUS UNKNOWN · Could not reach ${serverHost} (try direct connect)`;
+        statusLed?.classList.remove('online', 'offline');
+        statusLed?.style.background = '#f59e0b';
       }
     }
-    checkServerStatus();
-    setInterval(checkServerStatus, 60000); // every 60 secs
-
-    // smooth scroll anchors
+    
+    fetchServerStatus();
+    setInterval(fetchServerStatus, 60000); // update every 60 seconds
+    
+    // 3. Smooth anchor scroll
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function(e) {
-        const hash = this.getAttribute('href');
-        if (hash === '#') return;
-        const targetId = hash.substring(1);
+        const targetId = this.getAttribute('href').substring(1);
         if (targetId && document.getElementById(targetId)) {
           e.preventDefault();
           document.getElementById(targetId).scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -610,12 +583,8 @@
       });
     });
     
-    // Ensure no version/season text appears anywhere in the panel (already removed)
-    // Remove any possible leftover "season" text in status-panel
-    const panelText = document.querySelector('.status-panel');
-    if(panelText && panelText.innerText.includes('Season')) {
-      // just safety
-    }
+    // 4. Ensure any leftover "land claim" or "custom mobs" text is NOT present anywhere (already omitted)
+    // Additional: Remove any potential version/season mentions (none left)
   })();
 </script>
 </body>
