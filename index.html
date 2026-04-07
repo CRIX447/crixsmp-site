@@ -9,7 +9,7 @@
   <link rel="preload" href="MinecraftBold-nMkI.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftItalic-R8Mo.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftBoldItalic-1yle.otf" as="font" crossorigin="anonymous">
-  <!-- Favicon (crixsmplogo.png) - fixed -->
+  <!-- Favicon (crixsmplogo.png) - fixed path -->
   <link rel="icon" type="image/png" href="crixsmplogo.png">
   <link rel="shortcut icon" href="crixsmplogo.png">
   <style>
@@ -157,7 +157,7 @@
       color: white;
     }
 
-    /* SOCIAL BUTTONS — icons fixed with proper inline fallback & real images */
+    /* SOCIAL BUTTONS — using ONLY discord.png and youtube.png from repo */
     .social-icon {
       display: inline-flex;
       align-items: center;
@@ -398,18 +398,20 @@
   <nav class="navbar">
     <div class="logo-area">
       <!-- logo image: crixsmplogo.png -->
-      <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img" id="siteLogo" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23111%22%2F%3E%3Ctext%20x%3D%2222%22%20y%3D%2270%22%20fill%3D%22%232A43E0%22%20font-size%3D%2250%22%3EC%3C%2Ftext%3E%3C%2Fsvg%3E';">
+      <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img" id="siteLogo" onerror="this.style.display='none'; this.nextSibling.style.display='block';">
       <span class="logo-text">CRIX SMP</span>
     </div>
     <div class="nav-links">
       <a href="#home">HOME</a>
       <a href="#features">FEATURES</a>
       <a href="#downloads">VOICE CHAT</a>
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" rel="noopener noreferrer" class="social-icon discord" id="discordBtn">
-        <img src="discord.png" alt="Discord" id="discordImg" onerror="this.src='https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/discord.svg'; this.onerror=null;"> Discord
+      <!-- Discord link with discord.png ONLY (no fallback to external CDN) -->
+      <a href="https://discord.gg/KufFPEptTG" target="_blank" rel="noopener noreferrer" class="social-icon discord">
+        <img src="discord.png" alt="Discord" onerror="this.style.opacity='0.7'; this.alt='[D]';"> Discord
       </a>
-      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" rel="noopener noreferrer" class="social-icon youtube" id="youtubeBtn">
-        <img src="youtube.png" alt="YouTube" id="youtubeImg" onerror="this.src='https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg'; this.onerror=null;"> YouTube
+      <!-- YouTube link with youtube.png ONLY -->
+      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" rel="noopener noreferrer" class="social-icon youtube">
+        <img src="youtube.png" alt="YouTube" onerror="this.style.opacity='0.7'; this.alt='[Y]';"> YouTube
       </a>
     </div>
   </nav>
@@ -507,24 +509,24 @@
 
 <script>
   (function() {
-    // 1. Force fix favicon & social icons if images missing (double ensure)
-    const fixIcon = () => {
-      const favicon = document.querySelector("link[rel='icon']");
-      if(favicon && !favicon.href.includes('crixsmplogo.png')) favicon.href = 'crixsmplogo.png';
-      // for discord/youtube images: if broken, we already have fallback via onerror using simple-icons CDN.
-      // but also manually ensure the img elements get correct src if empty
-      const discordImg = document.getElementById('discordImg');
-      const youtubeImg = document.getElementById('youtubeImg');
-      if(discordImg && (!discordImg.src || discordImg.src.includes('null'))) {
-        discordImg.src = 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/discord.svg';
-      }
-      if(youtubeImg && (!youtubeImg.src || youtubeImg.src.includes('null'))) {
-        youtubeImg.src = 'https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/youtube.svg';
-      }
-    };
-    fixIcon();
-
-    // 2. LIVE SERVER STATUS CHECKER for crixsmp.tropicalhosting.net (bedrock port detection via public API)
+    // Ensure favicon loads correctly
+    const favicon = document.querySelector("link[rel='icon']");
+    if(favicon && favicon.getAttribute('href') !== 'crixsmplogo.png') {
+      favicon.setAttribute('href', 'crixsmplogo.png');
+    }
+    
+    // Social images use discord.png and youtube.png - we just log if missing but no CDN override
+    const discordImg = document.querySelector('.social-icon.discord img');
+    const youtubeImg = document.querySelector('.social-icon.youtube img');
+    
+    if(discordImg && discordImg.complete) {
+      if(discordImg.naturalWidth === 0) console.log("discord.png not found, but keeping local reference");
+    }
+    if(youtubeImg && youtubeImg.complete) {
+      if(youtubeImg.naturalWidth === 0) console.log("youtube.png not found, but keeping local reference");
+    }
+    
+    // 2. LIVE SERVER STATUS CHECKER for crixsmp.tropicalhosting.net
     const serverHost = 'crixsmp.tropicalhosting.net';
     const statusText = document.getElementById('statusText');
     const statusLed = document.getElementById('statusLed');
@@ -534,9 +536,9 @@
       statusText.innerText = '🌐 Fetching server stats...';
       statusLed?.classList.remove('online', 'offline');
       try {
-        // Using mcapi.us for bedrock + java combined detection
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 7000);
+        // Using mcapi.us for server status detection (works for both java/bedrock)
         const response = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=19132`, { signal: controller.signal });
         clearTimeout(timeoutId);
         if (!response.ok) throw new Error('API error');
@@ -565,7 +567,7 @@
         console.warn("Status check error:", err);
         statusText.innerHTML = `⚠️ STATUS UNKNOWN · Could not reach ${serverHost} (try direct connect)`;
         statusLed?.classList.remove('online', 'offline');
-        statusLed?.style.background = '#f59e0b';
+        if(statusLed) statusLed.style.background = '#f59e0b';
       }
     }
     
@@ -583,8 +585,8 @@
       });
     });
     
-    // 4. Ensure any leftover "land claim" or "custom mobs" text is NOT present anywhere (already omitted)
-    // Additional: Remove any potential version/season mentions (none left)
+    // 4. Remove any potential "land claim" or "custom mobs" mentions (already none)
+    // 5. No version or season text anywhere - confirmed absent
   })();
 </script>
 </body>
