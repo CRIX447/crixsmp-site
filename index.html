@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>CRIX SMP | Official Site</title>
-  <!-- Preload custom fonts from repo -->
+  <!-- Preload custom fonts from repo - CORRECTED FILENAMES -->
   <link rel="preload" href="MinecraftRegular-Bmg3.otf" as="font" crossorigin="anonymous">
-  <link rel="preload" href="MinecraftBold-nMkI.otf" as="font" crossorigin="anonymous">
+  <link rel="preload" href="MinecraftBold-nMK1.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftItalic-R8Mo.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftBoldItalic-1yle.otf" as="font" crossorigin="anonymous">
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="crixsmplogo.png">
   <link rel="shortcut icon" href="crixsmplogo.png">
   <style>
-    /* ---------- CUSTOM MINECRAFT FONTS (FORCED GLOBAL) ---------- */
+    /* ---------- CUSTOM MINECRAFT FONTS (CORRECTED FILENAMES) ---------- */
     @font-face {
       font-family: 'MinecraftRegular';
       src: url('MinecraftRegular-Bmg3.otf') format('opentype');
@@ -23,7 +23,7 @@
     }
     @font-face {
       font-family: 'MinecraftBold';
-      src: url('MinecraftBold-nMkI.otf') format('opentype');
+      src: url('MinecraftBold-nMK1.otf') format('opentype');
       font-weight: bold;
       font-style: normal;
       font-display: swap;
@@ -43,18 +43,31 @@
       font-display: swap;
     }
 
-    /* ---------- GLOBAL FONT OVERRIDE ---------- */
+    /* ---------- GLOBAL FONT RULES: ALL TEXT USES MINECRAFT FONTS ---------- */
     * {
-      font-family: 'MinecraftRegular', monospace !important;
+      font-family: 'MinecraftRegular', 'Courier New', monospace !important;
     }
+    
+    /* Bold text uses MinecraftBold (correct filename: MinecraftBold-nMK1.otf) */
     h1, h2, h3, h4, .logo-text, .nav-links a, .btn, .copyright, 
     button, .social-icon, .theme-toggle, .rules-btn, .ping-btn, 
-    .modal-content h2, .download-card a, .footer-links a, strong, b, 
-    .crix-blue, .smp-red, .status-badge span, .server-ip-display {
-      font-family: 'MinecraftBold', monospace !important;
+    .modal-content h2, .download-card a, .footer-links a, 
+    strong, b, .bold-text, .crix-blue, .smp-red, .stat-value, 
+    .server-ip-display, .status-badge span, .stat-label {
+      font-family: 'MinecraftBold', 'MinecraftRegular', monospace !important;
+    }
+    
+    /* Italic text */
+    em, i, .italic-text {
+      font-family: 'MinecraftItalic', monospace !important;
+    }
+    
+    /* Bold + Italic */
+    strong em, em strong, .bold-italic {
+      font-family: 'MinecraftBoldItalic', monospace !important;
     }
 
-    /* ---------- CSS VARIABLES ---------- */
+    /* ---------- CSS VARIABLES FOR DARK/LIGHT MODE ---------- */
     :root {
       --bg-primary: #0a0c10;
       --bg-secondary: #14161c;
@@ -82,29 +95,63 @@
       --footer-bg: #dce2e8;
     }
 
-    /* ---------- BLOCKY THEME ---------- */
+    /* ---------- BLOCKY/PIXELATED THEME ---------- */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      image-rendering: crisp-edges;
       image-rendering: pixelated;
     }
+
     body {
       background: var(--bg-primary);
-      background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
       color: var(--text-primary);
       line-height: 1.5;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      transition: background 0.3s;
+      scroll-behavior: smooth;
+      transition: background 0.3s, color 0.2s;
     }
-    .site-wrapper { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem; flex: 1; }
-    .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar { border-radius: 8px !important; border-style: solid; border-width: 3px; }
-    button, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn { border-radius: 6px !important; border-style: solid; border-width: 2px; text-transform: uppercase; letter-spacing: 1px; }
-    .card:hover, .btn:hover, button:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0px rgba(0,0,0,0.3); }
-    h1 { font-size: 3.4rem; margin-bottom: 0.75rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); }
+
+    .site-wrapper {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 1.5rem 2rem;
+      flex: 1;
+    }
+
+    /* Blocky borders */
+    .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar {
+      border-radius: 8px !important;
+      border-style: solid;
+      border-width: 3px;
+    }
+    
+    button, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn {
+      border-radius: 6px !important;
+      border-style: solid;
+      border-width: 2px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .card:hover, .btn:hover, button:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+    }
+    
+    h1 { font-size: 3.4rem; margin-bottom: 0.75rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); letter-spacing: 1px; }
     h2 { font-size: 2rem; border-left: 8px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; }
+    h3 { font-size: 1.5rem; color: #FFD966; margin: 1rem 0 0.5rem; }
     .crix-blue { color: #2A43E0; text-shadow: 2px 2px 0px #0a0e1a; }
     .smp-red { color: #FF2A1F; text-shadow: 2px 2px 0px #3a0a0a; }
 
@@ -115,16 +162,17 @@
       margin-bottom: 2.5rem; border-color: var(--border-color); box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
     }
     .logo-area { display: flex; align-items: center; gap: 1rem; }
-    .logo-img { height: 54px; width: auto; image-rendering: pixelated; }
+    .logo-img { height: 54px; width: auto; image-rendering: pixelated; transition: all 0.1s; cursor: pointer; }
+    .logo-img:hover { transform: scale(1.02); }
     .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .nav-links { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    .nav-links a { color: var(--text-secondary); text-decoration: none; padding: 0.4rem 0.8rem; border: 2px solid transparent; }
+    .nav-links a { color: var(--text-secondary); text-decoration: none; padding: 0.4rem 0.8rem; border: 2px solid transparent; transition: 0.1s; }
     .nav-links a:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
 
     /* Buttons */
     .social-icon, .theme-toggle, .rules-btn {
       display: inline-flex; align-items: center; gap: 8px; background: #1a1e2c;
-      padding: 0.45rem 1.2rem; transition: 0.1s; text-decoration: none; font-weight: bold;
+      padding: 0.45rem 1.2rem; transition: 0.1s; text-decoration: none;
       border: 2px solid; cursor: pointer;
     }
     .social-icon.discord { background: #5865F2; border-color: #3b48c4; color: white; }
@@ -137,7 +185,7 @@
     .hero { background: var(--hero-bg); backdrop-filter: blur(4px); padding: 2.5rem 2rem; margin-bottom: 2rem; border-color: var(--border-color); text-align: center; box-shadow: 6px 6px 0px rgba(0,0,0,0.2); }
     .hero p { font-size: 1.2rem; max-width: 750px; margin: 0 auto 2rem; color: var(--text-secondary); }
     .btn-group { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
-    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; font-weight: bold; transition: 0.1s; border: 3px solid; color: white; cursor: pointer; }
+    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; transition: 0.1s; border: 3px solid; color: white; cursor: pointer; }
     .btn-primary { background: #FF2A1F; border-color: #cc1a10; box-shadow: 4px 4px 0px #5a0a05; }
     .btn-primary:hover { background: #cc1a10; transform: translate(-2px, -2px); }
     .btn-secondary { background: #1f2a48; border-color: #2A43E0; box-shadow: 4px 4px 0px #0a1430; }
@@ -146,13 +194,13 @@
     /* Features Grid */
     .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
     .card { background: var(--bg-card); padding: 1.6rem; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); transition: all 0.1s; cursor: pointer; }
-    .card:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0px rgba(0,0,0,0.2); }
+    .card:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0px rgba(0,0,0,0.2); background: var(--bg-secondary); }
 
-    /* Status Panel - Enhanced with whitelist and player count */
+    /* Status Panel */
     .status-panel { background: var(--status-bg); padding: 1rem 1.5rem; margin: 2rem 0; border-color: #2A43E0; border-width: 3px; box-shadow: 4px 4px 0px rgba(0,0,0,0.2); }
     .status-grid { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
     .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; border-left: 4px solid #2A43E0; color: white; }
-    .status-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .status-stats { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
     .stat-box { background: #00000066; padding: 0.3rem 1rem; border-radius: 6px; display: flex; align-items: center; gap: 8px; }
     .stat-label { font-size: 0.75rem; color: #aaa; }
     .stat-value { font-weight: bold; color: #fff; }
@@ -163,24 +211,38 @@
     .whitelist-false { color: #22c55e; }
     .whitelist-unknown { color: #f59e0b; }
     @keyframes pulse { 0% { opacity: 0.6; transform: scale(0.9);} 100% { opacity: 1; transform: scale(1.2);} }
-    .ping-btn { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.4rem 1rem; cursor: pointer; }
+    .ping-btn { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.4rem 1rem; cursor: pointer; transition: 0.1s; }
+    .ping-btn:hover { background: #1a2ea0; transform: translate(-2px, -2px); }
 
-    /* Music Bar, Modal, Downloads, Footer (compact) */
-    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; padding: 0.5rem 1rem; display: flex; gap: 10px; z-index: 1000; border-color: #FF2A1F; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
-    .modal-content { background: var(--bg-card); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; box-shadow: 8px 8px 0px black; }
+    /* Music Bar */
+    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; backdrop-filter: blur(8px); padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border-color: #FF2A1F; border-width: 2px; box-shadow: 4px 4px 0px black; }
+    .music-bar button { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.2rem 0.6rem; cursor: pointer; transition: 0.1s; }
+    .music-bar button:hover { transform: translate(-1px, -1px); background: #FF2A1F; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); z-index: 2000; justify-content: center; align-items: center; }
+    .modal-content { background: var(--bg-card); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; position: relative; box-shadow: 8px 8px 0px black; }
     .close-modal { position: absolute; top: 0.8rem; right: 1rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
-    .rules-text { white-space: pre-wrap; }
-    .download-section { background: var(--bg-secondary); padding: 1.5rem; margin: 2rem 0; border-color: #2d3a60; }
-    .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
-    .download-card { background: #0f1622; padding: 1rem; flex: 1; min-width: 180px; text-align: center; border-top: 4px solid #2A43E0; }
-    .download-card a { color: white; background: #2A43E0; display: inline-block; padding: 0.5rem 1rem; margin-top: 0.8rem; text-decoration: none; }
+    .rules-text { white-space: pre-wrap; line-height: 1.6; }
+
+    /* Downloads */
+    .download-section { background: var(--bg-secondary); padding: 1.5rem; margin: 2rem 0; border-color: #2d3a60; border-width: 3px; box-shadow: 4px 4px 0px rgba(0,0,0,0.2); }
+    .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1.2rem; justify-content: center; }
+    .download-card { background: #0f1622; padding: 1rem 1.5rem; flex: 1; min-width: 180px; text-align: center; transition: 0.1s; border-top: 4px solid #2A43E0; border-left: 2px solid #2A43E0; border-right: 2px solid #2A43E0; border-bottom: 2px solid #2A43E0; }
+    .download-card a { color: white; text-decoration: none; background: #2A43E0; display: inline-block; padding: 0.5rem 1rem; margin-top: 0.8rem; transition: 0.1s; border: 2px solid #1a2ea0; }
+    .download-card a:hover { background: #1f36c2; transform: translate(-2px, -2px); }
+
+    /* Voice chat warning */
     .voice-warning { background: #1a0a0a; border-left: 6px solid #FF2A1F; padding: 0.8rem; margin-top: 1rem; font-size: 0.85rem; color: #ffaaaa; }
-    .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem; text-align: center; margin-top: 3rem; }
+
+    /* Footer */
+    .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem 2rem 1rem; margin-top: 3rem; text-align: center; }
+    .copyright { font-size: 0.8rem; color: var(--text-secondary); }
     .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .footer-links a { color: var(--text-secondary); text-decoration: none; }
-    .copyright { font-size: 0.8rem; }
-    @media (max-width: 760px) { .site-wrapper { padding: 1rem; } .hero h1 { font-size: 2.2rem; } }
+    .footer-links a { color: var(--text-secondary); text-decoration: none; padding: 0.2rem 0.5rem; border: 1px solid transparent; }
+    .footer-links a:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
+
+    @media (max-width: 760px) { .site-wrapper { padding: 1rem; } .hero h1 { font-size: 2.2rem; } .music-bar { bottom: 10px; right: 10px; } }
   </style>
 </head>
 <body>
@@ -202,7 +264,7 @@
     <div class="btn-group"><a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a><a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a></div>
   </div></div></section>
 
-  <!-- Enhanced Status Panel with Whitelist & Live Player Count -->
+  <!-- Status Panel with Whitelist & Player Count -->
   <div class="status-panel">
     <div class="status-grid">
       <div class="server-ip-display">🌐 <strong>play.crixsmp.net</strong> | Port: 19132 (Bedrock/Java)</div>
@@ -286,7 +348,7 @@
   themeToggle.addEventListener('click', () => { document.body.classList.toggle('light-mode'); localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); });
   if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
 
-  // ---------- ADVANCED SERVER STATUS WITH WHITELIST DETECTION & LIVE PLAYER COUNT ----------
+  // Server status with whitelist detection and live player count
   const serverHost = 'play.crixsmp.net';
   const statusTextSpan = document.getElementById('statusText');
   const playerCountSpan = document.getElementById('playerCount');
@@ -302,77 +364,50 @@
     whitelistSpan.className = 'stat-value whitelist-unknown';
     
     try {
-      // Use multiple APIs to get detailed info including whitelist hint
-      // Primary: mcapi.us (gives online status & players)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
       
-      // Try mcsrvstat first as it gives more details (motd can indicate whitelist)
+      // Primary API: mcsrvstat (gives detailed info)
       const mcsrvRes = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`, { signal: controller.signal });
-      let data = null;
-      let whitelistDetected = 'unknown';
       let online = false;
       let players = '?';
+      let whitelistDetected = 'unknown';
       
       if (mcsrvRes.ok) {
-        data = await mcsrvRes.json();
+        const data = await mcsrvRes.json();
         if (data && data.online === true) {
           online = true;
           players = data.players?.online || '?';
-          // Check for whitelist indication in MOTD or players.max sometimes shows whitelist behavior
-          // Many servers show "whitelist" in motd or players.max can be 0 when whitelisted but online false?
-          // Better: look for "whitelist" in motd.clean array
+          // Check MOTD for whitelist indication
           let motdString = '';
           if (data.motd?.clean) motdString = data.motd.clean.join(' ').toLowerCase();
           if (motdString.includes('whitelist')) whitelistDetected = 'true';
           else if (data.players?.online === 0 && data.players?.max > 0 && data.online) {
-            // Could be whitelisted or just empty, but we check motd
-            if (motdString.includes('only')) whitelistDetected = 'true';
+            if (motdString.includes('only') || motdString.includes('whitelist')) whitelistDetected = 'true';
             else whitelistDetected = 'false';
           } else whitelistDetected = 'false';
-        } else {
-          online = false;
         }
       }
       
-      // Fallback to mcapi.us if needed
+      // Fallback to mcapi.us
       if (!online) {
         const mcapiRes = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=19132`);
         const mcapiData = await mcapiRes.json();
         if (mcapiData && mcapiData.online) {
           online = true;
           players = mcapiData.players?.now || '?';
-          // mcapi doesn't give whitelist directly, try to infer from players?
           whitelistDetected = 'unknown';
         }
-      }
-      
-      // Final fallback: beapi (third option)
-      if (!online) {
-        try {
-          const beapiRes = await fetch(`https://api.beapi.app/v1/minecraft/server/${serverHost}?port=19132`);
-          if (beapiRes.ok) {
-            const beData = await beapiRes.json();
-            if (beData && beData.online) {
-              online = true;
-              players = beData.players?.online || '?';
-              const motdLow = (beData.motd || '').toLowerCase();
-              if (motdLow.includes('whitelist')) whitelistDetected = 'true';
-              else whitelistDetected = 'false';
-            }
-          }
-        } catch(e) {}
       }
       
       clearTimeout(timeoutId);
       
       if (online) {
-        statusTextSpan.innerHTML = '<span class="status-led online" style="display:inline-block; margin-right:6px;"></span> ✅ ONLINE';
+        statusTextSpan.innerHTML = '✅ ONLINE';
         statusLedSpan?.classList.add('online');
         statusLedSpan?.classList.remove('offline');
         playerCountSpan.innerText = players;
         
-        // Display whitelist status
         if (whitelistDetected === 'true') {
           whitelistSpan.innerText = '✓ ON (Whitelist Enabled)';
           whitelistSpan.className = 'stat-value whitelist-true';
@@ -384,7 +419,7 @@
           whitelistSpan.className = 'stat-value whitelist-unknown';
         }
       } else {
-        statusTextSpan.innerHTML = '<span class="status-led offline" style="display:inline-block; margin-right:6px;"></span> ❌ OFFLINE';
+        statusTextSpan.innerHTML = '❌ OFFLINE';
         statusLedSpan?.classList.add('offline');
         statusLedSpan?.classList.remove('online');
         playerCountSpan.innerText = '0';
@@ -399,10 +434,9 @@
     }
   }
   
-  // Initial check and refresh button
   checkServerWithDetails();
   if (pingBtn) pingBtn.addEventListener('click', () => checkServerWithDetails());
-  setInterval(() => checkServerWithDetails(), 60000); // Auto-refresh every minute
+  setInterval(() => checkServerWithDetails(), 60000);
   
   // Smooth scroll
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -415,7 +449,7 @@
     });
   });
   
-  console.log("CRIX SMP — Server status with whitelist detection and live player count active for play.crixsmp.net");
+  console.log("CRIX SMP — Custom fonts active: MinecraftRegular + MinecraftBold (MinecraftBold-nMK1.otf)");
 </script>
 </body>
 </html>
