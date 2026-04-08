@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" href="crixsmplogo.png">
   <link rel="shortcut icon" href="crixsmplogo.png">
   <style>
-    /* Font-face definitions (same as before) */
+    /* Font-face definitions */
     @font-face {
       font-family: 'MinecraftRegular';
       src: url('MinecraftRegular-Bmg3.otf') format('opentype');
@@ -48,7 +48,7 @@
       font-family: 'MinecraftBold', monospace !important;
     }
 
-    /* CSS Variables (dark/light mode) */
+    /* CSS Variables */
     :root {
       --bg-primary: #0a0c10; --bg-secondary: #14161c; --bg-card: #1a1d24e6;
       --bg-nav: #0d0f14ee; --text-primary: #e0e4f0; --text-secondary: #a0a8c0;
@@ -61,23 +61,29 @@
       --border-color: #b0b8c4; --hero-bg: #f4f6facc; --status-bg: #ffffffcc; --footer-bg: #dce2e8;
     }
 
-    /* Blocky theme styles (compact for brevity) */
+    /* Blocky theme */
     * { margin: 0; padding: 0; box-sizing: border-box; image-rendering: pixelated; }
     body { background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s; }
     .site-wrapper { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem; flex: 1; }
     .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar { border-radius: 8px !important; border-style: solid; border-width: 3px; }
-    button, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn { border-radius: 6px !important; border-width: 2px; text-transform: uppercase; }
+    button, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn { border-radius: 6px !important; border-width: 2px; text-transform: uppercase; cursor: pointer; }
     .card:hover, .btn:hover, button:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0px rgba(0,0,0,0.3); }
     h1 { font-size: 3.4rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); }
     h2 { font-size: 2rem; border-left: 8px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; }
     .crix-blue { color: #2A43E0; text-shadow: 2px 2px 0px #0a0e1a; }
     .smp-red { color: #FF2A1F; text-shadow: 2px 2px 0px #3a0a0a; }
+    
+    /* Icon images */
+    .icon-img { width: 24px; height: 24px; vertical-align: middle; image-rendering: pixelated; display: inline-block; margin-right: 6px; }
+    .icon-img-small { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
+    .feature-icon { width: 32px; height: 32px; margin-bottom: 8px; }
+    
     .navbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; background: var(--bg-nav); padding: 0.7rem 2rem; margin-bottom: 2.5rem; border-color: var(--border-color); box-shadow: 6px 6px 0px rgba(0,0,0,0.2); }
     .logo-area { display: flex; align-items: center; gap: 1rem; }
-    .logo-img { height: 54px; width: auto; }
+    .logo-img { height: 54px; width: auto; image-rendering: pixelated; }
     .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .nav-links { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
-    .social-icon, .theme-toggle, .rules-btn { display: inline-flex; align-items: center; gap: 6px; background: #1a1e2c; padding: 0.45rem 1rem; transition: 0.1s; text-decoration: none; border: 2px solid; cursor: pointer; }
+    .social-icon, .theme-toggle, .rules-btn { display: inline-flex; align-items: center; gap: 6px; background: #1a1e2c; padding: 0.45rem 1rem; transition: 0.1s; text-decoration: none; border: 2px solid; }
     .social-icon.discord { background: #5865F2; border-color: #3b48c4; color: white; }
     .social-icon.youtube { background: #FF0000; border-color: #cc0000; color: white; }
     .social-icon.patreon { background: #FF424D; border-color: #cc3540; color: white; }
@@ -85,31 +91,32 @@
     .rules-btn { background: #FF2A1F; border-color: #cc1a10; color: white; }
     .hero { background: var(--hero-bg); padding: 2.5rem 2rem; margin-bottom: 2rem; text-align: center; }
     .btn-group { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
-    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; border: 3px solid; color: white; cursor: pointer; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; border: 3px solid; color: white; cursor: pointer; }
     .btn-primary { background: #FF2A1F; border-color: #cc1a10; box-shadow: 4px 4px 0px #5a0a05; }
     .btn-secondary { background: #1f2a48; border-color: #2A43E0; box-shadow: 4px 4px 0px #0a1430; }
-    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
-    .card { background: var(--bg-card); padding: 1.6rem; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); cursor: pointer; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+    .card { background: var(--bg-card); padding: 1.5rem; text-align: center; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); cursor: pointer; }
+    .card h3 { margin-top: 8px; }
     .status-panel { background: var(--status-bg); padding: 1rem 1.5rem; margin: 2rem 0; border-color: #2A43E0; }
     .status-grid { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
-    .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; border-left: 4px solid #2A43E0; color: white; }
+    .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; border-left: 4px solid #2A43E0; color: white; display: flex; align-items: center; gap: 8px; }
     .status-stats { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
     .stat-box { background: #00000066; padding: 0.3rem 1rem; border-radius: 6px; display: flex; align-items: center; gap: 8px; }
-    .status-led { width: 12px; height: 12px; background: #6b7280; display: inline-block; margin-right: 6px; }
+    .status-led { width: 12px; height: 12px; background: #6b7280; display: inline-block; border-radius: 0px; }
     .status-led.online { background: #22c55e; animation: pulse 1.5s infinite; }
     .status-led.offline { background: #FF2A1F; }
     .status-led.restarting { background: #f59e0b; animation: blink 1s infinite; }
     @keyframes pulse { 0% { opacity: 0.6; transform: scale(0.9);} 100% { opacity: 1; transform: scale(1.2);} }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    .ping-btn { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.4rem 1rem; cursor: pointer; }
-    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; padding: 0.5rem 1rem; display: flex; gap: 10px; z-index: 1000; border-color: #FF2A1F; }
+    .ping-btn { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.4rem 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border-color: #FF2A1F; }
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
     .modal-content { background: var(--bg-card); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; }
     .close-modal { position: absolute; top: 0.8rem; right: 1rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
     .download-section { background: var(--bg-secondary); padding: 1.5rem; margin: 2rem 0; border-color: #2d3a60; }
     .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
     .download-card { background: #0f1622; padding: 1rem; flex: 1; min-width: 180px; text-align: center; border-top: 4px solid #2A43E0; }
-    .download-card a { color: white; background: #2A43E0; display: inline-block; padding: 0.5rem 1rem; margin-top: 0.8rem; text-decoration: none; }
+    .download-card a { color: white; background: #2A43E0; display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; margin-top: 0.8rem; text-decoration: none; }
     .voice-warning { background: #1a0a0a; border-left: 6px solid #FF2A1F; padding: 0.8rem; margin-top: 1rem; font-size: 0.85rem; color: #ffaaaa; }
     .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem; text-align: center; margin-top: 3rem; }
     .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
@@ -122,48 +129,51 @@
     <div class="logo-area"><img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img"><span class="logo-text">CRIX SMP</span></div>
     <div class="nav-links">
       <a href="#home">HOME</a><a href="#features">FEATURES</a><a href="#downloads">VOICE CHAT</a>
-      <button class="rules-btn" id="rulesBtn">📜 RULES</button>
-      <button class="theme-toggle" id="themeToggle">🌓 LIGHT/DARK</button>
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" class="social-icon discord">💬 Discord</a>
-      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-icon youtube">📺 YouTube</a>
-      <a href="https://www.patreon.com/cw/CRIXSMP" target="_blank" class="social-icon patreon">🎯 Patreon</a>
+      <button class="rules-btn" id="rulesBtn"><img src="rules_icon.png" class="icon-img-small" onerror="this.style.display='none'"> RULES</button>
+      <button class="theme-toggle" id="themeToggle"><img src="dark_mode.png" id="themeIcon" class="icon-img-small" onerror="this.style.display='none'"> LIGHT/DARK</button>
+      <a href="https://discord.gg/KufFPEptTG" target="_blank" class="social-icon discord"><img src="discord.png" class="icon-img-small" onerror="this.style.display='none'"> Discord</a>
+      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-icon youtube"><img src="youtube.png" class="icon-img-small" onerror="this.style.display='none'"> YouTube</a>
+      <a href="https://www.patreon.com/cw/CRIXSMP" target="_blank" class="social-icon patreon"><img src="patreon.png" class="icon-img-small" onerror="this.style.display='none'"> Patreon</a>
     </div>
   </nav>
 
   <section id="home"><div class="hero"><div class="hero-content">
     <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
     <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
-    <div class="btn-group"><a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a><a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a></div>
+    <div class="btn-group">
+      <a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary"><img src="nether_portal.png" class="icon-img" onerror="this.style.display='none'"> JOIN THE REALM</a>
+      <a href="#features" class="btn btn-secondary"><img src="explore.png" class="icon-img" onerror="this.style.display='none'"> EXPLORE FEATURES</a>
+    </div>
   </div></div></section>
 
-  <!-- Server Status Panel with Restarting Detection -->
+  <!-- Server Status Panel -->
   <div class="status-panel">
     <div class="status-grid">
-      <div class="server-ip-display">🌐 <strong>play.crixsmp.net</strong> | Port: 19132</div>
+      <div class="server-ip-display"><img src="server_ip.png" class="icon-img-small" onerror="this.style.display='none'"> <strong>play.crixsmp.net</strong> | Port: 19132</div>
       <div class="status-stats">
         <div class="stat-box"><span class="status-led" id="statusLed"></span><span id="statusText">Checking...</span></div>
-        <div class="stat-box"><span class="stat-label">👥 PLAYERS</span><span class="stat-value" id="playerCount">?</span></div>
-        <div class="stat-box"><span class="stat-label">🔒 WHITELIST</span><span class="stat-value" id="whitelistStatus">?</span></div>
-        <button class="ping-btn" id="pingServerBtn">🔄 REFRESH</button>
+        <div class="stat-box"><img src="player_icon.png" class="icon-img-small" onerror="this.style.display='none'"> <span class="stat-value" id="playerCount">?</span></div>
+        <div class="stat-box"><span id="whitelistIcon"></span> <span class="stat-value" id="whitelistStatus">?</span></div>
+        <button class="ping-btn" id="pingServerBtn"><img src="refresh_icon.png" class="icon-img-small" onerror="this.style.display='none'"> REFRESH</button>
       </div>
     </div>
   </div>
 
   <section id="features"><h2>🔥 SERVER FEATURES</h2><div class="features-grid">
-    <div class="card"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, duel leaderboards.</p></div>
-    <div class="card"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival.</p></div>
-    <div class="card"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice (Simple Voice Chat).</p></div>
-    <div class="card"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player shops.</p></div>
-    <div class="card"><h3>💰 BOUNTIES</h3><p>Place bounties on players.</p></div>
-    <div class="card"><h3>🍩 DONUT SPIRIT</h3><p>Cooperative, less chaotic.</p></div>
+    <div class="card"><img src="dueling.png" class="feature-icon" onerror="this.style.display='none'"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, duel leaderboards.</p></div>
+    <div class="card"><img src="survival.png" class="feature-icon" onerror="this.style.display='none'"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival.</p></div>
+    <div class="card"><img src="voice_chat.png" class="feature-icon" onerror="this.style.display='none'"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice (Simple Voice Chat).</p></div>
+    <div class="card"><img src="shop.png" class="feature-icon" onerror="this.style.display='none'"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player shops.</p></div>
+    <div class="card"><img src="bounties.png" class="feature-icon" onerror="this.style.display='none'"><h3>💰 BOUNTIES</h3><p>Place bounties on players.</p></div>
+    <div class="card"><img src="donut_smp.png" class="feature-icon" onerror="this.style.display='none'"><h3>🍩 DONUT SPIRIT</h3><p>Cooperative, less chaotic.</p></div>
   </div></section>
 
   <section id="downloads"><div class="download-section">
     <h2>🎙️ VOICE CHAT SETUP</h2>
     <div class="download-grid">
-      <div class="download-card"><h3>🧵 FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
-      <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
-      <div class="download-card"><h3>📦 FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
+      <div class="download-card"><img src="fabric_loader.png" class="feature-icon" onerror="this.style.display='none'"><h3>FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
+      <div class="download-card"><img src="voice_chat.png" class="feature-icon" onerror="this.style.display='none'"><h3>SIMPLE VOICE CHAT</h3><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
+      <div class="download-card"><img src="fabric_api.png" class="feature-icon" onerror="this.style.display='none'"><h3>FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
     </div>
     <div class="voice-warning">⚠️ Voice chat <strong>NOT supported on Bedrock</strong> — Java only.</div>
     <p style="margin-top:1rem;">💡 Java: <strong>play.crixsmp.net</strong> | Bedrock: same IP port 19132</p>
@@ -175,11 +185,11 @@
   <div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div>
 </footer>
 
-<div class="music-bar"><span>🎵 Chirp</span><button id="muteToggleBtn">🔊 Mute</button></div>
-<div id="rulesModal" class="modal"><div class="modal-content"><span class="close-modal" id="closeModalBtn">&times;</span><h2>📜 CRIX SMP RULES</h2><div class="rules-text" id="rulesText"></div></div></div>
+<div class="music-bar"><img src="chirp_disc.png" class="icon-img-small" onerror="this.style.display='none'"> <span>Chirp</span> <button id="muteToggleBtn"><img src="mute_icon.png" id="muteIcon" class="icon-img-small" onerror="this.style.display='none'"> Mute</button></div>
+<div id="rulesModal" class="modal"><div class="modal-content"><span class="close-modal" id="closeModalBtn">&times;</span><h2><img src="rules_icon.png" class="icon-img" onerror="this.style.display='none'"> CRIX SMP RULES</h2><div class="rules-text" id="rulesText"></div></div></div>
 
 <script>
-  // Audio setup (same as before)
+  // Audio setup
   const hoverSound = new Audio('scroll.mp3');
   const clickSound = new Audio('go.mp3');
   const bgMusic = new Audio('Chirp.mp3');
@@ -193,10 +203,21 @@
     el.addEventListener('mouseenter', playHover);
     el.addEventListener('click', playClick);
   });
+  
   const muteBtn = document.getElementById('muteToggleBtn');
+  const muteIcon = document.getElementById('muteIcon');
   muteBtn.addEventListener('click', () => {
-    if (!isMuted) { muteSound.play().catch(()=>{}); isMuted = true; bgMusic.pause(); muteBtn.innerHTML = '🔇 Unmute'; }
-    else { unmuteSound.play().catch(()=>{}); isMuted = false; bgMusic.play().catch(()=>{}); muteBtn.innerHTML = '🔊 Mute'; }
+    if (!isMuted) {
+      muteSound.play().catch(()=>{});
+      isMuted = true;
+      bgMusic.pause();
+      muteBtn.innerHTML = '<img src="unmute_icon.png" class="icon-img-small" onerror="this.style.display=\'none\'"> Unmute';
+    } else {
+      unmuteSound.play().catch(()=>{});
+      isMuted = false;
+      bgMusic.play().catch(()=>{});
+      muteBtn.innerHTML = '<img src="mute_icon.png" class="icon-img-small" onerror="this.style.display=\'none\'"> Mute';
+    }
   });
   document.body.addEventListener('click', () => { if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); }, { once: true });
 
@@ -205,18 +226,34 @@
   document.getElementById('rulesBtn').onclick = () => rulesModal.style.display = 'flex';
   document.getElementById('closeModalBtn').onclick = () => rulesModal.style.display = 'none';
   window.onclick = (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; };
-  document.getElementById('rulesText').innerText = `CRIX SMP RULES\n\n1. Respect everyone\n2. No hacking/cheating\n3. No griefing/stealing\n4. PvP only if agreed\n5. No inappropriate builds\n6. Listen to staff\n7. Have fun!`;
+  document.getElementById('rulesText').innerText = `CRIX SMP RULES\n\nGENERAL RULES\n1. Respect everyone\n2. No spamming\n3. Keep it appropriate\n4. Listen to staff\n5. No impersonation\n\nGAMEPLAY RULES\n1. No hacking/cheating\n2. No exploiting glitches\n3. No griefing\n4. No stealing\n5. PvP only if agreed\n\nBUILDING RULES\n1. No inappropriate builds\n2. Don't build too close\n3. No lag machines\n\nCHAT RULES\n1. No excessive swearing\n2. No advertising\n3. No toxicity\n\nPUNISHMENTS\n1st: Warning\n2nd: Kick/Mute\n3rd: Temp ban\nSevere: Instant ban`;
 
-  // Theme toggle
+  // Theme toggle with icon swap
   const themeToggle = document.getElementById('themeToggle');
-  themeToggle.onclick = () => { document.body.classList.toggle('light-mode'); localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); };
-  if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
+  const themeIcon = document.getElementById('themeIcon');
+  themeToggle.onclick = () => {
+    document.body.classList.toggle('light-mode');
+    const isLight = document.body.classList.contains('light-mode');
+    localStorage.setItem('crixTheme', isLight ? 'light' : 'dark');
+    if (isLight) {
+      themeIcon.src = 'light_mode.png';
+      themeToggle.innerHTML = '<img src="light_mode.png" class="icon-img-small" onerror="this.style.display=\'none\'"> DARK MODE';
+    } else {
+      themeIcon.src = 'dark_mode.png';
+      themeToggle.innerHTML = '<img src="dark_mode.png" class="icon-img-small" onerror="this.style.display=\'none\'"> LIGHT MODE';
+    }
+  };
+  if (localStorage.getItem('crixTheme') === 'light') {
+    document.body.classList.add('light-mode');
+    themeToggle.innerHTML = '<img src="light_mode.png" class="icon-img-small" onerror="this.style.display=\'none\'"> DARK MODE';
+  }
 
-  // Server status with RESTARTING detection
+  // Server status with restarting detection and whitelist icons
   const serverHost = 'play.crixsmp.net';
   const statusTextSpan = document.getElementById('statusText');
   const playerCountSpan = document.getElementById('playerCount');
-  const whitelistSpan = document.getElementById('whitelistStatus');
+  const whitelistStatusSpan = document.getElementById('whitelistStatus');
+  const whitelistIconSpan = document.getElementById('whitelistIcon');
   const statusLedSpan = document.getElementById('statusLed');
   const pingBtn = document.getElementById('pingServerBtn');
 
@@ -224,11 +261,25 @@
   let restartingDetected = false;
   let restartTimeout = null;
 
+  function updateWhitelistIcon(isWhitelisted) {
+    if (isWhitelisted === true) {
+      whitelistIconSpan.innerHTML = '<img src="whitelist_on.png" class="icon-img-small" onerror="this.style.display=\'none\'">';
+      whitelistStatusSpan.innerText = 'WHITELIST ON';
+      whitelistStatusSpan.style.color = '#facc15';
+    } else if (isWhitelisted === false) {
+      whitelistIconSpan.innerHTML = '<img src="whitelist_off.png" class="icon-img-small" onerror="this.style.display=\'none\'">';
+      whitelistStatusSpan.innerText = 'WHITELIST OFF';
+      whitelistStatusSpan.style.color = '#22c55e';
+    } else {
+      whitelistIconSpan.innerHTML = '';
+      whitelistStatusSpan.innerText = '?';
+    }
+  }
+
   async function checkServerWithDetails() {
     statusTextSpan.innerText = 'Pinging...';
     statusLedSpan?.classList.remove('online', 'offline', 'restarting');
     playerCountSpan.innerText = '?';
-    whitelistSpan.innerText = '?';
     
     try {
       const controller = new AbortController();
@@ -239,43 +290,38 @@
       if (response.ok) {
         const data = await response.json();
         if (data && data.online === true) {
-          // Server is online
           if (restartingDetected) {
             restartingDetected = false;
             if (restartTimeout) clearTimeout(restartTimeout);
           }
-          statusTextSpan.innerHTML = '✅ ONLINE';
+          statusTextSpan.innerHTML = 'ONLINE';
           statusLedSpan?.classList.add('online');
           playerCountSpan.innerText = data.players?.online || '?';
           
           let motdString = '';
           if (data.motd?.clean) motdString = data.motd.clean.join(' ').toLowerCase();
           if (motdString.includes('whitelist')) {
-            whitelistSpan.innerText = '✓ ON';
-            whitelistSpan.style.color = '#facc15';
+            updateWhitelistIcon(true);
           } else {
-            whitelistSpan.innerText = '✗ OFF';
-            whitelistSpan.style.color = '#22c55e';
+            updateWhitelistIcon(false);
           }
           lastWasOnline = true;
         } else {
-          // Server offline - check if it was just online (could be restarting)
           if (lastWasOnline && !restartingDetected) {
             restartingDetected = true;
-            statusTextSpan.innerHTML = '🔄 RESTARTING';
+            statusTextSpan.innerHTML = 'RESTARTING';
             statusLedSpan?.classList.add('restarting');
             playerCountSpan.innerText = '—';
-            whitelistSpan.innerText = '?';
-            // Auto-recheck after 30 seconds
+            updateWhitelistIcon(null);
             restartTimeout = setTimeout(() => { checkServerWithDetails(); }, 30000);
           } else if (restartingDetected) {
-            statusTextSpan.innerHTML = '🔄 RESTARTING';
+            statusTextSpan.innerHTML = 'RESTARTING';
             statusLedSpan?.classList.add('restarting');
           } else {
-            statusTextSpan.innerHTML = '❌ OFFLINE';
+            statusTextSpan.innerHTML = 'OFFLINE';
             statusLedSpan?.classList.add('offline');
             playerCountSpan.innerText = '0';
-            whitelistSpan.innerText = 'N/A';
+            updateWhitelistIcon(null);
             lastWasOnline = false;
           }
         }
@@ -285,11 +331,11 @@
     } catch (err) {
       if (lastWasOnline && !restartingDetected) {
         restartingDetected = true;
-        statusTextSpan.innerHTML = '🔄 RESTARTING';
+        statusTextSpan.innerHTML = 'RESTARTING';
         statusLedSpan?.classList.add('restarting');
         restartTimeout = setTimeout(() => { checkServerWithDetails(); }, 30000);
       } else {
-        statusTextSpan.innerHTML = '⚠️ UNREACHABLE';
+        statusTextSpan.innerHTML = 'UNREACHABLE';
         if(statusLedSpan) statusLedSpan.style.background = '#f59e0b';
       }
     }
