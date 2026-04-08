@@ -9,11 +9,11 @@
   <link rel="preload" href="MinecraftBold-nMkI.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftItalic-R8Mo.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftBoldItalic-1yle.otf" as="font" crossorigin="anonymous">
-  <!-- Favicon (crixsmplogo.png) -->
+  <!-- Favicon -->
   <link rel="icon" type="image/png" href="crixsmplogo.png">
   <link rel="shortcut icon" href="crixsmplogo.png">
   <style>
-    /* ---------- FONT FACE (exact filenames from repo) ---------- */
+    /* ---------- FONT FACE ---------- */
     @font-face {
       font-family: 'MinecraftRegular';
       src: url('MinecraftRegular-Bmg3.otf') format('opentype');
@@ -43,7 +43,36 @@
       font-display: swap;
     }
 
-    /* ---------- GLOBAL DARK RESET ---------- */
+    /* ---------- CSS VARIABLES FOR DARK/LIGHT MODE ---------- */
+    :root {
+      --bg-primary: #010101;
+      --bg-secondary: #0a0c16;
+      --bg-card: #0b0f1ae6;
+      --bg-nav: #070b14ee;
+      --text-primary: #eef2ff;
+      --text-secondary: #cbd5f0;
+      --border-color: #1f2a44;
+      --card-border-left: #2A43E0;
+      --card-border-bottom: #FF2A1F;
+      --hero-bg: #0a0e17cc;
+      --status-bg: #03050ccc;
+      --footer-bg: #020408;
+    }
+    body.light-mode {
+      --bg-primary: #f0f4ff;
+      --bg-secondary: #e2e8f0;
+      --bg-card: #ffffffd9;
+      --bg-nav: #ffffffdd;
+      --text-primary: #0f172a;
+      --text-secondary: #1e293b;
+      --border-color: #cbd5e1;
+      --card-border-left: #2A43E0;
+      --card-border-bottom: #FF2A1F;
+      --hero-bg: #f8fafccc;
+      --status-bg: #ffffffcc;
+      --footer-bg: #e2e8f0;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -51,15 +80,16 @@
     }
 
     body {
-      background: #010101;
-      background-image: radial-gradient(circle at 15% 30%, #0a0c16 1%, #000000 98%);
-      color: #eef2ff;
+      background: var(--bg-primary);
+      background-image: radial-gradient(circle at 15% 30%, var(--bg-secondary) 1%, var(--bg-primary) 98%);
+      color: var(--text-primary);
       font-family: 'MinecraftRegular', 'Courier New', monospace;
       line-height: 1.5;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       scroll-behavior: smooth;
+      transition: background 0.3s, color 0.2s;
     }
 
     .site-wrapper {
@@ -69,96 +99,41 @@
       flex: 1;
     }
 
-    /* ---------- TYPOGRAPHY & BRAND COLORS ---------- */
+    /* Typography */
     h1, h2, h3, .logo-text, .nav-links a, .btn, .copyright {
       font-family: 'MinecraftBold', 'MinecraftRegular', monospace;
       letter-spacing: 0.01em;
     }
+    .crix-blue { color: #2A43E0; text-shadow: 0 0 4px rgba(42,67,224,0.4); }
+    .smp-red { color: #FF2A1F; text-shadow: 0 0 3px rgba(255,42,31,0.3); }
+    h1 { font-size: 3.4rem; margin-bottom: 0.75rem; line-height: 1.2; }
+    h2 { font-size: 2rem; border-left: 6px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; color: var(--text-primary); }
+    h3 { font-size: 1.5rem; color: #FFD966; margin: 1rem 0 0.5rem; }
 
-    /* EXACT brand colors: Blue #2A43E0 for "CRIX", Red #FF2A1F for "S.M.P" */
-    .crix-blue {
-      color: #2A43E0;
-      text-shadow: 0 0 4px rgba(42,67,224,0.4);
-    }
-    .smp-red {
-      color: #FF2A1F;
-      text-shadow: 0 0 3px rgba(255,42,31,0.3);
-    }
-    h1 {
-      font-size: 3.4rem;
-      margin-bottom: 0.75rem;
-      line-height: 1.2;
-    }
-    h2 {
-      font-size: 2rem;
-      border-left: 6px solid #FF2A1F;
-      padding-left: 1rem;
-      margin: 1.8rem 0 1rem;
-      color: #ffffff;
-    }
-    h3 {
-      font-size: 1.5rem;
-      color: #FFD966;
-      margin: 1rem 0 0.5rem;
-    }
-
-    /* ---------- DARKER UI / HEADER ---------- */
+    /* Navbar */
     .navbar {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      background: #070b14ee;
+      background: var(--bg-nav);
       backdrop-filter: blur(12px);
       border-radius: 42px;
       padding: 0.7rem 2rem;
       margin-bottom: 2.5rem;
-      border: 1px solid #1f2a44;
+      border: 1px solid var(--border-color);
       box-shadow: 0 12px 28px -10px black;
     }
-    .logo-area {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    .logo-img {
-      height: 54px;
-      width: auto;
-      filter: drop-shadow(0 2px 4px black);
-      transition: transform 0.2s;
-    }
-    .logo-img:hover {
-      transform: scale(1.02);
-    }
-    .logo-text {
-      font-size: 1.9rem;
-      background: linear-gradient(135deg, #2A43E0, #FF2A1F);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      font-weight: bold;
-    }
-    .nav-links {
-      display: flex;
-      gap: 1.5rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .nav-links a {
-      color: #cbd5e6;
-      text-decoration: none;
-      font-size: 1rem;
-      padding: 0.4rem 0.2rem;
-      transition: 0.2s;
-      border-bottom: 2px solid transparent;
-    }
-    .nav-links a:hover {
-      border-bottom-color: #FF2A1F;
-      color: white;
-    }
+    .logo-area { display: flex; align-items: center; gap: 1rem; }
+    .logo-img { height: 54px; width: auto; filter: drop-shadow(0 2px 4px black); transition: transform 0.2s; cursor: pointer; }
+    .logo-img:hover { transform: scale(1.02); }
+    .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: bold; }
+    .nav-links { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
+    .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 1rem; padding: 0.4rem 0.2rem; transition: 0.2s; border-bottom: 2px solid transparent; cursor: pointer; }
+    .nav-links a:hover { border-bottom-color: #FF2A1F; color: var(--text-primary); }
 
-    /* SOCIAL BUTTONS — using only text + emoji (no image files needed) */
-    .social-icon {
+    /* Social & Theme Buttons */
+    .social-icon, .theme-toggle, .rules-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -169,248 +144,74 @@
       text-decoration: none;
       font-weight: bold;
       font-family: 'MinecraftBold', monospace;
-    }
-    .social-icon.discord {
-      background: #5865F2;
-    }
-    .social-icon.youtube {
-      background: #FF0000;
-    }
-    .social-icon:hover {
-      transform: translateY(-3px);
-      filter: brightness(1.05);
-    }
-
-    /* HERO SECTION */
-    .hero {
-      background: #0a0e17cc;
-      backdrop-filter: blur(4px);
-      border-radius: 48px;
-      padding: 2.5rem 2rem;
-      margin-bottom: 2rem;
-      border: 1px solid #202a44;
-      box-shadow: 0 20px 30px -12px black;
-    }
-    .hero-content {
-      text-align: center;
-    }
-    .hero p {
-      font-size: 1.2rem;
-      max-width: 750px;
-      margin: 0 auto 2rem;
-      color: #cbd5f0;
-    }
-    .btn-group {
-      display: flex;
-      gap: 1.2rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .btn {
-      display: inline-block;
-      background: #1e293b;
-      padding: 0.8rem 2rem;
-      border-radius: 60px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: 0.2s;
-      border: 1px solid #3b4b66;
-      color: white;
-      font-size: 1rem;
-    }
-    .btn-primary {
-      background: #FF2A1F;
-      border-color: #ff6b5e;
-      box-shadow: 0 4px 0 #8b1a12;
-    }
-    .btn-primary:hover {
-      background: #e01e12;
-      transform: translateY(-2px);
-    }
-    .btn-secondary {
-      background: #1f2a48;
-      border-color: #2A43E0;
-    }
-    .btn-secondary:hover {
-      background: #2d3a6e;
-      transform: translateY(-2px);
-    }
-
-    /* FEATURE GRID */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 1.8rem;
-      margin: 2rem 0 2rem;
-    }
-    .card {
-      background: #0b0f1ae6;
-      backdrop-filter: blur(4px);
-      border-radius: 28px;
-      padding: 1.6rem;
-      border-left: 5px solid #2A43E0;
-      border-bottom: 2px solid #FF2A1F;
-      transition: all 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-6px);
-      background: #111a2a;
-    }
-    .card h3 {
-      color: #FFD966;
-    }
-
-    /* SERVER STATUS PANEL + PING BUTTON */
-    .status-panel {
-      background: #03050ccc;
-      border-radius: 36px;
-      padding: 1.2rem 2rem;
-      margin: 2rem 0 1.5rem;
-      border: 1px solid #2A43E0;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-    }
-    .server-ip-display {
-      background: #000000aa;
-      font-family: monospace;
-      padding: 0.6rem 1.4rem;
-      border-radius: 32px;
-      font-size: 1.1rem;
-      letter-spacing: 0.5px;
-      word-break: break-all;
-      border-left: 3px solid #2A43E0;
-    }
-    .status-control {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: #00000066;
-      padding: 0.4rem 1.4rem;
-      border-radius: 60px;
-    }
-    .status-led {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #6b7280;
-      transition: all 0.2s;
-    }
-    .status-led.online {
-      background: #22c55e;
-      box-shadow: 0 0 8px #22c55e;
-      animation: pulse 1.5s infinite;
-    }
-    .status-led.offline {
-      background: #FF2A1F;
-      box-shadow: 0 0 5px #FF2A1F;
-    }
-    @keyframes pulse {
-      0% { opacity: 0.6; transform: scale(0.9);}
-      100% { opacity: 1; transform: scale(1.2);}
-    }
-    .ping-btn {
-      background: #2A43E0;
       border: none;
-      color: white;
-      font-family: 'MinecraftBold', monospace;
-      padding: 0.5rem 1.2rem;
-      border-radius: 40px;
       cursor: pointer;
-      transition: 0.2s;
-      font-size: 0.9rem;
     }
-    .ping-btn:hover {
-      background: #1f36c2;
-      transform: scale(1.02);
-    }
-    .ping-btn:active {
-      transform: scale(0.98);
-    }
+    .social-icon.discord { background: #5865F2; color: white; }
+    .social-icon.youtube { background: #FF0000; color: white; }
+    .theme-toggle { background: #2A43E0; color: white; }
+    .rules-btn { background: #FF2A1F; color: white; }
+    .social-icon:hover, .theme-toggle:hover, .rules-btn:hover { transform: translateY(-3px); filter: brightness(1.05); }
 
-    /* DOWNLOAD SECTION */
-    .download-section {
-      background: #070b14;
-      border-radius: 36px;
-      padding: 1.8rem;
-      margin: 2rem 0;
-      border: 1px solid #2d3a60;
-    }
-    .download-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.5rem;
-      margin-top: 1.2rem;
-      justify-content: center;
-    }
-    .download-card {
-      background: #0f1622;
-      border-radius: 28px;
-      padding: 1.3rem 1.8rem;
-      flex: 1;
-      min-width: 200px;
-      text-align: center;
-      transition: 0.2s;
-      border-top: 3px solid #2A43E0;
-    }
-    .download-card a {
-      color: white;
-      text-decoration: none;
-      font-family: 'MinecraftBold', monospace;
-      background: #2A43E0;
-      display: inline-block;
-      padding: 0.6rem 1.2rem;
-      border-radius: 40px;
-      margin-top: 0.8rem;
-      transition: 0.2s;
-    }
-    .download-card a:hover {
-      background: #1f36c2;
-      transform: scale(1.02);
-    }
+    /* Hero */
+    .hero { background: var(--hero-bg); backdrop-filter: blur(4px); border-radius: 48px; padding: 2.5rem 2rem; margin-bottom: 2rem; border: 1px solid var(--border-color); box-shadow: 0 20px 30px -12px black; text-align: center; }
+    .hero p { font-size: 1.2rem; max-width: 750px; margin: 0 auto 2rem; color: var(--text-secondary); }
+    .btn-group { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
+    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; border-radius: 60px; text-decoration: none; font-weight: bold; transition: 0.2s; border: 1px solid #3b4b66; color: white; font-size: 1rem; cursor: pointer; }
+    .btn-primary { background: #FF2A1F; border-color: #ff6b5e; box-shadow: 0 4px 0 #8b1a12; }
+    .btn-primary:hover { background: #e01e12; transform: translateY(-2px); }
+    .btn-secondary { background: #1f2a48; border-color: #2A43E0; }
+    .btn-secondary:hover { background: #2d3a6e; transform: translateY(-2px); }
 
-    /* FOOTER */
-    .main-footer {
-      background: #020408;
-      border-top: 1px solid #FF2A1F33;
-      padding: 2rem 2rem 1.5rem;
-      margin-top: 3rem;
-      text-align: center;
-    }
-    .copyright {
-      font-family: 'MinecraftRegular', monospace;
-      font-size: 0.85rem;
-      color: #7e8aa2;
-    }
-    .footer-links {
-      display: flex;
-      justify-content: center;
-      gap: 2rem;
-      margin-bottom: 1.2rem;
-      flex-wrap: wrap;
-    }
-    .footer-links a {
-      color: #a0aec0;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .footer-links a:hover {
-      color: #FF2A1F;
-    }
+    /* Features Grid */
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.8rem; margin: 2rem 0 2rem; }
+    .card { background: var(--bg-card); backdrop-filter: blur(4px); border-radius: 28px; padding: 1.6rem; border-left: 5px solid var(--card-border-left); border-bottom: 2px solid var(--card-border-bottom); transition: all 0.2s; cursor: pointer; }
+    .card:hover { transform: translateY(-6px); background: var(--bg-secondary); }
+    .card h3 { color: #FFD966; }
+
+    /* Status Panel */
+    .status-panel { background: var(--status-bg); border-radius: 36px; padding: 1.2rem 2rem; margin: 2rem 0 1.5rem; border: 1px solid #2A43E0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+    .server-ip-display { background: #000000aa; font-family: monospace; padding: 0.6rem 1.4rem; border-radius: 32px; font-size: 1.1rem; word-break: break-all; border-left: 3px solid #2A43E0; color: white; }
+    .status-control { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    .status-badge { display: flex; align-items: center; gap: 12px; background: #00000066; padding: 0.4rem 1.4rem; border-radius: 60px; }
+    .status-led { width: 14px; height: 14px; border-radius: 50%; background: #6b7280; transition: all 0.2s; }
+    .status-led.online { background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulse 1.5s infinite; }
+    .status-led.offline { background: #FF2A1F; box-shadow: 0 0 5px #FF2A1F; }
+    @keyframes pulse { 0% { opacity: 0.6; transform: scale(0.9);} 100% { opacity: 1; transform: scale(1.2);} }
+    .ping-btn { background: #2A43E0; border: none; color: white; font-family: 'MinecraftBold', monospace; padding: 0.5rem 1.2rem; border-radius: 40px; cursor: pointer; transition: 0.2s; }
+    .ping-btn:hover { background: #1f36c2; transform: scale(1.02); }
+
+    /* Music Player Bar */
+    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1e1b2ee6; backdrop-filter: blur(8px); padding: 0.6rem 1.2rem; border-radius: 60px; display: flex; gap: 12px; align-items: center; z-index: 1000; border: 1px solid #FF2A1F; font-family: 'MinecraftBold', monospace; }
+    .music-bar button { background: #2A43E0; border: none; color: white; padding: 0.3rem 0.8rem; border-radius: 30px; cursor: pointer; font-family: monospace; font-weight: bold; transition: 0.2s; }
+    .music-bar button:hover { transform: scale(1.05); background: #FF2A1F; }
+
+    /* Modal for Rules */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center; }
+    .modal-content { background: var(--bg-card); border-radius: 32px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 2px solid #FF2A1F; position: relative; color: var(--text-primary); }
+    .modal-content h2 { margin-top: 0; }
+    .close-modal { position: absolute; top: 1rem; right: 1.5rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
+    .rules-text { white-space: pre-wrap; font-family: 'MinecraftRegular', monospace; line-height: 1.6; }
+
+    /* Download Section */
+    .download-section { background: var(--bg-secondary); border-radius: 36px; padding: 1.8rem; margin: 2rem 0; border: 1px solid #2d3a60; }
+    .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1.2rem; justify-content: center; }
+    .download-card { background: #0f1622; border-radius: 28px; padding: 1.3rem 1.8rem; flex: 1; min-width: 200px; text-align: center; transition: 0.2s; border-top: 3px solid #2A43E0; }
+    .download-card a { color: white; text-decoration: none; font-family: 'MinecraftBold', monospace; background: #2A43E0; display: inline-block; padding: 0.6rem 1.2rem; border-radius: 40px; margin-top: 0.8rem; transition: 0.2s; }
+    .download-card a:hover { background: #1f36c2; transform: scale(1.02); }
+
+    /* Footer */
+    .main-footer { background: var(--footer-bg); border-top: 1px solid #FF2A1F33; padding: 2rem 2rem 1.5rem; margin-top: 3rem; text-align: center; }
+    .copyright { font-family: 'MinecraftRegular', monospace; font-size: 0.85rem; color: var(--text-secondary); }
+    .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; cursor: pointer; }
+    .footer-links a:hover { color: #FF2A1F; }
+
     @media (max-width: 760px) {
       .site-wrapper { padding: 1rem; }
       .hero h1 { font-size: 2.2rem; }
       h2 { font-size: 1.5rem; }
-      .status-panel { flex-direction: column; align-items: stretch; }
-      .status-control { justify-content: space-between; }
+      .music-bar { bottom: 10px; right: 10px; padding: 0.4rem 0.8rem; }
     }
   </style>
 </head>
@@ -418,30 +219,25 @@
 <div class="site-wrapper">
   <nav class="navbar">
     <div class="logo-area">
-      <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img">
+      <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img" id="logoImg">
       <span class="logo-text">CRIX SMP</span>
     </div>
     <div class="nav-links">
       <a href="#home">HOME</a>
       <a href="#features">FEATURES</a>
       <a href="#downloads">VOICE CHAT</a>
-      <!-- Social links with simple emoji + text (no image files) -->
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" rel="noopener noreferrer" class="social-icon discord">
-        💬 Discord
-      </a>
-      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" rel="noopener noreferrer" class="social-icon youtube">
-        📺 YouTube
-      </a>
+      <button class="rules-btn" id="rulesBtn">📜 RULES</button>
+      <button class="theme-toggle" id="themeToggle">🌓 LIGHT/DARK</button>
+      <a href="https://discord.gg/KufFPEptTG" target="_blank" rel="noopener noreferrer" class="social-icon discord">💬 Discord</a>
+      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" rel="noopener noreferrer" class="social-icon youtube">📺 YouTube</a>
     </div>
   </nav>
 
-  <!-- Hero section -->
   <section id="home">
     <div class="hero">
       <div class="hero-content">
         <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
-        <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong><br>
-        No land claim, no custom mobs — pure community & proximity voice.</p>
+        <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong><br>Pure community & proximity voice.</p>
         <div class="btn-group">
           <a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a>
           <a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a>
@@ -450,26 +246,19 @@
     </div>
   </section>
 
-  <!-- Live server status panel with manual ping button -->
-  <div class="status-panel" id="serverStatusBox">
-    <div class="server-ip-display">
-      🌐 <strong>crixsmp.tropicalhosting.net</strong>  |  Port: 19132 (Bedrock/Java)
-    </div>
+  <div class="status-panel">
+    <div class="server-ip-display">🌐 <strong>crixsmp.tropicalhosting.net</strong> | Port: 19132 (Bedrock/Java)</div>
     <div class="status-control">
-      <div class="status-badge" id="statusBadge">
-        <div class="status-led" id="statusLed"></div>
-        <span id="statusText">Checking server...</span>
-      </div>
+      <div class="status-badge" id="statusBadge"><div class="status-led" id="statusLed"></div><span id="statusText">Checking server...</span></div>
       <button class="ping-btn" id="pingServerBtn">🔄 PING SERVER</button>
     </div>
   </div>
 
-  <!-- Features section -->
   <section id="features">
     <h2>🔥 SERVER FEATURES</h2>
     <div class="features-grid">
       <div class="card"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, friendly challenges & duel leaderboards — prove your skill.</p></div>
-      <div class="card"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival with balanced economy, no land claims, no custom mobs — just classic fun.</p></div>
+      <div class="card"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival with balanced economy — just classic fun.</p></div>
       <div class="card"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice mod integration. Talk to nearby players — total immersion. (Simple Voice Chat)</p></div>
       <div class="card"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player-run shops, rare items, trading hub — economy at its core.</p></div>
       <div class="card"><h3>💰 BOUNTIES</h3><p>Place bounties on players, hunt or be hunted. Earn coins and exclusive tags.</p></div>
@@ -477,141 +266,213 @@
     </div>
   </section>
 
-  <!-- Downloads section -->
   <section id="downloads">
     <div class="download-section">
-      <h2 style="border-left-color: #2A43E0;">🎙️ VOICE CHAT SETUP (No other mods)</h2>
-      <p style="margin-bottom: 0.5rem;">To enable proximity voice on CRIX SMP, install Fabric Loader + Simple Voice Chat mod. <strong>No extra mods required.</strong></p>
+      <h2 style="border-left-color: #2A43E0;">🎙️ VOICE CHAT SETUP</h2>
+      <p style="margin-bottom: 0.5rem;">To enable proximity voice on CRIX SMP, install Fabric Loader + Simple Voice Chat mod.</p>
       <div class="download-grid">
-        <div class="download-card">
-          <h3>🧵 FABRIC LOADER</h3>
-          <p>Latest for 1.20.4 / 1.21</p>
-          <a href="https://fabricmc.net/use/" target="_blank" rel="noopener noreferrer">Download Fabric →</a>
-        </div>
-        <div class="download-card">
-          <h3>🎤 SIMPLE VOICE CHAT</h3>
-          <p>Proximity & group voice (essential)</p>
-          <a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank" rel="noopener noreferrer">Get Voice Chat →</a>
-        </div>
-        <div class="download-card">
-          <h3>📦 FABRIC API</h3>
-          <p>Required dependency</p>
-          <a href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener noreferrer">Fabric API →</a>
-        </div>
+        <div class="download-card"><h3>🧵 FABRIC LOADER</h3><p>Latest for 1.20.4 / 1.21</p><a href="https://fabricmc.net/use/" target="_blank">Download Fabric →</a></div>
+        <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><p>Proximity & group voice</p><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Voice Chat →</a></div>
+        <div class="download-card"><h3>📦 FABRIC API</h3><p>Required dependency</p><a href="https://modrinth.com/mod/fabric-api" target="_blank">Fabric API →</a></div>
       </div>
-      <p style="margin-top: 1rem; font-size: 0.85rem; color: #a0b4d7;">💡 After installation, put the Simple Voice Chat .jar into your "mods" folder. Connect to <strong>crixsmp.tropicalhosting.net</strong> (Java/Bedrock both work).</p>
+      <p style="margin-top: 1rem; font-size: 0.85rem;">💡 Connect to <strong>crixsmp.tropicalhosting.net</strong> (Java/Bedrock both work).</p>
     </div>
   </section>
-
-  <!-- Community widget -->
-  <div style="background: #070c14; border-radius: 32px; padding: 1.5rem; margin: 1rem 0; text-align: center;">
-    <h3 style="margin: 0 0 0.8rem;">🌐 JOIN THE COMMUNITY</h3>
-    <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" style="background:#5865F2; padding:0.6rem 1.6rem; border-radius:40px; text-decoration:none; color:white; font-weight:bold;">💬 DISCORD SERVER</a>
-      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" style="background:#FF0000; padding:0.6rem 1.6rem; border-radius:40px; text-decoration:none; color:white; font-weight:bold;">▶️ SUBSCRIBE ON YOUTUBE</a>
-    </div>
-  </div>
 </div>
 
 <footer class="main-footer">
-  <div class="footer-links">
-    <a href="#home">Home</a>
-    <a href="#features">Features</a>
-    <a href="#downloads">Voice Chat</a>
-    <a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a>
-    <a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a>
-  </div>
-  <div class="copyright">
-    © 2023 2026 CRIXGAMING VR. ltd all rights reserved
-  </div>
-  <div class="copyright" style="margin-top: 6px; font-size: 0.7rem;">
-    CRIX SMP — donut-style, only voice chat mod. No land claim, no custom mobs.
-  </div>
+  <div class="footer-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#downloads">Voice Chat</a><a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a><a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a></div>
+  <div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div>
+  <div class="copyright" style="margin-top: 6px; font-size: 0.7rem;">CRIX SMP — donut-style, only voice chat.</div>
 </footer>
 
+<!-- Floating Music Bar -->
+<div class="music-bar" id="musicBar">
+  <span>🎵 Chirp</span>
+  <button id="muteToggleBtn">🔊 Mute</button>
+</div>
+
+<!-- Modal for Rules -->
+<div id="rulesModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" id="closeModalBtn">&times;</span>
+    <h2>📜 CRIX SMP RULES</h2>
+    <div class="rules-text" id="rulesText">Loading rules...</div>
+  </div>
+</div>
+
 <script>
-  (function() {
-    // Server status checker with manual ping button
-    const serverHost = 'crixsmp.tropicalhosting.net';
-    const statusText = document.getElementById('statusText');
-    const statusLed = document.getElementById('statusLed');
-    const pingBtn = document.getElementById('pingServerBtn');
-    
-    // Function to ping/check server status (async)
-    async function checkServerStatus(showLoadingMsg = true) {
-      if (!statusText) return;
-      if (showLoadingMsg) {
-        statusText.innerText = '🔄 Pinging server...';
-      }
-      statusLed?.classList.remove('online', 'offline');
-      try {
-        // Use mcapi.us for server status (works for both Java/Bedrock)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-        const response = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=19132`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) throw new Error('API error');
-        const data = await response.json();
-        
-        if (data && data.online === true) {
-          const playerCount = data.players.now || '?';
-          statusText.innerHTML = `✅ ONLINE · ${playerCount} players online`;
+  // ---------- AUDIO SETUP ----------
+  const hoverSound = new Audio('scroll.mp3');
+  const clickSound = new Audio('go.mp3');
+  const bgMusic = new Audio('Chirp.mp3');
+  const muteSound = new Audio('mute.mp3');
+  const unmuteSound = new Audio('ok.mp3');
+  
+  bgMusic.loop = true;
+  bgMusic.volume = 0.4;
+  let isMuted = false;
+  
+  function playHover() { hoverSound.currentTime = 0; hoverSound.play().catch(e => console.log("hover audio blocked")); }
+  function playClick() { clickSound.currentTime = 0; clickSound.play().catch(e => console.log("click audio blocked")); }
+  
+  // Attach hover & click sounds to interactive elements
+  const interactiveElements = document.querySelectorAll('a, button, .card, .logo-img, .nav-links a, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn');
+  interactiveElements.forEach(el => {
+    el.addEventListener('mouseenter', playHover);
+    el.addEventListener('click', playClick);
+  });
+  
+  // Background music & mute button
+  const muteBtn = document.getElementById('muteToggleBtn');
+  function updateMuteUI() {
+    if (isMuted) {
+      muteBtn.innerHTML = '🔇 Unmute';
+      bgMusic.pause();
+    } else {
+      muteBtn.innerHTML = '🔊 Mute';
+      bgMusic.play().catch(e => console.log("autoplay blocked, user interaction needed"));
+    }
+  }
+  muteBtn.addEventListener('click', () => {
+    if (!isMuted) {
+      muteSound.play().catch(e=>console.log);
+      isMuted = true;
+      bgMusic.pause();
+    } else {
+      unmuteSound.play().catch(e=>console.log);
+      isMuted = false;
+      bgMusic.play().catch(e=>console.log);
+    }
+    updateMuteUI();
+  });
+  // Attempt to autoplay bg music (may require user interaction first)
+  document.body.addEventListener('click', () => {
+    if (!isMuted && bgMusic.paused) {
+      bgMusic.play().catch(e=>console.log);
+    }
+  }, { once: true });
+  
+  // ---------- RULES MODAL (from .txt file) ----------
+  const rulesModal = document.getElementById('rulesModal');
+  const rulesTextDiv = document.getElementById('rulesText');
+  const rulesBtnModal = document.getElementById('rulesBtn');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  
+  // Rules content as provided
+  const rulesContent = `CRIX SMP RULES
+
+GENERAL RULES
+1. Respect everyone - No bullying, harassment, or hate speech.
+2. No spamming - Includes chat, commands, or advertising.
+3. Keep it appropriate - No NSFW content or offensive builds.
+4. Listen to staff - Follow staff instructions.
+5. No impersonation - Do not pretend to be staff or other players.
+
+GAMEPLAY RULES
+1. No hacking or cheating (X-ray, kill aura, fly hacks, etc.)
+2. No exploiting glitches - Report them instead.
+3. No griefing - Do not destroy other players builds.
+4. No stealing - Only take what is yours.
+5. PvP only if both players agree (unless in PvP zones).
+
+BUILDING RULES
+1. No inappropriate builds.
+2. Do not build too close without permission.
+3. No lag machines or server-crashing builds.
+4. Keep redstone reasonable.
+
+CHAT RULES
+1. No excessive swearing.
+2. No advertising other servers.
+3. Use the main server language in public chat.
+4. No toxicity or drama.
+
+CROSSPLAY RULES
+1. Do not exploit version differences.
+2. Be respectful of different platforms.
+3. Report version-specific bugs.
+
+PUNISHMENTS
+1st Offense: Warning
+2nd Offense: Kick or mute
+3rd Offense: Temporary ban
+Severe offenses: Instant ban
+
+EXTRA RULES
+- Do not ask for admin.
+- Do not beg for items or ranks.
+- Have fun and respect others.`;
+  
+  rulesTextDiv.innerText = rulesContent;
+  
+  rulesBtnModal.addEventListener('click', () => { rulesModal.style.display = 'flex'; });
+  closeModalBtn.addEventListener('click', () => { rulesModal.style.display = 'none'; });
+  window.addEventListener('click', (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; });
+  
+  // ---------- DARK/LIGHT MODE ----------
+  const themeToggle = document.getElementById('themeToggle');
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('light-mode');
+    const isLight = document.body.classList.contains('light-mode');
+    localStorage.setItem('crixTheme', isLight ? 'light' : 'dark');
+  });
+  const savedTheme = localStorage.getItem('crixTheme');
+  if (savedTheme === 'light') document.body.classList.add('light-mode');
+  
+  // ---------- SERVER STATUS CHECKER ----------
+  const serverHost = 'crixsmp.tropicalhosting.net';
+  const statusText = document.getElementById('statusText');
+  const statusLed = document.getElementById('statusLed');
+  const pingBtnStat = document.getElementById('pingServerBtn');
+  
+  async function checkServerStatus(showLoading = true) {
+    if (!statusText) return;
+    if (showLoading) statusText.innerText = '🔄 Pinging server...';
+    statusLed?.classList.remove('online', 'offline');
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const response = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=19132`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error('API error');
+      const data = await response.json();
+      if (data && data.online === true) {
+        statusText.innerHTML = `✅ ONLINE · ${data.players.now || '?'} players online`;
+        statusLed?.classList.add('online');
+      } else {
+        const backupRes = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`);
+        const backupData = await backupRes.json();
+        if (backupData && backupData.online === true) {
+          statusText.innerHTML = `✅ ONLINE · ${backupData.players?.online || '?'} players online`;
           statusLed?.classList.add('online');
-          statusLed?.classList.remove('offline');
         } else {
-          // Fallback to secondary API (mcsrvstat)
-          const backupRes = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`);
-          const backupData = await backupRes.json();
-          if (backupData && backupData.online === true) {
-            const playersOnline = backupData.players?.online || '?';
-            statusText.innerHTML = `✅ ONLINE · ${playersOnline} players online`;
-            statusLed?.classList.add('online');
-            statusLed?.classList.remove('offline');
-          } else {
-            statusText.innerHTML = `❌ OFFLINE · Server unreachable`;
-            statusLed?.classList.add('offline');
-            statusLed?.classList.remove('online');
-          }
+          statusText.innerHTML = `❌ OFFLINE · Server unreachable`;
+          statusLed?.classList.add('offline');
         }
-      } catch (err) {
-        console.warn("Status check error:", err);
-        statusText.innerHTML = `⚠️ UNREACHABLE · Could not reach ${serverHost}`;
-        statusLed?.classList.remove('online', 'offline');
-        if(statusLed) statusLed.style.background = '#f59e0b';
       }
+    } catch (err) {
+      statusText.innerHTML = `⚠️ UNREACHABLE · Could not reach ${serverHost}`;
+      statusLed?.classList.remove('online', 'offline');
+      if(statusLed) statusLed.style.background = '#f59e0b';
     }
-    
-    // Initial check on page load
-    checkServerStatus(true);
-    
-    // Set up manual ping button
-    if (pingBtn) {
-      pingBtn.addEventListener('click', (e) => {
+  }
+  checkServerStatus(true);
+  if (pingBtnStat) pingBtnStat.addEventListener('click', () => checkServerStatus(true));
+  setInterval(() => checkServerStatus(false), 90000);
+  
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+      const targetId = this.getAttribute('href').substring(1);
+      if (targetId && document.getElementById(targetId)) {
         e.preventDefault();
-        checkServerStatus(true);
-      });
-    }
-    
-    // Auto-refresh every 90 seconds (optional but nice)
-    setInterval(() => {
-      checkServerStatus(false);
-    }, 90000);
-    
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function(e) {
-        const targetId = this.getAttribute('href').substring(1);
-        if (targetId && document.getElementById(targetId)) {
-          e.preventDefault();
-          document.getElementById(targetId).scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
+        document.getElementById(targetId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
-    
-    // Small console greeting
-    console.log("CRIX SMP Test Site — Server status checker active. Use 'PING SERVER' button to manually refresh.");
-  })();
+  });
+  
+  console.log("CRIX SMP — Sounds ready (scroll.mp3, go.mp3, Chirp.mp3, mute.mp3, ok.mp3). Rules modal active.");
 </script>
 </body>
 </html>
