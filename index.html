@@ -44,61 +44,87 @@
     }
 
     /* ---------- GLOBAL FONT OVERRIDE: EVERYTHING uses Minecraft fonts ---------- */
-    * {
-      font-family: 'MinecraftRegular', 'Courier New', monospace !important;
+    html, body, div, span, applet, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    a, abbr, acronym, address, big, cite, code,
+    del, dfn, em, img, ins, kbd, q, s, samp,
+    small, strike, strong, sub, sup, tt, var,
+    b, u, i, center, dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend, table, caption,
+    tbody, tfoot, thead, tr, th, td, article, aside,
+    canvas, details, embed, figure, figcaption, footer, header,
+    menu, nav, output, ruby, section, summary, time, mark, audio, video,
+    button, input, select, textarea, .card, .btn, .navbar, .hero, .status-panel,
+    .modal-content, .download-card, .footer-links, .music-bar, .rules-text {
+      font-family: 'MinecraftRegular', monospace !important;
     }
-    h1, h2, h3, h4, .logo-text, .nav-links a, .btn, .copyright, button, .social-icon, .theme-toggle, .rules-btn, .ping-btn, .modal-content, .status-text, .server-ip-display, .download-card a, .footer-links a {
+    
+    h1, h2, h3, h4, .logo-text, .nav-links a, .btn, .copyright, 
+    button, .social-icon, .theme-toggle, .rules-btn, .ping-btn, 
+    .modal-content h2, .download-card a, .footer-links a, strong, b, 
+    .crix-blue, .smp-red, .highlight, .status-badge span, .server-ip-display {
       font-family: 'MinecraftBold', 'MinecraftRegular', monospace !important;
     }
-    .crix-blue, .smp-red, .highlight {
-      font-family: 'MinecraftBold', monospace !important;
-    }
+    
     em, i, .italic {
       font-family: 'MinecraftItalic', monospace !important;
     }
-    strong, b {
+    
+    strong, b, .bold {
       font-family: 'MinecraftBold', monospace !important;
     }
 
     /* ---------- CSS VARIABLES FOR DARK/LIGHT MODE ---------- */
     :root {
-      --bg-primary: #010101;
-      --bg-secondary: #0a0c16;
-      --bg-card: #0b0f1ae6;
-      --bg-nav: #070b14ee;
-      --text-primary: #eef2ff;
-      --text-secondary: #cbd5f0;
-      --border-color: #1f2a44;
+      --bg-primary: #0a0c10;
+      --bg-secondary: #14161c;
+      --bg-card: #1a1d24e6;
+      --bg-nav: #0d0f14ee;
+      --text-primary: #e0e4f0;
+      --text-secondary: #a0a8c0;
+      --border-color: #2a2e3a;
       --card-border-left: #2A43E0;
       --card-border-bottom: #FF2A1F;
-      --hero-bg: #0a0e17cc;
-      --status-bg: #03050ccc;
-      --footer-bg: #020408;
+      --hero-bg: #0f1219cc;
+      --status-bg: #0a0c12cc;
+      --footer-bg: #080a0e;
+      --button-primary: #FF2A1F;
+      --button-secondary: #2A43E0;
     }
     body.light-mode {
-      --bg-primary: #f0f4ff;
-      --bg-secondary: #e2e8f0;
-      --bg-card: #ffffffd9;
-      --bg-nav: #ffffffdd;
-      --text-primary: #0f172a;
-      --text-secondary: #1e293b;
-      --border-color: #cbd5e1;
+      --bg-primary: #e8ecef;
+      --bg-secondary: #d0d5dd;
+      --bg-card: #ffffffea;
+      --bg-nav: #f0f2f5ee;
+      --text-primary: #1a1e2c;
+      --text-secondary: #2d3348;
+      --border-color: #b0b8c4;
       --card-border-left: #2A43E0;
       --card-border-bottom: #FF2A1F;
-      --hero-bg: #f8fafccc;
+      --hero-bg: #f4f6facc;
       --status-bg: #ffffffcc;
-      --footer-bg: #e2e8f0;
+      --footer-bg: #dce2e8;
     }
 
+    /* ---------- BLOCKY/PIXELATED THEME ---------- */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: pixelated;
     }
 
     body {
       background: var(--bg-primary);
-      background-image: radial-gradient(circle at 15% 30%, var(--bg-secondary) 1%, var(--bg-primary) 98%);
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
       color: var(--text-primary);
       line-height: 1.5;
       min-height: 100vh;
@@ -115,12 +141,33 @@
       flex: 1;
     }
 
-    /* Typography */
-    h1 { font-size: 3.4rem; margin-bottom: 0.75rem; line-height: 1.2; }
-    h2 { font-size: 2rem; border-left: 6px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; color: var(--text-primary); }
+    /* Blocky borders and pixel corners */
+    .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar {
+      border-radius: 8px !important;
+      border-style: solid;
+      border-width: 3px;
+    }
+    
+    button, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn {
+      border-radius: 6px !important;
+      border-style: solid;
+      border-width: 2px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    /* Pixelated hover effects */
+    .card:hover, .btn:hover, button:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+    }
+    
+    /* Typography with blocky feel */
+    h1 { font-size: 3.4rem; margin-bottom: 0.75rem; line-height: 1.2; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); letter-spacing: 1px; }
+    h2 { font-size: 2rem; border-left: 8px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; color: var(--text-primary); }
     h3 { font-size: 1.5rem; color: #FFD966; margin: 1rem 0 0.5rem; }
-    .crix-blue { color: #2A43E0; text-shadow: 0 0 4px rgba(42,67,224,0.4); }
-    .smp-red { color: #FF2A1F; text-shadow: 0 0 3px rgba(255,42,31,0.3); }
+    .crix-blue { color: #2A43E0; text-shadow: 2px 2px 0px #0a0e1a; }
+    .smp-red { color: #FF2A1F; text-shadow: 2px 2px 0px #3a0a0a; }
 
     /* Navbar */
     .navbar {
@@ -129,98 +176,108 @@
       justify-content: space-between;
       align-items: center;
       background: var(--bg-nav);
-      backdrop-filter: blur(12px);
-      border-radius: 42px;
+      backdrop-filter: blur(8px);
       padding: 0.7rem 2rem;
       margin-bottom: 2.5rem;
-      border: 1px solid var(--border-color);
-      box-shadow: 0 12px 28px -10px black;
+      border-color: var(--border-color);
+      border-width: 3px;
+      box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
     }
     .logo-area { display: flex; align-items: center; gap: 1rem; }
-    .logo-img { height: 54px; width: auto; filter: drop-shadow(0 2px 4px black); transition: transform 0.2s; cursor: pointer; }
+    .logo-img { height: 54px; width: auto; image-rendering: pixelated; transition: all 0.1s; cursor: pointer; }
     .logo-img:hover { transform: scale(1.02); }
     .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: bold; }
-    .nav-links { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
-    .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 1rem; padding: 0.4rem 0.2rem; transition: 0.2s; border-bottom: 2px solid transparent; cursor: pointer; }
-    .nav-links a:hover { border-bottom-color: #FF2A1F; color: var(--text-primary); }
+    .nav-links { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+    .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 1rem; padding: 0.4rem 0.8rem; transition: 0.1s; border: 2px solid transparent; cursor: pointer; }
+    .nav-links a:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); color: var(--text-primary); }
 
     /* Buttons & Interactive */
     .social-icon, .theme-toggle, .rules-btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: #111827;
+      background: #1a1e2c;
       padding: 0.45rem 1.2rem;
-      border-radius: 40px;
-      transition: 0.2s;
+      transition: 0.1s;
       text-decoration: none;
       font-weight: bold;
-      border: none;
+      border: 2px solid;
       cursor: pointer;
     }
-    .social-icon.discord { background: #5865F2; color: white; }
-    .social-icon.youtube { background: #FF0000; color: white; }
-    .theme-toggle { background: #2A43E0; color: white; }
-    .rules-btn { background: #FF2A1F; color: white; }
-    .social-icon:hover, .theme-toggle:hover, .rules-btn:hover { transform: translateY(-3px); filter: brightness(1.05); }
+    .social-icon.discord { background: #5865F2; border-color: #3b48c4; color: white; }
+    .social-icon.youtube { background: #FF0000; border-color: #cc0000; color: white; }
+    .theme-toggle { background: #2A43E0; border-color: #1a2ea0; color: white; }
+    .rules-btn { background: #FF2A1F; border-color: #cc1a10; color: white; }
+    .social-icon:hover, .theme-toggle:hover, .rules-btn:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0px black; }
 
     /* Hero */
-    .hero { background: var(--hero-bg); backdrop-filter: blur(4px); border-radius: 48px; padding: 2.5rem 2rem; margin-bottom: 2rem; border: 1px solid var(--border-color); box-shadow: 0 20px 30px -12px black; text-align: center; }
+    .hero { background: var(--hero-bg); backdrop-filter: blur(4px); padding: 2.5rem 2rem; margin-bottom: 2rem; border-color: var(--border-color); border-width: 3px; box-shadow: 6px 6px 0px rgba(0,0,0,0.2); text-align: center; }
     .hero p { font-size: 1.2rem; max-width: 750px; margin: 0 auto 2rem; color: var(--text-secondary); }
     .btn-group { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
-    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; border-radius: 60px; text-decoration: none; font-weight: bold; transition: 0.2s; border: 1px solid #3b4b66; color: white; font-size: 1rem; cursor: pointer; }
-    .btn-primary { background: #FF2A1F; border-color: #ff6b5e; box-shadow: 0 4px 0 #8b1a12; }
-    .btn-primary:hover { background: #e01e12; transform: translateY(-2px); }
-    .btn-secondary { background: #1f2a48; border-color: #2A43E0; }
-    .btn-secondary:hover { background: #2d3a6e; transform: translateY(-2px); }
+    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; font-weight: bold; transition: 0.1s; border: 3px solid; color: white; font-size: 1rem; cursor: pointer; }
+    .btn-primary { background: #FF2A1F; border-color: #cc1a10; box-shadow: 4px 4px 0px #5a0a05; }
+    .btn-primary:hover { background: #cc1a10; transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #3a0502; }
+    .btn-secondary { background: #1f2a48; border-color: #2A43E0; box-shadow: 4px 4px 0px #0a1430; }
+    .btn-secondary:hover { background: #2A43E0; transform: translate(-2px, -2px); }
 
     /* Features Grid */
-    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.8rem; margin: 2rem 0 2rem; }
-    .card { background: var(--bg-card); backdrop-filter: blur(4px); border-radius: 28px; padding: 1.6rem; border-left: 5px solid var(--card-border-left); border-bottom: 2px solid var(--card-border-bottom); transition: all 0.2s; cursor: pointer; }
-    .card:hover { transform: translateY(-6px); background: var(--bg-secondary); }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin: 2rem 0 2rem; }
+    .card { background: var(--bg-card); backdrop-filter: blur(4px); padding: 1.6rem; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); border-top: 2px solid var(--border-color); border-right: 2px solid var(--border-color); transition: all 0.1s; cursor: pointer; }
+    .card:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0px rgba(0,0,0,0.2); background: var(--bg-secondary); }
     .card h3 { color: #FFD966; }
 
     /* Status Panel */
-    .status-panel { background: var(--status-bg); border-radius: 36px; padding: 1.2rem 2rem; margin: 2rem 0 1.5rem; border: 1px solid #2A43E0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
-    .server-ip-display { background: #000000aa; padding: 0.6rem 1.4rem; border-radius: 32px; font-size: 1.1rem; word-break: break-all; border-left: 3px solid #2A43E0; color: white; }
+    .status-panel { background: var(--status-bg); padding: 1rem 1.5rem; margin: 2rem 0 1.5rem; border-color: #2A43E0; border-width: 3px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: 4px 4px 0px rgba(0,0,0,0.2); }
+    .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; font-size: 1rem; word-break: break-all; border-left: 4px solid #2A43E0; color: white; }
     .status-control { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    .status-badge { display: flex; align-items: center; gap: 12px; background: #00000066; padding: 0.4rem 1.4rem; border-radius: 60px; }
-    .status-led { width: 14px; height: 14px; border-radius: 50%; background: #6b7280; transition: all 0.2s; }
-    .status-led.online { background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulse 1.5s infinite; }
-    .status-led.offline { background: #FF2A1F; box-shadow: 0 0 5px #FF2A1F; }
+    .status-badge { display: flex; align-items: center; gap: 10px; background: #00000066; padding: 0.3rem 1rem; border-radius: 6px; border: 1px solid #555; }
+    .status-led { width: 12px; height: 12px; border-radius: 0px; background: #6b7280; }
+    .status-led.online { background: #22c55e; box-shadow: 0 0 6px #22c55e; animation: pulse 1.5s infinite; }
+    .status-led.offline { background: #FF2A1F; box-shadow: 0 0 4px #FF2A1F; }
     @keyframes pulse { 0% { opacity: 0.6; transform: scale(0.9);} 100% { opacity: 1; transform: scale(1.2);} }
-    .ping-btn { background: #2A43E0; border: none; color: white; padding: 0.5rem 1.2rem; border-radius: 40px; cursor: pointer; transition: 0.2s; }
+    .ping-btn { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.4rem 1rem; cursor: pointer; transition: 0.1s; }
+    .ping-btn:hover { background: #1a2ea0; transform: translate(-2px, -2px); }
 
     /* Music Bar */
-    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1e1b2ee6; backdrop-filter: blur(8px); padding: 0.6rem 1.2rem; border-radius: 60px; display: flex; gap: 12px; align-items: center; z-index: 1000; border: 1px solid #FF2A1F; }
-    .music-bar button { background: #2A43E0; border: none; color: white; padding: 0.3rem 0.8rem; border-radius: 30px; cursor: pointer; transition: 0.2s; }
-    .music-bar button:hover { transform: scale(1.05); background: #FF2A1F; }
+    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; backdrop-filter: blur(8px); padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border-color: #FF2A1F; border-width: 2px; box-shadow: 4px 4px 0px black; }
+    .music-bar button { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.2rem 0.6rem; cursor: pointer; transition: 0.1s; }
+    .music-bar button:hover { transform: translate(-1px, -1px); background: #FF2A1F; }
 
     /* Modal */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 2000; justify-content: center; align-items: center; }
-    .modal-content { background: var(--bg-card); border-radius: 32px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 2px solid #FF2A1F; position: relative; color: var(--text-primary); }
-    .close-modal { position: absolute; top: 1rem; right: 1.5rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); z-index: 2000; justify-content: center; align-items: center; }
+    .modal-content { background: var(--bg-card); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; position: relative; color: var(--text-primary); box-shadow: 8px 8px 0px black; border-radius: 8px !important; }
+    .close-modal { position: absolute; top: 0.8rem; right: 1rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
     .rules-text { white-space: pre-wrap; line-height: 1.6; }
 
     /* Downloads */
-    .download-section { background: var(--bg-secondary); border-radius: 36px; padding: 1.8rem; margin: 2rem 0; border: 1px solid #2d3a60; }
+    .download-section { background: var(--bg-secondary); padding: 1.5rem; margin: 2rem 0; border-color: #2d3a60; border-width: 3px; box-shadow: 4px 4px 0px rgba(0,0,0,0.2); }
     .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1.2rem; justify-content: center; }
-    .download-card { background: #0f1622; border-radius: 28px; padding: 1.3rem 1.8rem; flex: 1; min-width: 200px; text-align: center; transition: 0.2s; border-top: 3px solid #2A43E0; }
-    .download-card a { color: white; text-decoration: none; background: #2A43E0; display: inline-block; padding: 0.6rem 1.2rem; border-radius: 40px; margin-top: 0.8rem; transition: 0.2s; }
-    .download-card a:hover { background: #1f36c2; transform: scale(1.02); }
+    .download-card { background: #0f1622; padding: 1rem 1.5rem; flex: 1; min-width: 200px; text-align: center; transition: 0.1s; border-top: 4px solid #2A43E0; border-left: 2px solid #2A43E0; border-right: 2px solid #2A43E0; border-bottom: 2px solid #2A43E0; }
+    .download-card a { color: white; text-decoration: none; background: #2A43E0; display: inline-block; padding: 0.5rem 1rem; margin-top: 0.8rem; transition: 0.1s; border: 2px solid #1a2ea0; }
+    .download-card a:hover { background: #1f36c2; transform: translate(-2px, -2px); }
 
     /* Footer */
-    .main-footer { background: var(--footer-bg); border-top: 1px solid #FF2A1F33; padding: 2rem 2rem 1.5rem; margin-top: 3rem; text-align: center; }
-    .copyright { font-size: 0.85rem; color: var(--text-secondary); }
-    .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
-    .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; cursor: pointer; }
-    .footer-links a:hover { color: #FF2A1F; }
+    .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem 2rem 1rem; margin-top: 3rem; text-align: center; }
+    .copyright { font-size: 0.8rem; color: var(--text-secondary); }
+    .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; cursor: pointer; border: 1px solid transparent; padding: 0.2rem 0.5rem; }
+    .footer-links a:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
+
+    /* Voice chat warning */
+    .voice-warning {
+      background: #1a0a0a;
+      border-left: 6px solid #FF2A1F;
+      padding: 0.8rem;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #ffaaaa;
+    }
 
     @media (max-width: 760px) {
       .site-wrapper { padding: 1rem; }
       .hero h1 { font-size: 2.2rem; }
       h2 { font-size: 1.5rem; }
-      .music-bar { bottom: 10px; right: 10px; padding: 0.4rem 0.8rem; }
+      .music-bar { bottom: 10px; right: 10px; }
     }
   </style>
 </head>
@@ -259,7 +316,7 @@
     <div class="server-ip-display">🌐 <strong>crixsmp.tropicalhosting.net</strong> | Port: 19132 (Bedrock/Java)</div>
     <div class="status-control">
       <div class="status-badge" id="statusBadge"><div class="status-led" id="statusLed"></div><span id="statusText">Checking server...</span></div>
-      <button class="ping-btn" id="pingServerBtn">🔄 PING SERVER</button>
+      <button class="ping-btn" id="pingServerBtn">🔄 PING</button>
     </div>
   </div>
 
@@ -280,11 +337,14 @@
       <h2 style="border-left-color: #2A43E0;">🎙️ VOICE CHAT SETUP</h2>
       <p style="margin-bottom: 0.5rem;">To enable proximity voice on CRIX SMP, install Fabric Loader + Simple Voice Chat mod.</p>
       <div class="download-grid">
-        <div class="download-card"><h3>🧵 FABRIC LOADER</h3><p>Latest for 1.20.4 / 1.21</p><a href="https://fabricmc.net/use/" target="_blank">Download Fabric →</a></div>
-        <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><p>Proximity & group voice</p><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Voice Chat →</a></div>
-        <div class="download-card"><h3>📦 FABRIC API</h3><p>Required dependency</p><a href="https://modrinth.com/mod/fabric-api" target="_blank">Fabric API →</a></div>
+        <div class="download-card"><h3>🧵 FABRIC LOADER</h3><p>Latest for 1.20.4 / 1.21</p><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
+        <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><p>Proximity & group voice</p><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
+        <div class="download-card"><h3>📦 FABRIC API</h3><p>Required dependency</p><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
       </div>
-      <p style="margin-top: 1rem; font-size: 0.85rem;">💡 Connect to <strong>crixsmp.tropicalhosting.net</strong> (Java/Bedrock both work).</p>
+      <div class="voice-warning">
+        ⚠️ <strong>IMPORTANT:</strong> Voice chat is <strong>NOT supported on Bedrock Edition</strong>. This feature requires the Simple Voice Chat mod, which is only available for Java Edition. Bedrock players can still play normally but will not have proximity voice.
+      </div>
+      <p style="margin-top: 1rem; font-size: 0.85rem;">💡 Java players: Connect to <strong>crixsmp.tropicalhosting.net</strong>. Bedrock players: Use the same IP with port 19132 (voice chat unavailable).</p>
     </div>
   </section>
 </div>
@@ -292,7 +352,7 @@
 <footer class="main-footer">
   <div class="footer-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#downloads">Voice Chat</a><a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a><a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a></div>
   <div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div>
-  <div class="copyright" style="margin-top: 6px; font-size: 0.7rem;">CRIX SMP — donut-style, only voice chat.</div>
+  <div class="copyright" style="margin-top: 6px; font-size: 0.7rem;">CRIX SMP — donut-style, voice chat for Java only.</div>
 </footer>
 
 <div class="music-bar" id="musicBar">
@@ -309,9 +369,12 @@
 </div>
 
 <script>
-  // ---------- FORCE CUSTOM FONTS (already applied via CSS !important) ----------
-  // Additional runtime check to ensure all text uses Minecraft fonts
-  document.documentElement.style.setProperty('font-family', 'MinecraftRegular, monospace');
+  // Force all elements to use Minecraft fonts via JS as well
+  document.querySelectorAll('*').forEach(el => {
+    if (el.style) {
+      el.style.fontFamily = "'MinecraftRegular', monospace";
+    }
+  });
   
   // ---------- AUDIO SETUP ----------
   const hoverSound = new Audio('scroll.mp3');
@@ -324,8 +387,8 @@
   bgMusic.volume = 0.35;
   let isMuted = false;
   
-  function playHover() { hoverSound.currentTime = 0; hoverSound.play().catch(e => console.log("hover audio blocked")); }
-  function playClick() { clickSound.currentTime = 0; clickSound.play().catch(e => console.log("click audio blocked")); }
+  function playHover() { hoverSound.currentTime = 0; hoverSound.play().catch(e => console.log("hover blocked")); }
+  function playClick() { clickSound.currentTime = 0; clickSound.play().catch(e => console.log("click blocked")); }
   
   const interactiveElements = document.querySelectorAll('a, button, .card, .logo-img, .nav-links a, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn');
   interactiveElements.forEach(el => {
@@ -432,7 +495,7 @@ EXTRA RULES
   
   async function checkServerStatus(showLoading = true) {
     if (!statusText) return;
-    if (showLoading) statusText.innerText = '🔄 Pinging server...';
+    if (showLoading) statusText.innerText = '🔄 Pinging...';
     statusLed?.classList.remove('online', 'offline');
     try {
       const controller = new AbortController();
@@ -442,21 +505,21 @@ EXTRA RULES
       if (!response.ok) throw new Error('API error');
       const data = await response.json();
       if (data && data.online === true) {
-        statusText.innerHTML = `✅ ONLINE · ${data.players.now || '?'} players online`;
+        statusText.innerHTML = `✅ ONLINE · ${data.players.now || '?'} players`;
         statusLed?.classList.add('online');
       } else {
         const backupRes = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`);
         const backupData = await backupRes.json();
         if (backupData && backupData.online === true) {
-          statusText.innerHTML = `✅ ONLINE · ${backupData.players?.online || '?'} players online`;
+          statusText.innerHTML = `✅ ONLINE · ${backupData.players?.online || '?'} players`;
           statusLed?.classList.add('online');
         } else {
-          statusText.innerHTML = `❌ OFFLINE · Server unreachable`;
+          statusText.innerHTML = `❌ OFFLINE · Server down`;
           statusLed?.classList.add('offline');
         }
       }
     } catch (err) {
-      statusText.innerHTML = `⚠️ UNREACHABLE · Could not reach ${serverHost}`;
+      statusText.innerHTML = `⚠️ UNREACHABLE · ${serverHost}`;
       if(statusLed) statusLed.style.background = '#f59e0b';
     }
   }
@@ -475,7 +538,7 @@ EXTRA RULES
     });
   });
   
-  console.log("CRIX SMP Official Site — Custom fonts forced globally. Sounds ready. Rules modal active.");
+  console.log("CRIX SMP — Blocky theme active, Minecraft fonts forced globally. Voice chat warning for Bedrock added.");
 </script>
 </body>
 </html>
