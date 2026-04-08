@@ -73,10 +73,9 @@
     .crix-blue { color: #2A43E0; text-shadow: 2px 2px 0px #0a0e1a; }
     .smp-red { color: #FF2A1F; text-shadow: 2px 2px 0px #3a0a0a; }
     
-    /* Icon images */
+    /* Icon images - only essential ones kept */
     .icon-img { width: 24px; height: 24px; vertical-align: middle; image-rendering: pixelated; display: inline-block; margin-right: 6px; }
     .icon-img-small { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
-    .feature-icon { width: 32px; height: 32px; margin-bottom: 8px; }
     
     .navbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; background: var(--bg-nav); padding: 0.7rem 2rem; margin-bottom: 2.5rem; border-color: var(--border-color); box-shadow: 6px 6px 0px rgba(0,0,0,0.2); }
     .logo-area { display: flex; align-items: center; gap: 1rem; }
@@ -126,67 +125,111 @@
 <body>
 <div class="site-wrapper">
   <nav class="navbar">
-    <div class="logo-area"><img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img"><span class="logo-text">CRIX SMP</span></div>
+    <div class="logo-area">
+      <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img">
+      <span class="logo-text">CRIX SMP</span>
+    </div>
     <div class="nav-links">
-      <a href="#home">HOME</a><a href="#features">FEATURES</a><a href="#downloads">VOICE CHAT</a>
-      <button class="rules-btn" id="rulesBtn"><img src="rules_icon.png" class="icon-img-small" onerror="this.style.display='none'"> RULES</button>
-      <button class="theme-toggle" id="themeToggle"><img src="dark_mode.png" id="themeIcon" class="icon-img-small" onerror="this.style.display='none'"> LIGHT/DARK</button>
+      <a href="#home">HOME</a>
+      <a href="#features">FEATURES</a>
+      <a href="#downloads">VOICE CHAT</a>
+      <button class="rules-btn" id="rulesBtn">📜 RULES</button>
+      <button class="theme-toggle" id="themeToggle">🌓 LIGHT/DARK</button>
       <a href="https://discord.gg/KufFPEptTG" target="_blank" class="social-icon discord"><img src="discord.png" class="icon-img-small" onerror="this.style.display='none'"> Discord</a>
       <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-icon youtube"><img src="youtube.png" class="icon-img-small" onerror="this.style.display='none'"> YouTube</a>
       <a href="https://www.patreon.com/cw/CRIXSMP" target="_blank" class="social-icon patreon"><img src="patreon.png" class="icon-img-small" onerror="this.style.display='none'"> Patreon</a>
     </div>
   </nav>
 
-  <section id="home"><div class="hero"><div class="hero-content">
-    <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
-    <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
-    <div class="btn-group">
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary"><img src="nether_portal.png" class="icon-img" onerror="this.style.display='none'"> JOIN THE REALM</a>
-      <a href="#features" class="btn btn-secondary"><img src="explore.png" class="icon-img" onerror="this.style.display='none'"> EXPLORE FEATURES</a>
+  <section id="home">
+    <div class="hero">
+      <div class="hero-content">
+        <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
+        <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
+        <div class="btn-group">
+          <a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a>
+          <a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a>
+        </div>
+      </div>
     </div>
-  </div></div></section>
+  </section>
 
-  <!-- Server Status Panel -->
+  <!-- Server Status Panel with essential icons -->
   <div class="status-panel">
     <div class="status-grid">
-      <div class="server-ip-display"><img src="server_ip.png" class="icon-img-small" onerror="this.style.display='none'"> <strong>play.crixsmp.net</strong> | Port: 19132</div>
+      <div class="server-ip-display">
+        <img src="server_ip.png" class="icon-img-small" onerror="this.style.display='none'"> <strong>play.crixsmp.net</strong> | Port: 19132
+      </div>
       <div class="status-stats">
-        <div class="stat-box"><span class="status-led" id="statusLed"></span><span id="statusText">Checking...</span></div>
-        <div class="stat-box"><img src="player_icon.png" class="icon-img-small" onerror="this.style.display='none'"> <span class="stat-value" id="playerCount">?</span></div>
-        <div class="stat-box"><span id="whitelistIcon"></span> <span class="stat-value" id="whitelistStatus">?</span></div>
-        <button class="ping-btn" id="pingServerBtn"><img src="refresh_icon.png" class="icon-img-small" onerror="this.style.display='none'"> REFRESH</button>
+        <div class="stat-box">
+          <span class="status-led" id="statusLed"></span>
+          <span id="statusText">Checking...</span>
+        </div>
+        <div class="stat-box">
+          <img src="player_icon.png" class="icon-img-small" onerror="this.style.display='none'"> 
+          <span class="stat-value" id="playerCount">?</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">🔒</span>
+          <span class="stat-value" id="whitelistStatus">?</span>
+        </div>
+        <button class="ping-btn" id="pingServerBtn">🔄 REFRESH</button>
       </div>
     </div>
   </div>
 
-  <section id="features"><h2>🔥 SERVER FEATURES</h2><div class="features-grid">
-    <div class="card"><img src="dueling.png" class="feature-icon" onerror="this.style.display='none'"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, duel leaderboards.</p></div>
-    <div class="card"><img src="survival.png" class="feature-icon" onerror="this.style.display='none'"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival.</p></div>
-    <div class="card"><img src="voice_chat.png" class="feature-icon" onerror="this.style.display='none'"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice (Simple Voice Chat).</p></div>
-    <div class="card"><img src="shop.png" class="feature-icon" onerror="this.style.display='none'"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player shops.</p></div>
-    <div class="card"><img src="bounties.png" class="feature-icon" onerror="this.style.display='none'"><h3>💰 BOUNTIES</h3><p>Place bounties on players.</p></div>
-    <div class="card"><img src="donut_smp.png" class="feature-icon" onerror="this.style.display='none'"><h3>🍩 DONUT SPIRIT</h3><p>Cooperative, less chaotic.</p></div>
-  </div></section>
-
-  <section id="downloads"><div class="download-section">
-    <h2>🎙️ VOICE CHAT SETUP</h2>
-    <div class="download-grid">
-      <div class="download-card"><img src="fabric_loader.png" class="feature-icon" onerror="this.style.display='none'"><h3>FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
-      <div class="download-card"><img src="voice_chat.png" class="feature-icon" onerror="this.style.display='none'"><h3>SIMPLE VOICE CHAT</h3><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
-      <div class="download-card"><img src="fabric_api.png" class="feature-icon" onerror="this.style.display='none'"><h3>FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
+  <section id="features">
+    <h2>🔥 SERVER FEATURES</h2>
+    <div class="features-grid">
+      <div class="card"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, duel leaderboards.</p></div>
+      <div class="card"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival.</p></div>
+      <div class="card"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice (Simple Voice Chat).</p></div>
+      <div class="card"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player shops.</p></div>
+      <div class="card"><h3>💰 BOUNTIES</h3><p>Place bounties on players.</p></div>
+      <div class="card"><h3>🍩 DONUT SPIRIT</h3><p>Cooperative, less chaotic.</p></div>
     </div>
-    <div class="voice-warning">⚠️ Voice chat <strong>NOT supported on Bedrock</strong> — Java only.</div>
-    <p style="margin-top:1rem;">💡 Java: <strong>play.crixsmp.net</strong> | Bedrock: same IP port 19132</p>
-  </div></section>
+  </section>
+
+  <section id="downloads">
+    <div class="download-section">
+      <h2>🎙️ VOICE CHAT SETUP</h2>
+      <div class="download-grid">
+        <div class="download-card"><h3>🧵 FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
+        <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
+        <div class="download-card"><h3>📦 FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
+      </div>
+      <div class="voice-warning">⚠️ Voice chat <strong>NOT supported on Bedrock</strong> — Java only.</div>
+      <p style="margin-top:1rem;">💡 Java: <strong>play.crixsmp.net</strong> | Bedrock: same IP port 19132</p>
+    </div>
+  </section>
 </div>
 
 <footer class="main-footer">
-  <div class="footer-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#downloads">Voice Chat</a><a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a><a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a><a href="https://www.patreon.com/cw/CRIXSMP" target="_blank">Patreon</a></div>
+  <div class="footer-links">
+    <a href="#home">Home</a>
+    <a href="#features">Features</a>
+    <a href="#downloads">Voice Chat</a>
+    <a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a>
+    <a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a>
+    <a href="https://www.patreon.com/cw/CRIXSMP" target="_blank">Patreon</a>
+  </div>
   <div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div>
+  <div class="copyright" style="margin-top:6px;">CRIX SMP — donut-style, voice chat for Java only.</div>
 </footer>
 
-<div class="music-bar"><img src="chirp_disc.png" class="icon-img-small" onerror="this.style.display='none'"> <span>Chirp</span> <button id="muteToggleBtn"><img src="mute_icon.png" id="muteIcon" class="icon-img-small" onerror="this.style.display='none'"> Mute</button></div>
-<div id="rulesModal" class="modal"><div class="modal-content"><span class="close-modal" id="closeModalBtn">&times;</span><h2><img src="rules_icon.png" class="icon-img" onerror="this.style.display='none'"> CRIX SMP RULES</h2><div class="rules-text" id="rulesText"></div></div></div>
+<div class="music-bar">
+  <img src="chirp_disc.png" class="icon-img-small" onerror="this.style.display='none'"> 
+  <span>Chirp</span> 
+  <button id="muteToggleBtn">🔊 Mute</button>
+</div>
+
+<div id="rulesModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal" id="closeModalBtn">&times;</span>
+    <h2>📜 CRIX SMP RULES</h2>
+    <div class="rules-text" id="rulesText"></div>
+  </div>
+</div>
 
 <script>
   // Audio setup
@@ -195,86 +238,109 @@
   const bgMusic = new Audio('Chirp.mp3');
   const muteSound = new Audio('mute.mp3');
   const unmuteSound = new Audio('ok.mp3');
-  bgMusic.loop = true; bgMusic.volume = 0.35;
+  bgMusic.loop = true;
+  bgMusic.volume = 0.35;
   let isMuted = false;
+  
   function playHover() { hoverSound.currentTime = 0; hoverSound.play().catch(()=>{}); }
   function playClick() { clickSound.currentTime = 0; clickSound.play().catch(()=>{}); }
+  
   document.querySelectorAll('a, button, .card, .btn').forEach(el => {
     el.addEventListener('mouseenter', playHover);
     el.addEventListener('click', playClick);
   });
   
   const muteBtn = document.getElementById('muteToggleBtn');
-  const muteIcon = document.getElementById('muteIcon');
   muteBtn.addEventListener('click', () => {
     if (!isMuted) {
       muteSound.play().catch(()=>{});
       isMuted = true;
       bgMusic.pause();
-      muteBtn.innerHTML = '<img src="unmute_icon.png" class="icon-img-small" onerror="this.style.display=\'none\'"> Unmute';
+      muteBtn.innerHTML = '🔇 Unmute';
     } else {
       unmuteSound.play().catch(()=>{});
       isMuted = false;
       bgMusic.play().catch(()=>{});
-      muteBtn.innerHTML = '<img src="mute_icon.png" class="icon-img-small" onerror="this.style.display=\'none\'"> Mute';
+      muteBtn.innerHTML = '🔊 Mute';
     }
   });
-  document.body.addEventListener('click', () => { if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); }, { once: true });
+  
+  document.body.addEventListener('click', () => { 
+    if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); 
+  }, { once: true });
 
   // Rules modal
   const rulesModal = document.getElementById('rulesModal');
   document.getElementById('rulesBtn').onclick = () => rulesModal.style.display = 'flex';
   document.getElementById('closeModalBtn').onclick = () => rulesModal.style.display = 'none';
   window.onclick = (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; };
-  document.getElementById('rulesText').innerText = `CRIX SMP RULES\n\nGENERAL RULES\n1. Respect everyone\n2. No spamming\n3. Keep it appropriate\n4. Listen to staff\n5. No impersonation\n\nGAMEPLAY RULES\n1. No hacking/cheating\n2. No exploiting glitches\n3. No griefing\n4. No stealing\n5. PvP only if agreed\n\nBUILDING RULES\n1. No inappropriate builds\n2. Don't build too close\n3. No lag machines\n\nCHAT RULES\n1. No excessive swearing\n2. No advertising\n3. No toxicity\n\nPUNISHMENTS\n1st: Warning\n2nd: Kick/Mute\n3rd: Temp ban\nSevere: Instant ban`;
+  
+  document.getElementById('rulesText').innerText = `CRIX SMP RULES
 
-  // Theme toggle with icon swap
+GENERAL RULES
+1. Respect everyone - No bullying, harassment, or hate speech.
+2. No spamming - Includes chat, commands, or advertising.
+3. Keep it appropriate - No NSFW content or offensive builds.
+4. Listen to staff - Follow staff instructions.
+5. No impersonation - Do not pretend to be staff or other players.
+
+GAMEPLAY RULES
+1. No hacking or cheating (X-ray, kill aura, fly hacks, etc.)
+2. No exploiting glitches - Report them instead.
+3. No griefing - Do not destroy other players builds.
+4. No stealing - Only take what is yours.
+5. PvP only if both players agree (unless in PvP zones).
+
+BUILDING RULES
+1. No inappropriate builds.
+2. Do not build too close without permission.
+3. No lag machines or server-crashing builds.
+4. Keep redstone reasonable.
+
+CHAT RULES
+1. No excessive swearing.
+2. No advertising other servers.
+3. Use the main server language in public chat.
+4. No toxicity or drama.
+
+CROSSPLAY RULES
+1. Do not exploit version differences.
+2. Be respectful of different platforms.
+3. Report version-specific bugs.
+
+PUNISHMENTS
+1st Offense: Warning
+2nd Offense: Kick or mute
+3rd Offense: Temporary ban
+Severe offenses: Instant ban
+
+EXTRA RULES
+- Do not ask for admin.
+- Do not beg for items or ranks.
+- Have fun and respect others.`;
+
+  // Theme toggle
   const themeToggle = document.getElementById('themeToggle');
-  const themeIcon = document.getElementById('themeIcon');
   themeToggle.onclick = () => {
     document.body.classList.toggle('light-mode');
     const isLight = document.body.classList.contains('light-mode');
     localStorage.setItem('crixTheme', isLight ? 'light' : 'dark');
-    if (isLight) {
-      themeIcon.src = 'light_mode.png';
-      themeToggle.innerHTML = '<img src="light_mode.png" class="icon-img-small" onerror="this.style.display=\'none\'"> DARK MODE';
-    } else {
-      themeIcon.src = 'dark_mode.png';
-      themeToggle.innerHTML = '<img src="dark_mode.png" class="icon-img-small" onerror="this.style.display=\'none\'"> LIGHT MODE';
-    }
   };
   if (localStorage.getItem('crixTheme') === 'light') {
     document.body.classList.add('light-mode');
-    themeToggle.innerHTML = '<img src="light_mode.png" class="icon-img-small" onerror="this.style.display=\'none\'"> DARK MODE';
   }
 
-  // Server status with restarting detection and whitelist icons
+  // Server status with restarting detection
   const serverHost = 'play.crixsmp.net';
   const statusTextSpan = document.getElementById('statusText');
   const playerCountSpan = document.getElementById('playerCount');
   const whitelistStatusSpan = document.getElementById('whitelistStatus');
-  const whitelistIconSpan = document.getElementById('whitelistIcon');
   const statusLedSpan = document.getElementById('statusLed');
   const pingBtn = document.getElementById('pingServerBtn');
 
   let lastWasOnline = false;
   let restartingDetected = false;
   let restartTimeout = null;
-
-  function updateWhitelistIcon(isWhitelisted) {
-    if (isWhitelisted === true) {
-      whitelistIconSpan.innerHTML = '<img src="whitelist_on.png" class="icon-img-small" onerror="this.style.display=\'none\'">';
-      whitelistStatusSpan.innerText = 'WHITELIST ON';
-      whitelistStatusSpan.style.color = '#facc15';
-    } else if (isWhitelisted === false) {
-      whitelistIconSpan.innerHTML = '<img src="whitelist_off.png" class="icon-img-small" onerror="this.style.display=\'none\'">';
-      whitelistStatusSpan.innerText = 'WHITELIST OFF';
-      whitelistStatusSpan.style.color = '#22c55e';
-    } else {
-      whitelistIconSpan.innerHTML = '';
-      whitelistStatusSpan.innerText = '?';
-    }
-  }
 
   async function checkServerWithDetails() {
     statusTextSpan.innerText = 'Pinging...';
@@ -294,34 +360,36 @@
             restartingDetected = false;
             if (restartTimeout) clearTimeout(restartTimeout);
           }
-          statusTextSpan.innerHTML = 'ONLINE';
+          statusTextSpan.innerHTML = '✅ ONLINE';
           statusLedSpan?.classList.add('online');
           playerCountSpan.innerText = data.players?.online || '?';
           
           let motdString = '';
           if (data.motd?.clean) motdString = data.motd.clean.join(' ').toLowerCase();
           if (motdString.includes('whitelist')) {
-            updateWhitelistIcon(true);
+            whitelistStatusSpan.innerText = '✓ ON';
+            whitelistStatusSpan.style.color = '#facc15';
           } else {
-            updateWhitelistIcon(false);
+            whitelistStatusSpan.innerText = '✗ OFF';
+            whitelistStatusSpan.style.color = '#22c55e';
           }
           lastWasOnline = true;
         } else {
           if (lastWasOnline && !restartingDetected) {
             restartingDetected = true;
-            statusTextSpan.innerHTML = 'RESTARTING';
+            statusTextSpan.innerHTML = '🔄 RESTARTING';
             statusLedSpan?.classList.add('restarting');
             playerCountSpan.innerText = '—';
-            updateWhitelistIcon(null);
+            whitelistStatusSpan.innerText = '?';
             restartTimeout = setTimeout(() => { checkServerWithDetails(); }, 30000);
           } else if (restartingDetected) {
-            statusTextSpan.innerHTML = 'RESTARTING';
+            statusTextSpan.innerHTML = '🔄 RESTARTING';
             statusLedSpan?.classList.add('restarting');
           } else {
-            statusTextSpan.innerHTML = 'OFFLINE';
+            statusTextSpan.innerHTML = '❌ OFFLINE';
             statusLedSpan?.classList.add('offline');
             playerCountSpan.innerText = '0';
-            updateWhitelistIcon(null);
+            whitelistStatusSpan.innerText = 'N/A';
             lastWasOnline = false;
           }
         }
@@ -331,11 +399,11 @@
     } catch (err) {
       if (lastWasOnline && !restartingDetected) {
         restartingDetected = true;
-        statusTextSpan.innerHTML = 'RESTARTING';
+        statusTextSpan.innerHTML = '🔄 RESTARTING';
         statusLedSpan?.classList.add('restarting');
         restartTimeout = setTimeout(() => { checkServerWithDetails(); }, 30000);
       } else {
-        statusTextSpan.innerHTML = 'UNREACHABLE';
+        statusTextSpan.innerHTML = '⚠️ UNREACHABLE';
         if(statusLedSpan) statusLedSpan.style.background = '#f59e0b';
       }
     }
@@ -359,6 +427,8 @@
       }
     });
   });
+  
+  console.log("CRIX SMP — Essential icons only: player_icon.png, server_ip.png, discord.png, youtube.png, patreon.png, chirp_disc.png");
 </script>
 </body>
 </html>
