@@ -113,7 +113,6 @@
       box-sizing: border-box;
       image-rendering: crisp-edges;
       image-rendering: pixelated;
-      image-rendering: pixelated;
     }
 
     body {
@@ -313,7 +312,7 @@
   </section>
 
   <div class="status-panel">
-    <div class="server-ip-display">🌐 <strong>crixsmp.tropicalhosting.net</strong> | Port: 19132 (Bedrock/Java)</div>
+    <div class="server-ip-display">🌐 <strong>play.crixsmp.net</strong> | Port: 19132 (Bedrock/Java)</div>
     <div class="status-control">
       <div class="status-badge" id="statusBadge"><div class="status-led" id="statusLed"></div><span id="statusText">Checking server...</span></div>
       <button class="ping-btn" id="pingServerBtn">🔄 PING</button>
@@ -344,7 +343,7 @@
       <div class="voice-warning">
         ⚠️ <strong>IMPORTANT:</strong> Voice chat is <strong>NOT supported on Bedrock Edition</strong>. This feature requires the Simple Voice Chat mod, which is only available for Java Edition. Bedrock players can still play normally but will not have proximity voice.
       </div>
-      <p style="margin-top: 1rem; font-size: 0.85rem;">💡 Java players: Connect to <strong>crixsmp.tropicalhosting.net</strong>. Bedrock players: Use the same IP with port 19132 (voice chat unavailable).</p>
+      <p style="margin-top: 1rem; font-size: 0.85rem;">💡 Java players: Connect to <strong>play.crixsmp.net</strong>. Bedrock players: Use the same IP with port 19132 (voice chat unavailable).</p>
     </div>
   </section>
 </div>
@@ -487,8 +486,8 @@ EXTRA RULES
   const savedTheme = localStorage.getItem('crixTheme');
   if (savedTheme === 'light') document.body.classList.add('light-mode');
   
-  // ---------- SERVER STATUS CHECKER ----------
-  const serverHost = 'crixsmp.tropicalhosting.net';
+  // ---------- SERVER STATUS CHECKER (UPDATED IP) ----------
+  const serverHost = 'play.crixsmp.net';
   const statusText = document.getElementById('statusText');
   const statusLed = document.getElementById('statusLed');
   const pingBtnStat = document.getElementById('pingServerBtn');
@@ -538,7 +537,7 @@ EXTRA RULES
     });
   });
   
-  console.log("CRIX SMP — Blocky theme active, Minecraft fonts forced globally. Voice chat warning for Bedrock added.");
+  console.log("CRIX SMP — Server IP updated to play.crixsmp.net");
 </script>
 </body>
 </html>
