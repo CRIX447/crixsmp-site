@@ -4,16 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>CRIX SMP | Official Site</title>
-  <!-- Preload custom fonts from repo - CORRECTED FILENAMES -->
+  <!-- Preload custom fonts -->
   <link rel="preload" href="MinecraftRegular-Bmg3.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftBold-nMK1.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftItalic-R8Mo.otf" as="font" crossorigin="anonymous">
   <link rel="preload" href="MinecraftBoldItalic-1yle.otf" as="font" crossorigin="anonymous">
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="crixsmplogo.png">
   <link rel="shortcut icon" href="crixsmplogo.png">
   <style>
-    /* ---------- CUSTOM MINECRAFT FONTS (CORRECTED FILENAMES) ---------- */
+    /* Font-face definitions (same as before) */
     @font-face {
       font-family: 'MinecraftRegular';
       src: url('MinecraftRegular-Bmg3.otf') format('opentype');
@@ -43,206 +42,78 @@
       font-display: swap;
     }
 
-    /* ---------- GLOBAL FONT RULES: ALL TEXT USES MINECRAFT FONTS ---------- */
-    * {
-      font-family: 'MinecraftRegular', 'Courier New', monospace !important;
-    }
-    
-    /* Bold text uses MinecraftBold (correct filename: MinecraftBold-nMK1.otf) */
-    h1, h2, h3, h4, .logo-text, .nav-links a, .btn, .copyright, 
-    button, .social-icon, .theme-toggle, .rules-btn, .ping-btn, 
-    .modal-content h2, .download-card a, .footer-links a, 
-    strong, b, .bold-text, .crix-blue, .smp-red, .stat-value, 
-    .server-ip-display, .status-badge span, .stat-label {
-      font-family: 'MinecraftBold', 'MinecraftRegular', monospace !important;
-    }
-    
-    /* Italic text */
-    em, i, .italic-text {
-      font-family: 'MinecraftItalic', monospace !important;
-    }
-    
-    /* Bold + Italic */
-    strong em, em strong, .bold-italic {
-      font-family: 'MinecraftBoldItalic', monospace !important;
+    /* Global font rules */
+    * { font-family: 'MinecraftRegular', monospace !important; }
+    h1, h2, h3, h4, .logo-text, .nav-links a, .btn, button, strong, b, .crix-blue, .smp-red, .stat-value {
+      font-family: 'MinecraftBold', monospace !important;
     }
 
-    /* ---------- CSS VARIABLES FOR DARK/LIGHT MODE ---------- */
+    /* CSS Variables (dark/light mode) */
     :root {
-      --bg-primary: #0a0c10;
-      --bg-secondary: #14161c;
-      --bg-card: #1a1d24e6;
-      --bg-nav: #0d0f14ee;
-      --text-primary: #e0e4f0;
-      --text-secondary: #a0a8c0;
-      --border-color: #2a2e3a;
-      --card-border-left: #2A43E0;
-      --card-border-bottom: #FF2A1F;
-      --hero-bg: #0f1219cc;
-      --status-bg: #0a0c12cc;
-      --footer-bg: #080a0e;
+      --bg-primary: #0a0c10; --bg-secondary: #14161c; --bg-card: #1a1d24e6;
+      --bg-nav: #0d0f14ee; --text-primary: #e0e4f0; --text-secondary: #a0a8c0;
+      --border-color: #2a2e3a; --card-border-left: #2A43E0; --card-border-bottom: #FF2A1F;
+      --hero-bg: #0f1219cc; --status-bg: #0a0c12cc; --footer-bg: #080a0e;
     }
     body.light-mode {
-      --bg-primary: #e8ecef;
-      --bg-secondary: #d0d5dd;
-      --bg-card: #ffffffea;
-      --bg-nav: #f0f2f5ee;
-      --text-primary: #1a1e2c;
-      --text-secondary: #2d3348;
-      --border-color: #b0b8c4;
-      --hero-bg: #f4f6facc;
-      --status-bg: #ffffffcc;
-      --footer-bg: #dce2e8;
+      --bg-primary: #e8ecef; --bg-secondary: #d0d5dd; --bg-card: #ffffffea;
+      --bg-nav: #f0f2f5ee; --text-primary: #1a1e2c; --text-secondary: #2d3348;
+      --border-color: #b0b8c4; --hero-bg: #f4f6facc; --status-bg: #ffffffcc; --footer-bg: #dce2e8;
     }
 
-    /* ---------- BLOCKY/PIXELATED THEME ---------- */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      image-rendering: crisp-edges;
-      image-rendering: pixelated;
-    }
-
-    body {
-      background: var(--bg-primary);
-      background-image: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.03) 2px,
-        rgba(0, 0, 0, 0.03) 4px
-      );
-      color: var(--text-primary);
-      line-height: 1.5;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      scroll-behavior: smooth;
-      transition: background 0.3s, color 0.2s;
-    }
-
-    .site-wrapper {
-      max-width: 1300px;
-      margin: 0 auto;
-      padding: 1.5rem 2rem;
-      flex: 1;
-    }
-
-    /* Blocky borders */
-    .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar {
-      border-radius: 8px !important;
-      border-style: solid;
-      border-width: 3px;
-    }
-    
-    button, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn {
-      border-radius: 6px !important;
-      border-style: solid;
-      border-width: 2px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    .card:hover, .btn:hover, button:hover {
-      transform: translate(-2px, -2px);
-      box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
-    }
-    
-    h1 { font-size: 3.4rem; margin-bottom: 0.75rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); letter-spacing: 1px; }
+    /* Blocky theme styles (compact for brevity) */
+    * { margin: 0; padding: 0; box-sizing: border-box; image-rendering: pixelated; }
+    body { background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s; }
+    .site-wrapper { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem; flex: 1; }
+    .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar { border-radius: 8px !important; border-style: solid; border-width: 3px; }
+    button, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn { border-radius: 6px !important; border-width: 2px; text-transform: uppercase; }
+    .card:hover, .btn:hover, button:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0px rgba(0,0,0,0.3); }
+    h1 { font-size: 3.4rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); }
     h2 { font-size: 2rem; border-left: 8px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; }
-    h3 { font-size: 1.5rem; color: #FFD966; margin: 1rem 0 0.5rem; }
     .crix-blue { color: #2A43E0; text-shadow: 2px 2px 0px #0a0e1a; }
     .smp-red { color: #FF2A1F; text-shadow: 2px 2px 0px #3a0a0a; }
-
-    /* Navbar */
-    .navbar {
-      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-      background: var(--bg-nav); backdrop-filter: blur(8px); padding: 0.7rem 2rem;
-      margin-bottom: 2.5rem; border-color: var(--border-color); box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
-    }
+    .navbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; background: var(--bg-nav); padding: 0.7rem 2rem; margin-bottom: 2.5rem; border-color: var(--border-color); box-shadow: 6px 6px 0px rgba(0,0,0,0.2); }
     .logo-area { display: flex; align-items: center; gap: 1rem; }
-    .logo-img { height: 54px; width: auto; image-rendering: pixelated; transition: all 0.1s; cursor: pointer; }
-    .logo-img:hover { transform: scale(1.02); }
+    .logo-img { height: 54px; width: auto; }
     .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .nav-links { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
-    .nav-links a { color: var(--text-secondary); text-decoration: none; padding: 0.4rem 0.8rem; border: 2px solid transparent; transition: 0.1s; }
-    .nav-links a:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
-
-    /* Buttons */
-    .social-icon, .theme-toggle, .rules-btn {
-      display: inline-flex; align-items: center; gap: 8px; background: #1a1e2c;
-      padding: 0.45rem 1.2rem; transition: 0.1s; text-decoration: none;
-      border: 2px solid; cursor: pointer;
-    }
+    .nav-links { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
+    .social-icon, .theme-toggle, .rules-btn { display: inline-flex; align-items: center; gap: 6px; background: #1a1e2c; padding: 0.45rem 1rem; transition: 0.1s; text-decoration: none; border: 2px solid; cursor: pointer; }
     .social-icon.discord { background: #5865F2; border-color: #3b48c4; color: white; }
     .social-icon.youtube { background: #FF0000; border-color: #cc0000; color: white; }
+    .social-icon.patreon { background: #FF424D; border-color: #cc3540; color: white; }
     .theme-toggle { background: #2A43E0; border-color: #1a2ea0; color: white; }
     .rules-btn { background: #FF2A1F; border-color: #cc1a10; color: white; }
-    .social-icon:hover, .theme-toggle:hover, .rules-btn:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0px black; }
-
-    /* Hero */
-    .hero { background: var(--hero-bg); backdrop-filter: blur(4px); padding: 2.5rem 2rem; margin-bottom: 2rem; border-color: var(--border-color); text-align: center; box-shadow: 6px 6px 0px rgba(0,0,0,0.2); }
-    .hero p { font-size: 1.2rem; max-width: 750px; margin: 0 auto 2rem; color: var(--text-secondary); }
+    .hero { background: var(--hero-bg); padding: 2.5rem 2rem; margin-bottom: 2rem; text-align: center; }
     .btn-group { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
-    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; transition: 0.1s; border: 3px solid; color: white; cursor: pointer; }
+    .btn { display: inline-block; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; border: 3px solid; color: white; cursor: pointer; }
     .btn-primary { background: #FF2A1F; border-color: #cc1a10; box-shadow: 4px 4px 0px #5a0a05; }
-    .btn-primary:hover { background: #cc1a10; transform: translate(-2px, -2px); }
     .btn-secondary { background: #1f2a48; border-color: #2A43E0; box-shadow: 4px 4px 0px #0a1430; }
-    .btn-secondary:hover { background: #2A43E0; transform: translate(-2px, -2px); }
-
-    /* Features Grid */
     .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
-    .card { background: var(--bg-card); padding: 1.6rem; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); transition: all 0.1s; cursor: pointer; }
-    .card:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0px rgba(0,0,0,0.2); background: var(--bg-secondary); }
-
-    /* Status Panel */
-    .status-panel { background: var(--status-bg); padding: 1rem 1.5rem; margin: 2rem 0; border-color: #2A43E0; border-width: 3px; box-shadow: 4px 4px 0px rgba(0,0,0,0.2); }
+    .card { background: var(--bg-card); padding: 1.6rem; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); cursor: pointer; }
+    .status-panel { background: var(--status-bg); padding: 1rem 1.5rem; margin: 2rem 0; border-color: #2A43E0; }
     .status-grid { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
     .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; border-left: 4px solid #2A43E0; color: white; }
     .status-stats { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
     .stat-box { background: #00000066; padding: 0.3rem 1rem; border-radius: 6px; display: flex; align-items: center; gap: 8px; }
-    .stat-label { font-size: 0.75rem; color: #aaa; }
-    .stat-value { font-weight: bold; color: #fff; }
-    .status-led { width: 12px; height: 12px; border-radius: 0px; background: #6b7280; display: inline-block; margin-right: 6px; }
+    .status-led { width: 12px; height: 12px; background: #6b7280; display: inline-block; margin-right: 6px; }
     .status-led.online { background: #22c55e; animation: pulse 1.5s infinite; }
     .status-led.offline { background: #FF2A1F; }
-    .whitelist-true { color: #facc15; }
-    .whitelist-false { color: #22c55e; }
-    .whitelist-unknown { color: #f59e0b; }
+    .status-led.restarting { background: #f59e0b; animation: blink 1s infinite; }
     @keyframes pulse { 0% { opacity: 0.6; transform: scale(0.9);} 100% { opacity: 1; transform: scale(1.2);} }
-    .ping-btn { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.4rem 1rem; cursor: pointer; transition: 0.1s; }
-    .ping-btn:hover { background: #1a2ea0; transform: translate(-2px, -2px); }
-
-    /* Music Bar */
-    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; backdrop-filter: blur(8px); padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border-color: #FF2A1F; border-width: 2px; box-shadow: 4px 4px 0px black; }
-    .music-bar button { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.2rem 0.6rem; cursor: pointer; transition: 0.1s; }
-    .music-bar button:hover { transform: translate(-1px, -1px); background: #FF2A1F; }
-
-    /* Modal */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); z-index: 2000; justify-content: center; align-items: center; }
-    .modal-content { background: var(--bg-card); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; position: relative; box-shadow: 8px 8px 0px black; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .ping-btn { background: #2A43E0; border: 2px solid #1a2ea0; color: white; padding: 0.4rem 1rem; cursor: pointer; }
+    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; padding: 0.5rem 1rem; display: flex; gap: 10px; z-index: 1000; border-color: #FF2A1F; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
+    .modal-content { background: var(--bg-card); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; }
     .close-modal { position: absolute; top: 0.8rem; right: 1rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
-    .rules-text { white-space: pre-wrap; line-height: 1.6; }
-
-    /* Downloads */
-    .download-section { background: var(--bg-secondary); padding: 1.5rem; margin: 2rem 0; border-color: #2d3a60; border-width: 3px; box-shadow: 4px 4px 0px rgba(0,0,0,0.2); }
-    .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1.2rem; justify-content: center; }
-    .download-card { background: #0f1622; padding: 1rem 1.5rem; flex: 1; min-width: 180px; text-align: center; transition: 0.1s; border-top: 4px solid #2A43E0; border-left: 2px solid #2A43E0; border-right: 2px solid #2A43E0; border-bottom: 2px solid #2A43E0; }
-    .download-card a { color: white; text-decoration: none; background: #2A43E0; display: inline-block; padding: 0.5rem 1rem; margin-top: 0.8rem; transition: 0.1s; border: 2px solid #1a2ea0; }
-    .download-card a:hover { background: #1f36c2; transform: translate(-2px, -2px); }
-
-    /* Voice chat warning */
+    .download-section { background: var(--bg-secondary); padding: 1.5rem; margin: 2rem 0; border-color: #2d3a60; }
+    .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
+    .download-card { background: #0f1622; padding: 1rem; flex: 1; min-width: 180px; text-align: center; border-top: 4px solid #2A43E0; }
+    .download-card a { color: white; background: #2A43E0; display: inline-block; padding: 0.5rem 1rem; margin-top: 0.8rem; text-decoration: none; }
     .voice-warning { background: #1a0a0a; border-left: 6px solid #FF2A1F; padding: 0.8rem; margin-top: 1rem; font-size: 0.85rem; color: #ffaaaa; }
-
-    /* Footer */
-    .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem 2rem 1rem; margin-top: 3rem; text-align: center; }
-    .copyright { font-size: 0.8rem; color: var(--text-secondary); }
+    .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem; text-align: center; margin-top: 3rem; }
     .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .footer-links a { color: var(--text-secondary); text-decoration: none; padding: 0.2rem 0.5rem; border: 1px solid transparent; }
-    .footer-links a:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
-
-    @media (max-width: 760px) { .site-wrapper { padding: 1rem; } .hero h1 { font-size: 2.2rem; } .music-bar { bottom: 10px; right: 10px; } }
+    @media (max-width: 760px) { .site-wrapper { padding: 1rem; } .hero h1 { font-size: 2.2rem; } }
   </style>
 </head>
 <body>
@@ -255,19 +126,20 @@
       <button class="theme-toggle" id="themeToggle">🌓 LIGHT/DARK</button>
       <a href="https://discord.gg/KufFPEptTG" target="_blank" class="social-icon discord">💬 Discord</a>
       <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-icon youtube">📺 YouTube</a>
+      <a href="https://www.patreon.com/cw/CRIXSMP" target="_blank" class="social-icon patreon">🎯 Patreon</a>
     </div>
   </nav>
 
   <section id="home"><div class="hero"><div class="hero-content">
     <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
-    <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong><br>Pure community & proximity voice.</p>
+    <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
     <div class="btn-group"><a href="https://discord.gg/KufFPEptTG" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a><a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a></div>
   </div></div></section>
 
-  <!-- Status Panel with Whitelist & Player Count -->
+  <!-- Server Status Panel with Restarting Detection -->
   <div class="status-panel">
     <div class="status-grid">
-      <div class="server-ip-display">🌐 <strong>play.crixsmp.net</strong> | Port: 19132 (Bedrock/Java)</div>
+      <div class="server-ip-display">🌐 <strong>play.crixsmp.net</strong> | Port: 19132</div>
       <div class="status-stats">
         <div class="stat-box"><span class="status-led" id="statusLed"></span><span id="statusText">Checking...</span></div>
         <div class="stat-box"><span class="stat-label">👥 PLAYERS</span><span class="stat-value" id="playerCount">?</span></div>
@@ -278,38 +150,36 @@
   </div>
 
   <section id="features"><h2>🔥 SERVER FEATURES</h2><div class="features-grid">
-    <div class="card"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, duel leaderboards — prove your skill.</p></div>
-    <div class="card"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival with balanced economy.</p></div>
-    <div class="card"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice mod (Simple Voice Chat) for Java.</p></div>
-    <div class="card"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player-run shops, trading hub.</p></div>
-    <div class="card"><h3>💰 BOUNTIES</h3><p>Place bounties on players, hunt or be hunted.</p></div>
-    <div class="card"><h3>🍩 DONUT SPIRIT</h3><p>Less chaotic, cooperative vibes, epic builds.</p></div>
+    <div class="card"><h3>⚔️ DUELING</h3><p>Ranked 1v1 arenas, duel leaderboards.</p></div>
+    <div class="card"><h3>🌿 SURVIVAL+</h3><p>Enhanced vanilla survival.</p></div>
+    <div class="card"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice (Simple Voice Chat).</p></div>
+    <div class="card"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player shops.</p></div>
+    <div class="card"><h3>💰 BOUNTIES</h3><p>Place bounties on players.</p></div>
+    <div class="card"><h3>🍩 DONUT SPIRIT</h3><p>Cooperative, less chaotic.</p></div>
   </div></section>
 
   <section id="downloads"><div class="download-section">
-    <h2 style="border-left-color:#2A43E0;">🎙️ VOICE CHAT SETUP</h2>
-    <p>Install Fabric Loader + Simple Voice Chat mod for Java Edition.</p>
+    <h2>🎙️ VOICE CHAT SETUP</h2>
     <div class="download-grid">
       <div class="download-card"><h3>🧵 FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
       <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
       <div class="download-card"><h3>📦 FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
     </div>
-    <div class="voice-warning">⚠️ <strong>IMPORTANT:</strong> Voice chat is <strong>NOT supported on Bedrock Edition</strong>. Requires Simple Voice Chat mod (Java only).</div>
-    <p style="margin-top:1rem;">💡 Java: <strong>play.crixsmp.net</strong> | Bedrock: same IP port 19132 (no voice chat)</p>
+    <div class="voice-warning">⚠️ Voice chat <strong>NOT supported on Bedrock</strong> — Java only.</div>
+    <p style="margin-top:1rem;">💡 Java: <strong>play.crixsmp.net</strong> | Bedrock: same IP port 19132</p>
   </div></section>
 </div>
 
 <footer class="main-footer">
-  <div class="footer-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#downloads">Voice Chat</a><a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a><a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a></div>
+  <div class="footer-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#downloads">Voice Chat</a><a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a><a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a><a href="https://www.patreon.com/cw/CRIXSMP" target="_blank">Patreon</a></div>
   <div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div>
-  <div class="copyright" style="margin-top:6px;">CRIX SMP — donut-style, voice chat for Java only.</div>
 </footer>
 
 <div class="music-bar"><span>🎵 Chirp</span><button id="muteToggleBtn">🔊 Mute</button></div>
 <div id="rulesModal" class="modal"><div class="modal-content"><span class="close-modal" id="closeModalBtn">&times;</span><h2>📜 CRIX SMP RULES</h2><div class="rules-text" id="rulesText"></div></div></div>
 
 <script>
-  // Audio setup
+  // Audio setup (same as before)
   const hoverSound = new Audio('scroll.mp3');
   const clickSound = new Audio('go.mp3');
   const bgMusic = new Audio('Chirp.mp3');
@@ -319,36 +189,30 @@
   let isMuted = false;
   function playHover() { hoverSound.currentTime = 0; hoverSound.play().catch(()=>{}); }
   function playClick() { clickSound.currentTime = 0; clickSound.play().catch(()=>{}); }
-  document.querySelectorAll('a, button, .card, .logo-img, .nav-links a, .btn, .social-icon, .theme-toggle, .rules-btn, .ping-btn').forEach(el => {
+  document.querySelectorAll('a, button, .card, .btn').forEach(el => {
     el.addEventListener('mouseenter', playHover);
     el.addEventListener('click', playClick);
   });
   const muteBtn = document.getElementById('muteToggleBtn');
-  function updateMuteUI() {
-    if (isMuted) { muteBtn.innerHTML = '🔇 Unmute'; bgMusic.pause(); }
-    else { muteBtn.innerHTML = '🔊 Mute'; bgMusic.play().catch(()=>{}); }
-  }
   muteBtn.addEventListener('click', () => {
-    if (!isMuted) { muteSound.play().catch(()=>{}); isMuted = true; bgMusic.pause(); }
-    else { unmuteSound.play().catch(()=>{}); isMuted = false; bgMusic.play().catch(()=>{}); }
-    updateMuteUI();
+    if (!isMuted) { muteSound.play().catch(()=>{}); isMuted = true; bgMusic.pause(); muteBtn.innerHTML = '🔇 Unmute'; }
+    else { unmuteSound.play().catch(()=>{}); isMuted = false; bgMusic.play().catch(()=>{}); muteBtn.innerHTML = '🔊 Mute'; }
   });
   document.body.addEventListener('click', () => { if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); }, { once: true });
 
   // Rules modal
   const rulesModal = document.getElementById('rulesModal');
-  const rulesTextDiv = document.getElementById('rulesText');
-  document.getElementById('rulesBtn').addEventListener('click', () => rulesModal.style.display = 'flex');
-  document.getElementById('closeModalBtn').addEventListener('click', () => rulesModal.style.display = 'none');
-  window.addEventListener('click', (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; });
-  rulesTextDiv.innerText = `CRIX SMP RULES\n\nGENERAL RULES\n1. Respect everyone - No bullying, harassment, or hate speech.\n2. No spamming - Includes chat, commands, or advertising.\n3. Keep it appropriate - No NSFW content or offensive builds.\n4. Listen to staff - Follow staff instructions.\n5. No impersonation - Do not pretend to be staff or other players.\n\nGAMEPLAY RULES\n1. No hacking or cheating (X-ray, kill aura, fly hacks, etc.)\n2. No exploiting glitches - Report them instead.\n3. No griefing - Do not destroy other players builds.\n4. No stealing - Only take what is yours.\n5. PvP only if both players agree (unless in PvP zones).\n\nBUILDING RULES\n1. No inappropriate builds.\n2. Do not build too close without permission.\n3. No lag machines or server-crashing builds.\n4. Keep redstone reasonable.\n\nCHAT RULES\n1. No excessive swearing.\n2. No advertising other servers.\n3. Use the main server language in public chat.\n4. No toxicity or drama.\n\nCROSSPLAY RULES\n1. Do not exploit version differences.\n2. Be respectful of different platforms.\n3. Report version-specific bugs.\n\nPUNISHMENTS\n1st Offense: Warning\n2nd Offense: Kick or mute\n3rd Offense: Temporary ban\nSevere offenses: Instant ban\n\nEXTRA RULES\n- Do not ask for admin.\n- Do not beg for items or ranks.\n- Have fun and respect others.`;
+  document.getElementById('rulesBtn').onclick = () => rulesModal.style.display = 'flex';
+  document.getElementById('closeModalBtn').onclick = () => rulesModal.style.display = 'none';
+  window.onclick = (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; };
+  document.getElementById('rulesText').innerText = `CRIX SMP RULES\n\n1. Respect everyone\n2. No hacking/cheating\n3. No griefing/stealing\n4. PvP only if agreed\n5. No inappropriate builds\n6. Listen to staff\n7. Have fun!`;
 
   // Theme toggle
   const themeToggle = document.getElementById('themeToggle');
-  themeToggle.addEventListener('click', () => { document.body.classList.toggle('light-mode'); localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); });
+  themeToggle.onclick = () => { document.body.classList.toggle('light-mode'); localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); };
   if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
 
-  // Server status with whitelist detection and live player count
+  // Server status with RESTARTING detection
   const serverHost = 'play.crixsmp.net';
   const statusTextSpan = document.getElementById('statusText');
   const playerCountSpan = document.getElementById('playerCount');
@@ -356,86 +220,87 @@
   const statusLedSpan = document.getElementById('statusLed');
   const pingBtn = document.getElementById('pingServerBtn');
 
+  let lastWasOnline = false;
+  let restartingDetected = false;
+  let restartTimeout = null;
+
   async function checkServerWithDetails() {
     statusTextSpan.innerText = 'Pinging...';
-    statusLedSpan?.classList.remove('online', 'offline');
+    statusLedSpan?.classList.remove('online', 'offline', 'restarting');
     playerCountSpan.innerText = '?';
     whitelistSpan.innerText = '?';
-    whitelistSpan.className = 'stat-value whitelist-unknown';
     
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
-      
-      // Primary API: mcsrvstat (gives detailed info)
-      const mcsrvRes = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`, { signal: controller.signal });
-      let online = false;
-      let players = '?';
-      let whitelistDetected = 'unknown';
-      
-      if (mcsrvRes.ok) {
-        const data = await mcsrvRes.json();
-        if (data && data.online === true) {
-          online = true;
-          players = data.players?.online || '?';
-          // Check MOTD for whitelist indication
-          let motdString = '';
-          if (data.motd?.clean) motdString = data.motd.clean.join(' ').toLowerCase();
-          if (motdString.includes('whitelist')) whitelistDetected = 'true';
-          else if (data.players?.online === 0 && data.players?.max > 0 && data.online) {
-            if (motdString.includes('only') || motdString.includes('whitelist')) whitelistDetected = 'true';
-            else whitelistDetected = 'false';
-          } else whitelistDetected = 'false';
-        }
-      }
-      
-      // Fallback to mcapi.us
-      if (!online) {
-        const mcapiRes = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=19132`);
-        const mcapiData = await mcapiRes.json();
-        if (mcapiData && mcapiData.online) {
-          online = true;
-          players = mcapiData.players?.now || '?';
-          whitelistDetected = 'unknown';
-        }
-      }
-      
+      const response = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`, { signal: controller.signal });
       clearTimeout(timeoutId);
       
-      if (online) {
-        statusTextSpan.innerHTML = '✅ ONLINE';
-        statusLedSpan?.classList.add('online');
-        statusLedSpan?.classList.remove('offline');
-        playerCountSpan.innerText = players;
-        
-        if (whitelistDetected === 'true') {
-          whitelistSpan.innerText = '✓ ON (Whitelist Enabled)';
-          whitelistSpan.className = 'stat-value whitelist-true';
-        } else if (whitelistDetected === 'false') {
-          whitelistSpan.innerText = '✗ OFF (Open)';
-          whitelistSpan.className = 'stat-value whitelist-false';
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.online === true) {
+          // Server is online
+          if (restartingDetected) {
+            restartingDetected = false;
+            if (restartTimeout) clearTimeout(restartTimeout);
+          }
+          statusTextSpan.innerHTML = '✅ ONLINE';
+          statusLedSpan?.classList.add('online');
+          playerCountSpan.innerText = data.players?.online || '?';
+          
+          let motdString = '';
+          if (data.motd?.clean) motdString = data.motd.clean.join(' ').toLowerCase();
+          if (motdString.includes('whitelist')) {
+            whitelistSpan.innerText = '✓ ON';
+            whitelistSpan.style.color = '#facc15';
+          } else {
+            whitelistSpan.innerText = '✗ OFF';
+            whitelistSpan.style.color = '#22c55e';
+          }
+          lastWasOnline = true;
         } else {
-          whitelistSpan.innerText = '? UNKNOWN';
-          whitelistSpan.className = 'stat-value whitelist-unknown';
+          // Server offline - check if it was just online (could be restarting)
+          if (lastWasOnline && !restartingDetected) {
+            restartingDetected = true;
+            statusTextSpan.innerHTML = '🔄 RESTARTING';
+            statusLedSpan?.classList.add('restarting');
+            playerCountSpan.innerText = '—';
+            whitelistSpan.innerText = '?';
+            // Auto-recheck after 30 seconds
+            restartTimeout = setTimeout(() => { checkServerWithDetails(); }, 30000);
+          } else if (restartingDetected) {
+            statusTextSpan.innerHTML = '🔄 RESTARTING';
+            statusLedSpan?.classList.add('restarting');
+          } else {
+            statusTextSpan.innerHTML = '❌ OFFLINE';
+            statusLedSpan?.classList.add('offline');
+            playerCountSpan.innerText = '0';
+            whitelistSpan.innerText = 'N/A';
+            lastWasOnline = false;
+          }
         }
       } else {
-        statusTextSpan.innerHTML = '❌ OFFLINE';
-        statusLedSpan?.classList.add('offline');
-        statusLedSpan?.classList.remove('online');
-        playerCountSpan.innerText = '0';
-        whitelistSpan.innerText = 'N/A';
-        whitelistSpan.className = 'stat-value';
+        throw new Error('API error');
       }
     } catch (err) {
-      statusTextSpan.innerHTML = '⚠️ UNREACHABLE';
-      playerCountSpan.innerText = '?';
-      whitelistSpan.innerText = '?';
-      if(statusLedSpan) statusLedSpan.style.background = '#f59e0b';
+      if (lastWasOnline && !restartingDetected) {
+        restartingDetected = true;
+        statusTextSpan.innerHTML = '🔄 RESTARTING';
+        statusLedSpan?.classList.add('restarting');
+        restartTimeout = setTimeout(() => { checkServerWithDetails(); }, 30000);
+      } else {
+        statusTextSpan.innerHTML = '⚠️ UNREACHABLE';
+        if(statusLedSpan) statusLedSpan.style.background = '#f59e0b';
+      }
     }
   }
   
   checkServerWithDetails();
-  if (pingBtn) pingBtn.addEventListener('click', () => checkServerWithDetails());
+  pingBtn.onclick = () => { 
+    if (restartTimeout) clearTimeout(restartTimeout);
+    restartingDetected = false;
+    checkServerWithDetails(); 
+  };
   setInterval(() => checkServerWithDetails(), 60000);
   
   // Smooth scroll
@@ -448,8 +313,6 @@
       }
     });
   });
-  
-  console.log("CRIX SMP — Custom fonts active: MinecraftRegular + MinecraftBold (MinecraftBold-nMK1.otf)");
 </script>
 </body>
 </html>
