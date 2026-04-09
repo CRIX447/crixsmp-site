@@ -27,7 +27,7 @@
             border: 3px solid #2A43E0;
             border-radius: 8px;
             padding: 30px;
-            max-width: 550px;
+            max-width: 600px;
             width: 100%;
         }
 
@@ -76,6 +76,7 @@
             padding: 4px 10px;
             border-radius: 4px;
             display: inline-block;
+            margin-bottom: 10px;
         }
 
         .status-pending {
@@ -88,20 +89,21 @@
             color: #22c55e;
         }
 
-        .status-skipped {
-            background: #6c757d20;
-            color: #6c757d;
+        .code-box {
+            background: #0a0c10;
+            border: 2px solid #2A43E0;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            margin: 10px 0;
         }
 
-        input {
-            background: #0a0c10;
-            border: 2px solid #2a2e3a;
-            color: #e0e4f0;
-            padding: 10px;
-            border-radius: 6px;
-            width: 100%;
-            margin: 10px 0;
-            font-family: 'Courier New', monospace;
+        .code {
+            font-size: 2rem;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #22c55e;
+            font-family: monospace;
         }
 
         button {
@@ -126,39 +128,10 @@
             background: #1f36c2;
         }
 
-        .skip-btn {
-            background: #6c757d;
-            margin-left: 10px;
-        }
-
-        .skip-btn:hover:not(:disabled) {
-            background: #5a6268;
-        }
-
         .info-text {
             font-size: 0.75rem;
             color: #6c757d;
             margin-top: 8px;
-        }
-
-        .minecraft-info {
-            background: #0a0c10;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-            font-size: 0.85rem;
-        }
-
-        .final-btn {
-            background: #22c55e;
-            width: 100%;
-            padding: 15px;
-            font-size: 1rem;
-            margin-top: 15px;
-        }
-
-        .final-btn:disabled {
-            background: #555;
         }
 
         .warning {
@@ -215,18 +188,6 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
-        .verify-btn {
-            background: #f59e0b;
-            margin-left: 10px;
-            padding: 10px 15px;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
     </style>
 </head>
 <body>
@@ -235,55 +196,47 @@
         <div class="subtitle">Link your accounts to unlock exclusive rewards!</div>
 
         <div class="reward-box">
-            <h4>🎁 What you get when both Minecraft & Patreon are linked:</h4>
+            <h4>🎁 What you get when linked:</h4>
             <ul>
                 <li>💰 <strong>100,000,000</strong> monthly in-game money</li>
                 <li>👑 <strong>CRIX+</strong> rank in-game</li>
                 <li>🎬 Early access to features & YouTube videos</li>
-                <li>💬 Optional: Discord role & access to private channels</li>
+                <li>💬 Discord role & access to private channels</li>
             </ul>
         </div>
 
         <div class="warning">
-            ⚠️ <strong>Important:</strong>
-            <ul style="margin: 5px 0 0 20px;">
-                <li>You can only link <strong>ONE</strong> Minecraft account</li>
-                <li>Make sure you enter your <strong>EXACT Minecraft username</strong> (case-sensitive!)</li>
-                <li>Discord is <strong>optional</strong> - only for server roles</li>
-                <li>Once linked, you get <strong>100,000,000</strong> monthly!</li>
-            </ul>
+            ⚠️ <strong>IMPORTANT!</strong> You must be in-game on the SAME IP address to verify!
         </div>
 
-        <!-- Step 1: Minecraft (REQUIRED) -->
-        <div id="minecraftStep" class="step active">
-            <h3>🎮 Step 1: Link Minecraft (Required)</h3>
-            <div id="minecraftStatus" class="step-status status-pending">Not linked</div>
-            <div id="minecraftInfo" class="minecraft-info" style="display:none;"></div>
-            <div class="input-group">
-                <input type="text" id="minecraftUsername" placeholder="Enter your Minecraft username" style="flex:1;">
-                <button id="verifyMinecraftBtn" class="verify-btn" onclick="verifyMinecraft()">Verify →</button>
+        <!-- Step 1: Get Verification Code -->
+        <div id="codeStep" class="step active">
+            <h3>🔑 Step 1: Get Verification Code</h3>
+            <button id="getCodeBtn" onclick="getVerificationCode()">Generate Verification Code →</button>
+            <div id="codeDisplay" style="display:none;" class="code-box">
+                <p>In Minecraft, type:</p>
+                <div class="code" id="verificationCode">XXXXXX</div>
+                <p class="info-text">This code expires in 10 minutes. Use it in-game to link your Minecraft account!</p>
             </div>
-            <div class="info-text">Enter your EXACT Minecraft Java Edition username (case-sensitive)</div>
         </div>
 
-        <!-- Step 2: Patreon (REQUIRED) -->
-        <div id="patreonStep" class="step">
-            <h3>🎯 Step 2: Link Patreon (Required)</h3>
-            <div id="patreonStatus" class="step-status status-pending">Not linked</div>
-            <button id="patreonBtn" onclick="linkPatreon()" disabled>Link Patreon Account →</button>
+        <!-- Step 2: Wait for Verification -->
+        <div id="verifyStep" class="step" style="display:none;">
+            <h3>⏳ Step 2: Waiting for Verification</h3>
+            <div id="verifyStatus" class="step-status status-pending">Waiting for you to type /link [code] in Minecraft...</div>
+            <div class="info-text">Once you type the command in-game, this will automatically update!</div>
         </div>
 
-        <!-- Step 3: Discord (OPTIONAL) -->
-        <div id="discordStep" class="step">
-            <h3>💬 Step 3: Link Discord (Optional)</h3>
-            <div id="discordStatus" class="step-status status-pending">Not linked</div>
-            <div class="info-text">✨ Optional: Get Discord roles and access to private channels</div>
-            <button id="discordBtn" onclick="linkDiscord()">Link Discord (Optional) →</button>
-            <button id="skipDiscordBtn" class="skip-btn" onclick="skipDiscord()">Skip →</button>
+        <!-- Step 3: Claim Monthly Reward -->
+        <div id="claimStep" class="step" style="display:none;">
+            <h3>💰 Step 3: Claim Your Monthly Reward</h3>
+            <button id="getRewardBtn" onclick="getRedeemCode()" disabled>Generate Redeem Code →</button>
+            <div id="redeemDisplay" style="display:none;" class="code-box">
+                <p>In Minecraft, type:</p>
+                <div class="code" id="redeemCode">XXXXXX</div>
+                <p class="info-text">This code is IP-locked! Only your current IP can use it.</p>
+            </div>
         </div>
-
-        <!-- Complete Button -->
-        <button id="completeBtn" class="final-btn" onclick="completeLinking()" disabled>✅ Complete Linking & Claim Rewards</button>
 
         <div id="errorMsg"></div>
     </div>
@@ -296,210 +249,101 @@
             localStorage.setItem('crix_session', sessionId);
         }
 
-        let minecraftLinked = false;
-        let patreonLinked = false;
-        let discordLinked = false;
-        let discordSkipped = false;
-        let minecraftUsername = null;
-        let minecraftUUID = null;
-        let isActivePatreon = false;
+        let currentCode = null;
+        let currentRedeemCode = null;
+        let checkInterval = null;
 
-        async function verifyMinecraft() {
-            const usernameInput = document.getElementById('minecraftUsername');
-            const username = usernameInput.value.trim();
-            
-            if (!username) {
-                showMessage('❌ Please enter your Minecraft username', 'error');
-                return;
-            }
-            
-            const btn = document.getElementById('verifyMinecraftBtn');
-            btn.innerHTML = 'Verifying... <span class="loading"></span>';
+        async function getVerificationCode() {
+            const btn = document.getElementById('getCodeBtn');
+            btn.innerHTML = 'Generating... <span class="loading"></span>';
             btn.disabled = true;
             
             try {
-                // Use Mojang API to verify username and get UUID
-                const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(username)}`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    minecraftUsername = data.name;
-                    minecraftUUID = data.id;
-                    minecraftLinked = true;
-                    
-                    // Save to backend
-                    const saveResponse = await fetch(`${API_URL}/api/save-minecraft`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ session_id: sessionId, username: minecraftUsername, uuid: minecraftUUID })
-                    });
-                    
-                    if (saveResponse.ok) {
-                        document.getElementById('minecraftStatus').innerHTML = '✅ Linked';
-                        document.getElementById('minecraftStatus').className = 'step-status status-completed';
-                        document.getElementById('minecraftStep').classList.add('completed');
-                        document.getElementById('minecraftStep').classList.remove('active');
-                        document.getElementById('minecraftInfo').innerHTML = `📛 Minecraft: ${minecraftUsername}<br>🆔 UUID: ${minecraftUUID}`;
-                        document.getElementById('minecraftInfo').style.display = 'block';
-                        document.getElementById('minecraftUsername').disabled = true;
-                        document.getElementById('patreonBtn').disabled = false;
-                        document.getElementById('patreonStep').classList.add('active');
-                        showMessage(`✅ Minecraft account "${minecraftUsername}" verified! Now link your Patreon.`, 'success');
-                    } else {
-                        throw new Error('Failed to save');
-                    }
-                } else if (response.status === 404) {
-                    showMessage('❌ Minecraft username not found! Make sure it\'s correct and you own Java Edition.', 'error');
-                } else {
-                    showMessage('❌ Failed to verify. Try again later.', 'error');
-                }
-            } catch (error) {
-                showMessage('❌ Error verifying username. Check your connection and try again.', 'error');
-            } finally {
-                btn.innerHTML = 'Verify →';
-                btn.disabled = false;
-            }
-        }
-
-        async function checkStatus() {
-            try {
-                const response = await fetch(`${API_URL}/api/status?session=${sessionId}`);
-                const data = await response.json();
-
-                if (data.minecraft_linked) {
-                    minecraftLinked = true;
-                    minecraftUsername = data.minecraft_username;
-                    minecraftUUID = data.minecraft_uuid;
-                    document.getElementById('minecraftStatus').innerHTML = '✅ Linked';
-                    document.getElementById('minecraftStatus').className = 'step-status status-completed';
-                    document.getElementById('minecraftStep').classList.add('completed');
-                    document.getElementById('minecraftStep').classList.remove('active');
-                    document.getElementById('minecraftInfo').innerHTML = `📛 Minecraft: ${minecraftUsername}`;
-                    document.getElementById('minecraftInfo').style.display = 'block';
-                    document.getElementById('minecraftUsername').disabled = true;
-                    document.getElementById('patreonBtn').disabled = false;
-                    document.getElementById('patreonStep').classList.add('active');
-                }
-
-                if (data.patreon_linked) {
-                    patreonLinked = true;
-                    isActivePatreon = data.is_active_patreon;
-                    if (isActivePatreon) {
-                        document.getElementById('patreonStatus').innerHTML = '✅ Active Member';
-                    } else {
-                        document.getElementById('patreonStatus').innerHTML = '⚠️ Linked (No Active Membership)';
-                    }
-                    document.getElementById('patreonStatus').className = 'step-status status-completed';
-                    document.getElementById('patreonStep').classList.add('completed');
-                    document.getElementById('patreonStep').classList.remove('active');
-                    document.getElementById('patreonBtn').disabled = true;
-                }
-
-                if (data.discord_linked) {
-                    discordLinked = true;
-                    document.getElementById('discordStatus').innerHTML = '✅ Linked';
-                    document.getElementById('discordStatus').className = 'step-status status-completed';
-                    document.getElementById('discordStep').classList.add('completed');
-                    document.getElementById('discordBtn').disabled = true;
-                    document.getElementById('skipDiscordBtn').disabled = true;
-                } else if (discordSkipped) {
-                    document.getElementById('discordStatus').innerHTML = '⏩ Skipped';
-                    document.getElementById('discordStatus').className = 'step-status status-skipped';
-                }
-
-                if (minecraftLinked && patreonLinked && isActivePatreon) {
-                    document.getElementById('completeBtn').disabled = false;
-                    document.getElementById('patreonStep').classList.remove('active');
-                } else if (minecraftLinked && patreonLinked && !isActivePatreon) {
-                    document.getElementById('errorMsg').innerHTML = '<span class="error-text">⚠️ Your Patreon is linked but you don\'t have an active CRIX SMP membership. Please become a patron first!</span>';
-                }
-            } catch (error) {
-                console.error('Status check failed:', error);
-            }
-        }
-
-        function linkPatreon() {
-            const popup = window.open(`${API_URL}/api/auth/patreon?session=${sessionId}`, 'Patreon Auth', 'width=500,height=700');
-            
-            const messageHandler = function(event) {
-                if (event.data.type === 'patreon_linked') {
-                    patreonLinked = true;
-                    isActivePatreon = event.data.is_active;
-                    if (isActivePatreon) {
-                        document.getElementById('patreonStatus').innerHTML = '✅ Active Member';
-                        document.getElementById('completeBtn').disabled = false;
-                        showMessage('✅ Patreon linked! You are an active member.', 'success');
-                    } else {
-                        document.getElementById('patreonStatus').innerHTML = '⚠️ Linked (No Active Membership)';
-                        showMessage('⚠️ Patreon linked but no active membership found. Please become a patron first.', 'error');
-                    }
-                    document.getElementById('patreonStatus').className = 'step-status status-completed';
-                    document.getElementById('patreonStep').classList.add('completed');
-                    document.getElementById('patreonStep').classList.remove('active');
-                    document.getElementById('patreonBtn').disabled = true;
-                    window.removeEventListener('message', messageHandler);
-                } else if (event.data.type === 'patreon_error') {
-                    showMessage(`❌ ${event.data.message}`, 'error');
-                    window.removeEventListener('message', messageHandler);
-                }
-            };
-            window.addEventListener('message', messageHandler, { once: true });
-        }
-
-        function linkDiscord() {
-            const popup = window.open(`${API_URL}/api/auth/discord?session=${sessionId}`, 'Discord Auth', 'width=500,height=700');
-            
-            const messageHandler = function(event) {
-                if (event.data.type === 'discord_linked') {
-                    discordLinked = true;
-                    document.getElementById('discordStatus').innerHTML = '✅ Linked';
-                    document.getElementById('discordStatus').className = 'step-status status-completed';
-                    document.getElementById('discordStep').classList.add('completed');
-                    document.getElementById('discordBtn').disabled = true;
-                    document.getElementById('skipDiscordBtn').disabled = true;
-                    showMessage('✅ Discord linked! You now have access to Discord roles.', 'success');
-                    window.removeEventListener('message', messageHandler);
-                }
-            };
-            window.addEventListener('message', messageHandler, { once: true });
-        }
-
-        function skipDiscord() {
-            discordSkipped = true;
-            document.getElementById('discordStatus').innerHTML = '⏩ Skipped';
-            document.getElementById('discordStatus').className = 'step-status status-skipped';
-            document.getElementById('discordBtn').disabled = true;
-            document.getElementById('skipDiscordBtn').disabled = true;
-            showMessage('Discord linking skipped. You can always link later.', 'success');
-        }
-
-        async function completeLinking() {
-            const btn = document.getElementById('completeBtn');
-            btn.innerHTML = 'Processing... <span class="loading"></span>';
-            btn.disabled = true;
-            
-            try {
-                const response = await fetch(`${API_URL}/api/complete`, {
+                const response = await fetch(`${API_URL}/api/generate-code`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId, discord_skipped: discordSkipped })
+                    body: JSON.stringify({ session_id: sessionId })
                 });
                 const data = await response.json();
-
+                
                 if (data.success) {
-                    showMessage('✅ Linking complete! Your first 100M has been added. You can close this window.', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 3000);
+                    currentCode = data.code;
+                    document.getElementById('verificationCode').innerText = currentCode;
+                    document.getElementById('codeDisplay').style.display = 'block';
+                    document.getElementById('codeStep').classList.add('completed');
+                    document.getElementById('codeStep').classList.remove('active');
+                    document.getElementById('verifyStep').style.display = 'block';
+                    document.getElementById('verifyStep').classList.add('active');
+                    showMessage(`✅ Code generated: ${currentCode}. Type /link ${currentCode} in Minecraft!`, 'success');
+                    
+                    // Start checking if code was used
+                    startCheckingVerification();
                 } else {
                     showMessage(`❌ ${data.message}`, 'error');
-                    btn.innerHTML = '✅ Complete Linking & Claim Rewards';
                     btn.disabled = false;
+                    btn.innerHTML = 'Generate Verification Code →';
                 }
             } catch (error) {
-                showMessage('❌ Failed to complete linking. Please try again.', 'error');
-                btn.innerHTML = '✅ Complete Linking & Claim Rewards';
+                showMessage('❌ Failed to generate code', 'error');
                 btn.disabled = false;
+                btn.innerHTML = 'Generate Verification Code →';
+            }
+        }
+
+        function startCheckingVerification() {
+            if (checkInterval) clearInterval(checkInterval);
+            
+            checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_URL}/api/check-verified?session=${sessionId}`);
+                    const data = await response.json();
+                    
+                    if (data.verified) {
+                        clearInterval(checkInterval);
+                        document.getElementById('verifyStatus').innerHTML = '✅ Verified! Your Minecraft account is linked!';
+                        document.getElementById('verifyStatus').className = 'step-status status-completed';
+                        document.getElementById('verifyStep').classList.add('completed');
+                        document.getElementById('verifyStep').classList.remove('active');
+                        document.getElementById('claimStep').style.display = 'block';
+                        document.getElementById('claimStep').classList.add('active');
+                        document.getElementById('getRewardBtn').disabled = false;
+                        showMessage('✅ Minecraft account verified! You can now claim your monthly reward.', 'success');
+                    }
+                } catch (error) {
+                    console.error('Check failed:', error);
+                }
+            }, 3000);
+        }
+
+        async function getRedeemCode() {
+            const btn = document.getElementById('getRewardBtn');
+            btn.innerHTML = 'Generating... <span class="loading"></span>';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/generate-redeem`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentRedeemCode = data.code;
+                    document.getElementById('redeemCode').innerText = currentRedeemCode;
+                    document.getElementById('redeemDisplay').style.display = 'block';
+                    document.getElementById('claimStep').classList.add('completed');
+                    document.getElementById('claimStep').classList.remove('active');
+                    showMessage(`✅ Redeem code generated! Type /redeem ${currentRedeemCode} in Minecraft for 100M!`, 'success');
+                } else {
+                    showMessage(`❌ ${data.message}`, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Generate Redeem Code →';
+                }
+            } catch (error) {
+                showMessage('❌ Failed to generate redeem code', 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Redeem Code →';
             }
         }
 
@@ -510,11 +354,8 @@
                 if (errorDiv.innerHTML === `<span class="${type === 'error' ? 'error-text' : 'success-text'}">${msg}</span>`) {
                     errorDiv.innerHTML = '';
                 }
-            }, 5000);
+            }, 8000);
         }
-
-        checkStatus();
-        setInterval(checkStatus, 5000);
     </script>
 </body>
 </html>
