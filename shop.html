@@ -8,16 +8,15 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @font-face {
+            font-family: 'MinecraftRegular';
+            src: url('MinecraftRegular-Bmg3.otf') format('opentype');
+        }
+        @font-face {
             font-family: 'MinecraftBold';
             src: url('MinecraftBold-nMK1.otf') format('opentype');
         }
-        body {
-            background: #0a0c10;
-            background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-            color: #e0e4f0;
-            font-family: 'MinecraftBold', 'Courier New', monospace;
-            min-height: 100vh;
-        }
+        body { background: #0a0c10; color: #e0e4f0; font-family: 'MinecraftRegular', monospace; min-height: 100vh; }
+        h1, h2, h3, button, .buy-btn, .cart-icon { font-family: 'MinecraftBold', monospace; }
         .shop-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
         
         .navbar {
@@ -30,18 +29,15 @@
         .logo-img { height: 54px; width: auto; }
         .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .nav-links { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
-        .nav-links a, .nav-links button {
-            color: #cbd5e6; text-decoration: none; padding: 0.4rem 0.8rem;
-            border: 2px solid transparent; background: none; font-family: inherit; font-size: 1rem; cursor: pointer;
-        }
+        .nav-links a, .nav-links button { color: #cbd5e6; text-decoration: none; padding: 0.4rem 0.8rem; border: 2px solid transparent; background: none; font-size: 1rem; cursor: pointer; }
         .nav-links a:hover, .nav-links button:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
         
         .shop-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 2rem; gap: 1rem; }
-        .cart-icon { background: #FF2A1F; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: bold; }
+        .cart-icon { background: #FF2A1F; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
         .cart-count { background: white; color: #FF2A1F; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
         .currency-selector { background: #1a1d24; padding: 0.5rem 1rem; border-radius: 8px; display: flex; align-items: center; gap: 10px; }
         .currency-selector select { background: #0a0c10; color: #e0e4f0; border: 1px solid #2A43E0; padding: 0.3rem; border-radius: 4px; }
-        .sale-banner { background: linear-gradient(135deg, #FF2A1F, #f59e0b); color: white; text-align: center; padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: bold; }
+        .sale-banner { background: linear-gradient(135deg, #FF2A1F, #f59e0b); color: white; text-align: center; padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; }
         .creator-code { background: #1a2a1a; border-left: 4px solid #22c55e; padding: 0.75rem; margin: 1rem 0; text-align: center; border-radius: 8px; }
         .creator-code code { background: #0a0c10; padding: 0.25rem 0.5rem; border-radius: 4px; color: #22c55e; font-size: 1.2rem; }
         
@@ -54,7 +50,7 @@
         .coin-amount { font-size: 1.5rem; font-weight: bold; color: #22c55e; margin: 0.5rem 0; }
         .price { font-size: 1.2rem; margin: 0.5rem 0; }
         .bonus { font-size: 0.85rem; color: #f59e0b; margin: 0.5rem 0; }
-        .buy-btn { background: #2A43E0; border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-family: inherit; }
+        .buy-btn { background: #2A43E0; border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; width: 100%; }
         .buy-btn:hover { transform: translate(-2px, -2px); background: #1f36c2; }
         .custom-btn { background: #FF2A1F; }
         
@@ -63,34 +59,25 @@
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #2a2e3a; }
         .remove-item { background: #FF2A1F; border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
         .cart-total { font-size: 1.2rem; font-weight: bold; text-align: right; padding: 1rem; border-top: 2px solid #2A43E0; }
-        .checkout-btn { background: #22c55e; width: 100%; padding: 0.75rem; font-size: 1.1rem; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 1rem; }
+        .checkout-btn { background: #22c55e; width: 100%; padding: 0.75rem; font-size: 1.1rem; border: none; border-radius: 6px; cursor: pointer; margin-top: 1rem; }
         .coupon-input { display: flex; gap: 0.5rem; margin: 1rem 0; }
         .coupon-input input { flex: 1; background: #0a0c10; border: 1px solid #2a2e3a; color: white; padding: 0.5rem; border-radius: 4px; }
         .payment-methods { margin: 1rem 0; padding: 1rem; background: #0f1219; border-radius: 8px; }
         .payment-option { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; cursor: pointer; border-radius: 6px; margin: 0.5rem 0; }
         .payment-option:hover { background: #1a1d24; }
-        .card-split-container { margin-top: 1rem; padding: 1rem; background: #0a0c10; border-radius: 8px; }
-        .card-split-item { display: flex; gap: 0.5rem; margin: 0.5rem 0; align-items: center; }
-        .card-split-item select { flex: 2; background: #1a1d24; border: 1px solid #2A43E0; color: white; padding: 0.5rem; border-radius: 4px; }
-        .card-split-item input { flex: 1; background: #1a1d24; border: 1px solid #2A43E0; color: white; padding: 0.5rem; border-radius: 4px; }
-        .add-card-btn { background: #2A43E0; border: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; margin-top: 0.5rem; }
         .coming-soon { text-align: center; padding: 2rem; background: #1a1d24; border-radius: 8px; margin-top: 1rem; }
         
         .icon-img-small { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
+        .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; backdrop-filter: blur(8px); padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border: 2px solid #FF2A1F; border-radius: 8px; }
         @media (max-width: 760px) { .shop-container { padding: 1rem; } }
     </style>
 </head>
 <body>
 <div class="shop-container">
     <nav class="navbar">
-        <div class="logo-area">
-            <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img">
-            <span class="logo-text">CRIX SMP</span>
-        </div>
+        <div class="logo-area"><img src="crixsmplogo.png" class="logo-img"><span class="logo-text">CRIX SMP</span></div>
         <div class="nav-links">
-            <a href="index.html">HOME</a>
-            <a href="index.html#features">FEATURES</a>
-            <a href="shop.html">SHOP</a>
+            <a href="index.html">HOME</a><a href="index.html#features">FEATURES</a><a href="shop.html">SHOP</a>
             <button id="themeToggle">🌓 LIGHT/DARK</button>
             <a href="https://discord.gg/MbQvJGDAst" target="_blank">💬 Discord</a>
             <a href="https://www.youtube.com/@CRIXSMP" target="_blank">📺 YouTube</a>
@@ -98,56 +85,32 @@
         </div>
     </nav>
 
-    <div class="shop-header">
-        <h1>💰 CRIX COINS SHOP</h1>
+    <div class="shop-header"><h1>💰 CRIX COINS SHOP</h1>
         <div class="shop-controls">
-            <div class="currency-selector">
-                <span>💱</span>
-                <select id="currencySelect">
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="CAD">CAD (C$)</option>
-                    <option value="AUD">AUD (A$)</option>
-                </select>
-            </div>
-            <div class="cart-icon" onclick="openCart()">
-                🛒 Cart <span class="cart-count" id="cartCount">0</span>
-            </div>
+            <div class="currency-selector"><span>💱</span><select id="currencySelect"><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option><option value="CAD">CAD (C$)</option><option value="AUD">AUD (A$)</option></select></div>
+            <div class="cart-icon" onclick="openCart()">🛒 Cart <span class="cart-count" id="cartCount">0</span></div>
         </div>
     </div>
 
     <div id="saleBanner" class="sale-banner" style="display:none;"></div>
-    <div class="creator-code">💎 <strong>Creator Code:</strong> <code>cgvr</code> - Get 20% OFF at checkout!</div>
-    
+    <div class="creator-code">💎 <strong>Creator Code:</strong> <code>cgvr</code> - Get 20% OFF!</div>
     <div class="packages-grid" id="packagesGrid"></div>
 </div>
 
-<div id="cartModal" class="cart-modal">
-    <div class="cart-content">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2>🛒 Your Cart</h2>
-            <span onclick="closeCart()" style="font-size:2rem; cursor:pointer;">&times;</span>
-        </div>
-        <div id="cartItems"></div>
-        <div class="coupon-input">
-            <input type="text" id="couponCode" placeholder="Enter creator code (cgvr)">
-            <button onclick="applyCoupon()">Apply</button>
-        </div>
-        <div class="payment-methods">
-            <h3>Select Payment Method</h3>
-            <div class="payment-option" onclick="selectPayment('paypal')">
-                <input type="radio" name="payment" value="paypal" id="paypalRadio"> <label>💳 PayPal</label>
-            </div>
-            <div class="payment-option" onclick="selectPayment('card')">
-                <input type="radio" name="payment" value="card" id="cardRadio"> <label>💎 Credit/Debit Card</label>
-            </div>
-            <div id="cardSplitContainer" style="display:none;"></div>
-        </div>
-        <div class="cart-total" id="cartTotal"></div>
-        <button class="checkout-btn" onclick="checkout()">Proceed to Payment →</button>
+<div class="music-bar"><img src="chirp_disc.png" class="icon-img-small"><span>Chirp</span><button id="muteToggleBtn">🔊 Mute</button></div>
+
+<div id="cartModal" class="cart-modal"><div class="cart-content">
+    <div style="display:flex; justify-content:space-between;"><h2>🛒 Your Cart</h2><span onclick="closeCart()" style="font-size:2rem; cursor:pointer;">&times;</span></div>
+    <div id="cartItems"></div>
+    <div class="coupon-input"><input type="text" id="couponCode" placeholder="Enter creator code (cgvr)"><button onclick="applyCoupon()">Apply</button></div>
+    <div class="payment-methods"><h3>Select Payment Method</h3>
+        <div class="payment-option" onclick="selectPayment('paypal')"><input type="radio" name="payment" value="paypal" id="paypalRadio"><label>💳 PayPal</label></div>
+        <div class="payment-option" onclick="selectPayment('card')"><input type="radio" name="payment" value="card" id="cardRadio"><label>💎 Credit/Debit Card</label></div>
+        <div id="cardSplitContainer" style="display:none;"></div>
     </div>
-</div>
+    <div class="cart-total" id="cartTotal"></div>
+    <button class="checkout-btn" onclick="checkout()">Proceed to Payment →</button>
+</div></div>
 
 <script>
     const PACKAGES = [
@@ -164,8 +127,7 @@
     const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£', CAD: 'C$', AUD: 'A$' };
     
     let cart = JSON.parse(localStorage.getItem('crix_cart') || '[]');
-    let activeSale = null, activeDiscount = 0, couponApplied = false, selectedPayment = null;
-    let cardSplit = [{ cardId: '', amount: 0 }];
+    let activeDiscount = 0, couponApplied = false, selectedPayment = null;
     
     function getCurrency() { return localStorage.getItem('crix_currency') || 'USD'; }
     function setCurrency(c) { localStorage.setItem('crix_currency', c); renderPackages(); updateCartDisplay(); }
@@ -177,14 +139,14 @@
             const sales = await response.json();
             const now = new Date();
             for (const sale of sales) {
-                if (now >= new Date(sale.start) && now <= new Date(sale.end) && sale.active !== false) {
-                    activeSale = sale; activeDiscount = sale.discount;
+                if (now >= new Date(sale.start) && now <= new Date(sale.end)) {
+                    activeDiscount = sale.discount;
                     document.getElementById('saleBanner').style.display = 'block';
                     document.getElementById('saleBanner').innerHTML = `🎉 ${sale.name} SALE! ${sale.discount}% OFF! 🎉`;
                     break;
                 }
             }
-        } catch(e) { console.log('No active sale'); }
+        } catch(e) {}
     }
     
     function renderPackages() {
@@ -217,7 +179,6 @@
         else cart.push({ id, coins, priceUSD, quantity: 1 });
         localStorage.setItem('crix_cart', JSON.stringify(cart));
         updateCartCount(); updateCartDisplay();
-        showNotification(`Added ${coins.toLocaleString()} Coins!`);
     }
     
     function openCustomAmount() {
@@ -253,83 +214,58 @@
     }
     
     function removeFromCart(id) { cart = cart.filter(i => i.id !== id); localStorage.setItem('crix_cart', JSON.stringify(cart)); updateCartCount(); updateCartDisplay(); }
-    function applyCoupon() { const code = document.getElementById('couponCode').value.toLowerCase(); if (code === 'cgvr') { couponApplied = true; showNotification('20% OFF Applied!'); renderPackages(); updateCartDisplay(); } else { showNotification('Invalid code!', 'error'); } }
+    function applyCoupon() { const code = document.getElementById('couponCode').value.toLowerCase(); if (code === 'cgvr') { couponApplied = true; alert('20% OFF Applied!'); renderPackages(); updateCartDisplay(); } else { alert('Invalid code!'); } }
     
     function selectPayment(method) {
         selectedPayment = method;
         document.getElementById('paypalRadio').checked = (method === 'paypal');
         document.getElementById('cardRadio').checked = (method === 'card');
-        if (method === 'card') loadCardsForSplit();
-        else document.getElementById('cardSplitContainer').style.display = 'none';
-    }
-    
-    async function loadCardsForSplit() {
-        try {
-            const response = await fetch('data/cards.json');
-            if (!response.ok) throw new Error('No cards');
-            const cards = await response.json();
-            if (!cards || cards.length === 0) throw new Error('No cards');
-            let html = '<div class="card-split-container"><h4>Split Payment Across Cards</h4>';
-            cardSplit.forEach((split, idx) => {
-                html += `<div class="card-split-item">
-                    <select onchange="updateCardSplit(${idx}, 'card', this.value)">
-                        <option value="">Select Card</option>
-                        ${cards.map(c => `<option value="${c.id}">${c.name} (****${c.last4}) - $${c.balance}</option>`).join('')}
-                    </select>
-                    <input type="number" placeholder="Amount $" onchange="updateCardSplit(${idx}, 'amount', this.value)">
-                    ${idx > 0 ? `<button onclick="removeCardSplit(${idx})">×</button>` : ''}
-                </div>`;
-            });
-            html += `<button class="add-card-btn" onclick="addCardSplit()">+ Add Another Card</button>
-                    <div class="split-total" id="splitTotal"></div></div>`;
-            document.getElementById('cardSplitContainer').innerHTML = html;
+        if (method === 'card') {
+            document.getElementById('cardSplitContainer').innerHTML = `<div class="coming-soon"><h3>🔧 Coming Soon!</h3><p>Card payments are coming soon. Please use PayPal for now.</p><p>We're working on adding this feature!</p></div>`;
             document.getElementById('cardSplitContainer').style.display = 'block';
-        } catch(error) {
-            document.getElementById('cardSplitContainer').innerHTML = `<div class="coming-soon"><h3>🔧 Coming Soon!</h3><p>Card payments are not yet available. Please use PayPal for now.</p><p>We're working on adding this feature!</p></div>`;
-            document.getElementById('cardSplitContainer').style.display = 'block';
+        } else {
+            document.getElementById('cardSplitContainer').style.display = 'none';
         }
     }
-    
-    function updateCardSplit(idx, field, value) { if (field === 'card') cardSplit[idx].cardId = value; if (field === 'amount') cardSplit[idx].amount = parseFloat(value) || 0; updateSplitTotal(); }
-    function addCardSplit() { cardSplit.push({ cardId: '', amount: 0 }); loadCardsForSplit(); }
-    function removeCardSplit(idx) { cardSplit.splice(idx, 1); loadCardsForSplit(); }
-    function updateSplitTotal() { const total = cardSplit.reduce((s, i) => s + i.amount, 0); const st = document.getElementById('splitTotal'); if(st) st.innerHTML = `Total to charge: $${total.toFixed(2)}`; }
     
     function checkout() {
         if (cart.length === 0) { alert('Cart is empty!'); return; }
         if (!selectedPayment) { alert('Select a payment method!'); return; }
         let totalUSD = cart.reduce((s, i) => s + (i.priceUSD * i.quantity), 0);
         const totalCoins = cart.reduce((s, i) => s + (i.coins * i.quantity), 0);
-        if (selectedPayment === 'card') {
-            const totalSplit = cardSplit.reduce((s, i) => s + i.amount, 0);
-            if (Math.abs(totalSplit - totalUSD) > 0.01) { alert(`Split total ($${totalSplit.toFixed(2)}) doesn't match order total ($${totalUSD.toFixed(2)})`); return; }
+        
+        if (selectedPayment === 'paypal') {
+            alert(`Redirecting to PayPal...\nTotal: $${totalUSD.toFixed(2)} for ${totalCoins.toLocaleString()} Coins\n\nPayment will be processed via PayPal.`);
+        } else {
+            alert(`Card payments coming soon!\nTotal: $${totalUSD.toFixed(2)} for ${totalCoins.toLocaleString()} Coins\n\nPlease use PayPal for now.`);
+            return;
         }
-        alert(`Order placed! Total: $${totalUSD.toFixed(2)} for ${totalCoins.toLocaleString()} Coins\nPayment will be processed.`);
         cart = []; localStorage.setItem('crix_cart', JSON.stringify(cart)); updateCartCount(); closeCart();
-    }
-    
-    function showNotification(msg, type = 'success') {
-        const notif = document.createElement('div');
-        notif.style.cssText = `position:fixed;bottom:20px;right:20px;background:${type === 'error' ? '#FF2A1F' : '#22c55e'};color:white;padding:12px 20px;border-radius:8px;z-index:9999;animation:fadeInOut 3s forwards;`;
-        notif.innerText = msg; document.body.appendChild(notif);
-        setTimeout(() => notif.remove(), 3000);
     }
     
     document.getElementById('currencySelect').addEventListener('change', (e) => setCurrency(e.target.value));
     document.getElementById('currencySelect').value = getCurrency();
     loadActiveSale(); renderPackages(); updateCartCount();
     
-    const style = document.createElement('style');
-    style.textContent = `@keyframes fadeInOut {0%{opacity:0;transform:translateY(20px);}15%{opacity:1;transform:translateY(0);}85%{opacity:1;}100%{opacity:0;transform:translateY(-20px);}}`;
-    document.head.appendChild(style);
-    
-    window.openCart = openCart; window.closeCart = closeCart; window.addToCart = addToCart; window.removeFromCart = removeFromCart;
-    window.applyCoupon = applyCoupon; window.selectPayment = selectPayment; window.openCustomAmount = openCustomAmount;
-    window.updateCardSplit = updateCardSplit; window.addCardSplit = addCardSplit; window.removeCardSplit = removeCardSplit; window.checkout = checkout;
+    // Audio for shop page
+    const bgMusic = new Audio('Chirp.mp3');
+    bgMusic.loop = true; bgMusic.volume = 0.35;
+    let isMuted = localStorage.getItem('crix_muted') === 'true';
+    const muteBtn = document.getElementById('muteToggleBtn');
+    if (muteBtn) {
+        if (isMuted) { muteBtn.innerHTML = '🔇 Unmute'; } else { bgMusic.play().catch(()=>{}); }
+        muteBtn.addEventListener('click', () => {
+            if (!isMuted) { isMuted = true; bgMusic.pause(); muteBtn.innerHTML = '🔇 Unmute'; localStorage.setItem('crix_muted', 'true');
+            } else { isMuted = false; bgMusic.play().catch(()=>{}); muteBtn.innerHTML = '🔊 Mute'; localStorage.setItem('crix_muted', 'false'); }
+        });
+    }
     
     const themeToggle = document.getElementById('themeToggle');
     themeToggle.onclick = () => { document.body.classList.toggle('light-mode'); localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); };
     if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
+    
+    window.openCart = openCart; window.closeCart = closeCart; window.addToCart = addToCart; window.removeFromCart = removeFromCart;
+    window.applyCoupon = applyCoupon; window.selectPayment = selectPayment; window.openCustomAmount = openCustomAmount; window.checkout = checkout;
 </script>
 </body>
 </html>
