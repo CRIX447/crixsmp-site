@@ -10,12 +10,10 @@
         @font-face {
             font-family: 'MinecraftRegular';
             src: url('MinecraftRegular-Bmg3.otf') format('opentype');
-            font-weight: normal;
         }
         @font-face {
             font-family: 'MinecraftBold';
             src: url('MinecraftBold-nMK1.otf') format('opentype');
-            font-weight: bold;
         }
         body {
             background: #0a0c10;
@@ -97,6 +95,7 @@
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
         .modal-content { background: #1a1d24; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; border-radius: 8px; position: relative; }
         .close-modal { position: absolute; top: 0.8rem; right: 1rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
+        .rules-text { white-space: pre-wrap; line-height: 1.6; }
         @media (max-width: 760px) { .site-wrapper { padding: 1rem; } h1 { font-size: 2.2rem; } }
     </style>
 </head>
@@ -106,7 +105,7 @@
         <div class="logo-area"><img src="crixsmplogo.png" alt="Logo" class="logo-img"><span class="logo-text">CRIX SMP</span></div>
         <div class="nav-links">
             <a href="#home">HOME</a><a href="#features">FEATURES</a><a href="shop.html">SHOP</a><a href="#downloads">VOICE CHAT</a>
-            <button id="rulesBtn">📜 RULES</button><button id="themeToggle">🌓 LIGHT/DARK</button>
+            <button id="rulesBtn">📜 RULES</button>
             <a href="https://discord.gg/MbQvJGDAst" target="_blank" class="social-icon discord"><img src="discord.png" class="icon-img-small" onerror="this.style.display='none'"> Discord</a>
             <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-icon youtube"><img src="youtube.png" class="icon-img-small" onerror="this.style.display='none'"> YouTube</a>
             <a href="https://www.patreon.com/cw/IMCRIX123" target="_blank" class="social-icon patreon"><img src="patreon.png" class="icon-img-small" onerror="this.style.display='none'"> Patreon</a>
@@ -180,16 +179,11 @@
     document.body.addEventListener('click', () => { if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); }, { once: true });
 
     // Rules
+    const rulesText = `CRIX SMP RULES\n\nGENERAL RULES\n1. Respect everyone - No bullying, harassment, or hate speech.\n2. No spamming - Includes chat, commands, or advertising.\n3. Keep it appropriate - No NSFW content or offensive builds.\n4. Listen to staff - Follow staff instructions.\n5. No impersonation - Do not pretend to be staff or other players.\n\nGAMEPLAY RULES\n1. No hacking or cheating (X-ray, kill aura, fly hacks, etc.)\n2. No exploiting glitches - Report them instead.\n3. No griefing - Do not destroy other players builds.\n4. No stealing - Only take what is yours.\n5. PvP only if both players agree (unless in PvP zones).\n\nBUILDING RULES\n1. No inappropriate builds.\n2. Do not build too close without permission.\n3. No lag machines or server-crashing builds.\n4. Keep redstone reasonable.\n\nCHAT RULES\n1. No excessive swearing.\n2. No advertising other servers.\n3. Use the main server language in public chat.\n4. No toxicity or drama.\n\nCROSSPLAY RULES\n1. Do not exploit version differences.\n2. Be respectful of different platforms.\n3. Report version-specific bugs.\n\nPUNISHMENTS\n1st Offense: Warning\n2nd Offense: Kick or mute\n3rd Offense: Temporary ban\nSevere offenses: Instant ban\n\nEXTRA RULES\n- Do not ask for admin.\n- Do not beg for items or ranks.\n- Have fun and respect others.`;
     const rulesModal = document.getElementById('rulesModal');
-    document.getElementById('rulesBtn').onclick = () => rulesModal.style.display = 'flex';
+    document.getElementById('rulesBtn').onclick = () => { document.getElementById('rulesText').innerText = rulesText; rulesModal.style.display = 'flex'; };
     document.getElementById('closeModalBtn').onclick = () => rulesModal.style.display = 'none';
     window.onclick = (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; };
-    document.getElementById('rulesText').innerText = `CRIX SMP RULES\n\n1. Respect everyone\n2. No hacking/cheating\n3. No griefing\n4. PvP only if agreed\n5. Have fun!`;
-
-    // Theme toggle
-    const themeToggle = document.getElementById('themeToggle');
-    themeToggle.onclick = () => { document.body.classList.toggle('light-mode'); localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); };
-    if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
 
     // Server status
     const serverHost = 'play.crixsmp.net';
