@@ -56,6 +56,10 @@
         .btn-primary:hover { background: #cc1a10; transform: translate(-2px, -2px); }
         .btn-secondary { background: #1f2a48; border-color: #2A43E0; box-shadow: 4px 4px 0px #0a1430; }
         .btn-secondary:hover { background: #2A43E0; transform: translate(-2px, -2px); }
+        .btn-disabled {
+            background: #6c757d; border-color: #555; cursor: not-allowed; opacity: 0.6;
+        }
+        .btn-disabled:hover { transform: none; background: #6c757d; }
         
         .hero { background: #0f1219cc; backdrop-filter: blur(4px); padding: 2.5rem 2rem; margin-bottom: 2rem; border: 3px solid #2a2e3a; text-align: center; border-radius: 8px; }
         h1 { font-size: 3.4rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); }
@@ -77,6 +81,38 @@
         .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
         .card { background: #1a1d24e6; padding: 1.5rem; text-align: center; border-left: 8px solid #2A43E0; border-bottom: 4px solid #FF2A1F; border-radius: 8px; cursor: pointer; }
         .card:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0px rgba(0,0,0,0.2); }
+        
+        /* Coming Soon Banner */
+        .coming-soon-banner {
+            background: linear-gradient(135deg, #f59e0b, #FF2A1F);
+            text-align: center;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .shop-locked {
+            opacity: 0.7;
+            pointer-events: none;
+            position: relative;
+        }
+        .shop-locked-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            z-index: 10;
+        }
+        .shop-section {
+            position: relative;
+        }
         
         .download-section { background: #0f1219; padding: 1.5rem; margin: 2rem 0; border: 3px solid #2d3a60; border-radius: 8px; }
         .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
@@ -104,7 +140,9 @@
     <nav class="navbar">
         <div class="logo-area"><img src="crixsmplogo.png" alt="Logo" class="logo-img"><span class="logo-text">CRIX SMP</span></div>
         <div class="nav-links">
-            <a href="#home">HOME</a><a href="#features">FEATURES</a><a href="shop.html">SHOP</a><a href="#downloads">VOICE CHAT</a>
+            <a href="#home">HOME</a><a href="#features">FEATURES</a>
+            <a href="#" id="shopLink" style="cursor:pointer;">🛒 SHOP</a>
+            <a href="#downloads">VOICE CHAT</a>
             <button id="rulesBtn">📜 RULES</button>
             <a href="https://discord.gg/MbQvJGDAst" target="_blank" class="social-icon discord"><img src="discord.png" class="icon-img-small" onerror="this.style.display='none'"> Discord</a>
             <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-icon youtube"><img src="youtube.png" class="icon-img-small" onerror="this.style.display='none'"> YouTube</a>
@@ -114,7 +152,10 @@
 
     <section id="home"><div class="hero"><h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
     <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
-    <div class="btn-group"><a href="https://discord.gg/MbQvJGDAst" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a><a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a></div>
+    <div class="btn-group">
+        <a href="https://discord.gg/MbQvJGDAst" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a>
+        <a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a>
+    </div>
     </div></section>
 
     <div class="status-panel"><div class="status-grid">
@@ -136,6 +177,38 @@
         <div class="card"><h3>🍩 DONUT SPIRIT</h3><p>Cooperative gameplay.</p></div>
     </div></section>
 
+    <!-- SHOP SECTION - LOCKED WITH COMING SOON -->
+    <section id="shopSection" class="shop-section">
+        <div id="shopLockedOverlay" style="display: flex;">
+            <div class="coming-soon-banner">
+                🛒 SHOP COMING SOON! 🛒<br>
+                We're preparing amazing coin packages for you!
+            </div>
+            <div style="text-align: center; padding: 2rem; background: #1a1d24; border-radius: 8px; margin-top: 1rem;">
+                <h2>🔧 Shop Under Construction</h2>
+                <p>The CRIX Coins Shop is currently being prepared.</p>
+                <p>Check back soon for amazing deals and exclusive packages!</p>
+                <div style="margin-top: 20px;">
+                    <span style="font-size: 3rem;">💰</span>
+                    <span style="font-size: 3rem;">⚡</span>
+                    <span style="font-size: 3rem;">✨</span>
+                </div>
+                <p style="margin-top: 20px; color: #f59e0b;">Estimated Launch: Coming Weeks</p>
+            </div>
+        </div>
+        <div id="shopUnlockedContent" style="display: none;">
+            <!-- This content will show when admin unlocks the shop -->
+            <div class="coming-soon-banner" style="background: #22c55e;">
+                🎉 SHOP IS NOW OPEN! 🎉
+            </div>
+            <div style="text-align: center; padding: 2rem; background: #1a1d24; border-radius: 8px; margin-top: 1rem;">
+                <h2>💰 CRIX COINS SHOP</h2>
+                <p>The shop is now open! Click below to start shopping.</p>
+                <a href="shop.html" class="btn btn-primary" style="margin-top: 20px; display: inline-block;">🛒 GO TO SHOP →</a>
+            </div>
+        </div>
+    </section>
+
     <section id="downloads"><div class="download-section"><h2>🎙️ VOICE CHAT SETUP</h2>
     <div class="download-grid">
         <div class="download-card"><h3>🧵 FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
@@ -148,8 +221,11 @@
 </div>
 
 <footer class="main-footer"><div class="footer-links">
-    <a href="#home">Home</a><a href="#features">Features</a><a href="shop.html">Shop</a><a href="#downloads">Voice Chat</a>
-    <a href="https://discord.gg/MbQvJGDAst" target="_blank">Discord</a><a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a>
+    <a href="#home">Home</a><a href="#features">Features</a>
+    <a href="#" id="footerShopLink">Shop</a>
+    <a href="#downloads">Voice Chat</a>
+    <a href="https://discord.gg/MbQvJGDAst" target="_blank">Discord</a>
+    <a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a>
     <a href="https://www.patreon.com/cw/IMCRIX123" target="_blank">Patreon</a>
 </div><div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div></footer>
 
@@ -157,6 +233,7 @@
 <div id="rulesModal" class="modal"><div class="modal-content"><span class="close-modal" id="closeModalBtn">&times;</span><h2>📜 CRIX SMP RULES</h2><div class="rules-text" id="rulesText"></div></div></div>
 
 <script>
+    // Audio setup
     const hoverSound = new Audio('scroll.mp3');
     const clickSound = new Audio('go.mp3');
     const bgMusic = new Audio('Chirp.mp3');
@@ -177,12 +254,14 @@
     });
     document.body.addEventListener('click', () => { if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); }, { once: true });
 
+    // Rules
     const rulesText = `CRIX SMP RULES\n\nGENERAL RULES\n1. Respect everyone - No bullying, harassment, or hate speech.\n2. No spamming - Includes chat, commands, or advertising.\n3. Keep it appropriate - No NSFW content or offensive builds.\n4. Listen to staff - Follow staff instructions.\n5. No impersonation - Do not pretend to be staff or other players.\n\nGAMEPLAY RULES\n1. No hacking or cheating (X-ray, kill aura, fly hacks, etc.)\n2. No exploiting glitches - Report them instead.\n3. No griefing - Do not destroy other players builds.\n4. No stealing - Only take what is yours.\n5. PvP only if both players agree (unless in PvP zones).\n\nBUILDING RULES\n1. No inappropriate builds.\n2. Do not build too close without permission.\n3. No lag machines or server-crashing builds.\n4. Keep redstone reasonable.\n\nCHAT RULES\n1. No excessive swearing.\n2. No advertising other servers.\n3. Use the main server language in public chat.\n4. No toxicity or drama.\n\nCROSSPLAY RULES\n1. Do not exploit version differences.\n2. Be respectful of different platforms.\n3. Report version-specific bugs.\n\nPUNISHMENTS\n1st Offense: Warning\n2nd Offense: Kick or mute\n3rd Offense: Temporary ban\nSevere offenses: Instant ban\n\nEXTRA RULES\n- Do not ask for admin.\n- Do not beg for items or ranks.\n- Have fun and respect others.`;
     const rulesModal = document.getElementById('rulesModal');
     document.getElementById('rulesBtn').onclick = () => { document.getElementById('rulesText').innerText = rulesText; rulesModal.style.display = 'flex'; };
     document.getElementById('closeModalBtn').onclick = () => rulesModal.style.display = 'none';
     window.onclick = (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; };
 
+    // Server status
     const serverHost = 'play.crixsmp.net';
     async function checkServerStatus() {
         const statusText = document.getElementById('statusText');
@@ -210,6 +289,51 @@
     checkServerStatus();
     document.getElementById('pingServerBtn').onclick = checkServerStatus;
     setInterval(checkServerStatus, 60000);
+
+    // SHOP LOCK/UNLOCK SYSTEM
+    // Check localStorage for shop unlock status
+    let isShopUnlocked = localStorage.getItem('crix_shop_unlocked') === 'true';
+    
+    function updateShopDisplay() {
+        const lockedDiv = document.getElementById('shopLockedOverlay');
+        const unlockedDiv = document.getElementById('shopUnlockedContent');
+        const shopLink = document.getElementById('shopLink');
+        const footerShopLink = document.getElementById('footerShopLink');
+        
+        if (isShopUnlocked) {
+            lockedDiv.style.display = 'none';
+            unlockedDiv.style.display = 'block';
+            if (shopLink) shopLink.href = 'shop.html';
+            if (footerShopLink) footerShopLink.href = 'shop.html';
+        } else {
+            lockedDiv.style.display = 'block';
+            unlockedDiv.style.display = 'none';
+            if (shopLink) {
+                shopLink.href = '#';
+                shopLink.onclick = (e) => {
+                    e.preventDefault();
+                    alert('🛒 The shop is currently under construction! Check back soon for amazing coin packages.');
+                };
+            }
+            if (footerShopLink) {
+                footerShopLink.href = '#';
+                footerShopLink.onclick = (e) => {
+                    e.preventDefault();
+                    alert('🛒 The shop is currently under construction! Check back soon for amazing coin packages.');
+                };
+            }
+        }
+    }
+    
+    updateShopDisplay();
+    
+    // Listen for storage changes (for admin panel unlock)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'crix_shop_unlocked') {
+            isShopUnlocked = e.newValue === 'true';
+            updateShopDisplay();
+        }
+    });
 </script>
 </body>
 </html>
