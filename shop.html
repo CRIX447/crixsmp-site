@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRIX SMP - Shop</title>
+    <link rel="icon" type="image/png" href="images/crixsmplogo.png">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/shop.css">
+</head>
+<body>
+<div class="shop-container">
+    <nav class="navbar">
+        <div class="logo-area">
+            <img src="images/crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img">
+            <span class="logo-text">CRIX SMP</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">HOME</a>
+            <a href="index.html#features">FEATURES</a>
+            <a href="shop.html">SHOP</a>
+            <button id="themeToggle">🌓 LIGHT/DARK</button>
+            <a href="https://discord.gg/MbQvJGDAst" target="_blank">💬 Discord</a>
+            <a href="https://www.youtube.com/@CRIXSMP" target="_blank">📺 YouTube</a>
+            <a href="https://www.patreon.com/cw/IMCRIX123" target="_blank">🎯 Patreon</a>
+        </div>
+    </nav>
+
+    <div class="shop-header">
+        <h1>💰 CRIX COINS SHOP</h1>
+        <div class="shop-controls">
+            <div class="currency-selector">
+                <span>💱</span>
+                <select id="currencySelect">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CAD">CAD (C$)</option>
+                    <option value="AUD">AUD (A$)</option>
+                </select>
+            </div>
+            <div class="cart-icon" onclick="openCart()">
+                🛒 Cart <span class="cart-count" id="cartCount">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="saleBanner" class="sale-banner" style="display:none;"></div>
+    
+    <div class="creator-code">
+        💎 <strong>Creator Code:</strong> <code>cgvr</code> - Get 20% OFF at checkout!
+    </div>
+    
+    <div class="packages-grid" id="packagesGrid"></div>
+</div>
+
+<!-- Cart Modal -->
+<div id="cartModal" class="cart-modal">
+    <div class="cart-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>🛒 Your Cart</h2>
+            <span onclick="closeCart()" style="font-size:2rem; cursor:pointer;">&times;</span>
+        </div>
+        <div id="cartItems"></div>
+        
+        <div class="coupon-input">
+            <input type="text" id="couponCode" placeholder="Enter creator code (cgvr)">
+            <button onclick="applyCoupon()">Apply</button>
+        </div>
+        
+        <div class="payment-methods">
+            <h3>Select Payment Method</h3>
+            <div class="payment-option" onclick="selectPayment('paypal')">
+                <input type="radio" name="payment" value="paypal" id="paypalRadio">
+                <label for="paypalRadio">💳 PayPal</label>
+            </div>
+            <div class="payment-option" onclick="selectPayment('card')">
+                <input type="radio" name="payment" value="card" id="cardRadio">
+                <label for="cardRadio">💎 Credit/Debit Card</label>
+            </div>
+            <div id="cardSplitContainer" style="display:none;"></div>
+        </div>
+        
+        <div class="cart-total" id="cartTotal"></div>
+        <button class="checkout-btn" onclick="checkout()">Proceed to Payment →</button>
+    </div>
+</div>
+
+<script src="js/shop.js"></script>
+</body>
+</html>

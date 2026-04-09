@@ -1,0 +1,308 @@
+/* CRIX SMP - Shop Styles */
+.shop-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.shop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.cart-icon {
+    background: #FF2A1F;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+}
+
+.cart-count {
+    background: white;
+    color: #FF2A1F;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.currency-selector {
+    background: #1a1d24;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.currency-selector select {
+    background: #0a0c10;
+    color: #e0e4f0;
+    border: 1px solid #2A43E0;
+    padding: 0.3rem;
+    border-radius: 4px;
+}
+
+.sale-banner {
+    background: linear-gradient(135deg, #FF2A1F, #f59e0b);
+    color: white;
+    text-align: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-weight: bold;
+}
+
+.creator-code {
+    background: #1a2a1a;
+    border-left: 4px solid #22c55e;
+    padding: 0.75rem;
+    margin: 1rem 0;
+    text-align: center;
+    border-radius: 8px;
+}
+
+.creator-code code {
+    background: #0a0c10;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    color: #22c55e;
+    font-size: 1.2rem;
+}
+
+.packages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.package-card {
+    background: #1a1d24;
+    border: 2px solid #2a2e3a;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.package-card:hover {
+    transform: translate(-3px, -3px);
+    border-color: #2A43E0;
+    box-shadow: 5px 5px 0 rgba(0,0,0,0.3);
+}
+
+.package-img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+.package-info {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.package-info h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+    color: #FFD966;
+}
+
+.coin-amount {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #22c55e;
+    margin: 0.5rem 0;
+}
+
+.price {
+    font-size: 1.2rem;
+    margin: 0.5rem 0;
+}
+
+.bonus {
+    font-size: 0.85rem;
+    color: #f59e0b;
+    margin: 0.5rem 0;
+}
+
+.buy-btn {
+    background: #2A43E0;
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    transition: all 0.1s;
+    font-family: inherit;
+}
+
+.buy-btn:hover {
+    transform: translate(-2px, -2px);
+    background: #1f36c2;
+}
+
+/* Cart Modal */
+.cart-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.95);
+    z-index: 3000;
+    justify-content: center;
+    align-items: center;
+}
+
+.cart-content {
+    background: #1a1d24;
+    border: 3px solid #2A43E0;
+    border-radius: 12px;
+    max-width: 550px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-bottom: 1px solid #2a2e3a;
+}
+
+.remove-item {
+    background: #FF2A1F;
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.cart-total {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: right;
+    padding: 1rem;
+    border-top: 2px solid #2A43E0;
+}
+
+.checkout-btn {
+    background: #22c55e;
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 1rem;
+}
+
+.coupon-input {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.coupon-input input {
+    flex: 1;
+    background: #0a0c10;
+    border: 1px solid #2a2e3a;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+/* Payment Method Selector */
+.payment-methods {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #0f1219;
+    border-radius: 8px;
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    border-radius: 6px;
+    margin: 0.5rem 0;
+}
+
+.payment-option:hover {
+    background: #1a1d24;
+}
+
+.payment-option.selected {
+    background: #1f2a48;
+    border-left: 4px solid #22c55e;
+}
+
+/* Multi-card split */
+.card-split-container {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #0a0c10;
+    border-radius: 8px;
+}
+
+.card-split-item {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+    align-items: center;
+}
+
+.card-split-item select {
+    flex: 2;
+    background: #1a1d24;
+    border: 1px solid #2A43E0;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.card-split-item input {
+    flex: 1;
+    background: #1a1d24;
+    border: 1px solid #2A43E0;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.add-card-btn {
+    background: #2A43E0;
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.split-total {
+    font-size: 0.9rem;
+    color: #22c55e;
+    margin-top: 0.5rem;
+}

@@ -1,0 +1,23 @@
+[
+    {
+        "id": "card_1",
+        "name": "Main Business Account",
+        "last4": "1234",
+        "balance": 10000,
+        "routing": "Bank of America"
+    },
+    {
+        "id": "card_2",
+        "name": "Secondary Account",
+        "last4": "5678",
+        "balance": 5000,
+        "routing": "Chase"
+    },
+    {
+        "id": "card_3",
+        "name": "CRIX SMP Fund",
+        "last4": "9012",
+        "balance": 25000,
+        "routing": "Wells Fargo"
+    }
+]
