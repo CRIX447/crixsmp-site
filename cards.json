@@ -1,7 +1,7 @@
 {
     "cards": [
         {
-            "id": "mastercard_main",
+            "id": "mastercard_business",
             "type": "mastercard",
             "last4": "1234",
             "name": "Main Business Account",
@@ -14,6 +14,22 @@
             "last4": "5678",
             "name": "CRIX SMP Fund",
             "bank": "Bank of America",
+            "enabled": true
+        },
+        {
+            "id": "amex_business",
+            "type": "amex",
+            "last4": "9012",
+            "name": "American Express Business",
+            "bank": "American Express",
+            "enabled": true
+        },
+        {
+            "id": "discover_business",
+            "type": "discover",
+            "last4": "3456",
+            "name": "Discover Business Account",
+            "bank": "Discover",
             "enabled": true
         },
         {
