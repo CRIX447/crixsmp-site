@@ -157,7 +157,6 @@
 <div id="rulesModal" class="modal"><div class="modal-content"><span class="close-modal" id="closeModalBtn">&times;</span><h2>📜 CRIX SMP RULES</h2><div class="rules-text" id="rulesText"></div></div></div>
 
 <script>
-    // Audio setup
     const hoverSound = new Audio('scroll.mp3');
     const clickSound = new Audio('go.mp3');
     const bgMusic = new Audio('Chirp.mp3');
@@ -178,14 +177,12 @@
     });
     document.body.addEventListener('click', () => { if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); }, { once: true });
 
-    // Rules
     const rulesText = `CRIX SMP RULES\n\nGENERAL RULES\n1. Respect everyone - No bullying, harassment, or hate speech.\n2. No spamming - Includes chat, commands, or advertising.\n3. Keep it appropriate - No NSFW content or offensive builds.\n4. Listen to staff - Follow staff instructions.\n5. No impersonation - Do not pretend to be staff or other players.\n\nGAMEPLAY RULES\n1. No hacking or cheating (X-ray, kill aura, fly hacks, etc.)\n2. No exploiting glitches - Report them instead.\n3. No griefing - Do not destroy other players builds.\n4. No stealing - Only take what is yours.\n5. PvP only if both players agree (unless in PvP zones).\n\nBUILDING RULES\n1. No inappropriate builds.\n2. Do not build too close without permission.\n3. No lag machines or server-crashing builds.\n4. Keep redstone reasonable.\n\nCHAT RULES\n1. No excessive swearing.\n2. No advertising other servers.\n3. Use the main server language in public chat.\n4. No toxicity or drama.\n\nCROSSPLAY RULES\n1. Do not exploit version differences.\n2. Be respectful of different platforms.\n3. Report version-specific bugs.\n\nPUNISHMENTS\n1st Offense: Warning\n2nd Offense: Kick or mute\n3rd Offense: Temporary ban\nSevere offenses: Instant ban\n\nEXTRA RULES\n- Do not ask for admin.\n- Do not beg for items or ranks.\n- Have fun and respect others.`;
     const rulesModal = document.getElementById('rulesModal');
     document.getElementById('rulesBtn').onclick = () => { document.getElementById('rulesText').innerText = rulesText; rulesModal.style.display = 'flex'; };
     document.getElementById('closeModalBtn').onclick = () => rulesModal.style.display = 'none';
     window.onclick = (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; };
 
-    // Server status
     const serverHost = 'play.crixsmp.net';
     async function checkServerStatus() {
         const statusText = document.getElementById('statusText');
