@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRIX SMP - Link Your Accounts</title>
+    <title>CRIX SMP - Link Your Account</title>
     <style>
         * {
             margin: 0;
@@ -104,6 +104,8 @@
             letter-spacing: 5px;
             color: #22c55e;
             font-family: monospace;
+            user-select: all;
+            cursor: pointer;
         }
 
         button {
@@ -188,12 +190,28 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        .copy-btn {
+            background: #22c55e;
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            margin-left: 10px;
+        }
+
+        .minecraft-commands {
+            background: #0a0c10;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔗 CRIX SMP Account Link</h1>
-        <div class="subtitle">Link your accounts to unlock exclusive rewards!</div>
+        <div class="subtitle">Generate codes directly in your browser!</div>
 
         <div class="reward-box">
             <h4>🎁 What you get when linked:</h4>
@@ -201,22 +219,30 @@
                 <li>💰 <strong>100,000,000</strong> monthly in-game money</li>
                 <li>👑 <strong>CRIX+</strong> rank in-game</li>
                 <li>🎬 Early access to features & YouTube videos</li>
-                <li>💬 Discord role & access to private channels</li>
             </ul>
         </div>
 
         <div class="warning">
-            ⚠️ <strong>IMPORTANT!</strong> You must be in-game on the SAME IP address to verify!
+            ⚠️ <strong>IMPORTANT!</strong> 
+            <ul style="margin: 5px 0 0 20px;">
+                <li>Codes are stored in your browser (localStorage)</li>
+                <li>Each code expires in <strong>10 minutes</strong></li>
+                <li>Keep this page open while you use the code in-game!</li>
+            </ul>
         </div>
 
         <!-- Step 1: Get Verification Code -->
         <div id="codeStep" class="step active">
-            <h3>🔑 Step 1: Get Verification Code</h3>
-            <button id="getCodeBtn" onclick="getVerificationCode()">Generate Verification Code →</button>
+            <h3>🔑 Step 1: Generate Verification Code</h3>
+            <button id="getCodeBtn" onclick="generateLinkCode()">Generate Link Code →</button>
             <div id="codeDisplay" style="display:none;" class="code-box">
-                <p>In Minecraft, type:</p>
-                <div class="code" id="verificationCode">XXXXXX</div>
-                <p class="info-text">This code expires in 10 minutes. Use it in-game to link your Minecraft account!</p>
+                <p>📋 Your verification code (click to copy):</p>
+                <div class="code" id="verificationCode" onclick="copyCode('verificationCode')">XXXXXX</div>
+                <div class="minecraft-commands">
+                    💻 In Minecraft, type:<br>
+                    <strong style="color:#22c55e">/link <span id="cmdCode">XXXXXX</span></strong>
+                </div>
+                <p class="info-text">⏰ This code expires in 10 minutes. Use it in-game to link your account!</p>
             </div>
         </div>
 
@@ -224,129 +250,299 @@
         <div id="verifyStep" class="step" style="display:none;">
             <h3>⏳ Step 2: Waiting for Verification</h3>
             <div id="verifyStatus" class="step-status status-pending">Waiting for you to type /link [code] in Minecraft...</div>
-            <div class="info-text">Once you type the command in-game, this will automatically update!</div>
+            <div class="info-text">Once you type the command, this will update automatically!</div>
         </div>
 
         <!-- Step 3: Claim Monthly Reward -->
         <div id="claimStep" class="step" style="display:none;">
             <h3>💰 Step 3: Claim Your Monthly Reward</h3>
-            <button id="getRewardBtn" onclick="getRedeemCode()" disabled>Generate Redeem Code →</button>
+            <button id="getRewardBtn" onclick="generateRedeemCode()" disabled>Generate Redeem Code →</button>
             <div id="redeemDisplay" style="display:none;" class="code-box">
-                <p>In Minecraft, type:</p>
-                <div class="code" id="redeemCode">XXXXXX</div>
-                <p class="info-text">This code is IP-locked! Only your current IP can use it.</p>
+                <p>📋 Your redeem code (click to copy):</p>
+                <div class="code" id="redeemCode" onclick="copyCode('redeemCode')">XXXXXX</div>
+                <div class="minecraft-commands">
+                    💻 In Minecraft, type:<br>
+                    <strong style="color:#22c55e">/redeem <span id="redeemCmdCode">XXXXXX</span></strong>
+                </div>
+                <p class="info-text">🔒 This code is IP-locked! Only your current IP can use it.</p>
             </div>
+        </div>
+
+        <!-- Pending Codes Display -->
+        <div id="pendingCodesDisplay" style="display:none; margin-top: 20px;">
+            <h3>📋 Your Pending Codes</h3>
+            <div id="pendingList"></div>
         </div>
 
         <div id="errorMsg"></div>
     </div>
 
     <script>
-        const API_URL = window.location.origin;
-        let sessionId = localStorage.getItem('crix_session');
-        if (!sessionId) {
-            sessionId = crypto.randomUUID();
-            localStorage.setItem('crix_session', sessionId);
+        // ============================================
+        // CRIX SMP - Browser-Based Code Generator
+        // ============================================
+        
+        // Get or create player ID (unique per browser/device)
+        let playerId = localStorage.getItem('crix_player_id');
+        if (!playerId) {
+            playerId = crypto.randomUUID();
+            localStorage.setItem('crix_player_id', playerId);
         }
-
-        let currentCode = null;
-        let currentRedeemCode = null;
-        let checkInterval = null;
-
-        async function getVerificationCode() {
+        
+        // Load existing data
+        let linkedAccount = localStorage.getItem('crix_linked');
+        let lastClaimMonth = localStorage.getItem('crix_last_claim');
+        let pendingLinkCodes = JSON.parse(localStorage.getItem('crix_pending_links') || '[]');
+        let pendingRedeemCodes = JSON.parse(localStorage.getItem('crix_pending_redeems') || '[]');
+        
+        // Clean expired codes on load
+        function cleanExpiredCodes() {
+            const now = Date.now();
+            
+            // Clean link codes
+            pendingLinkCodes = pendingLinkCodes.filter(code => code.expires > now);
+            localStorage.setItem('crix_pending_links', JSON.stringify(pendingLinkCodes));
+            
+            // Clean redeem codes
+            pendingRedeemCodes = pendingRedeemCodes.filter(code => code.expires > now);
+            localStorage.setItem('crix_pending_redeems', JSON.stringify(pendingRedeemCodes));
+        }
+        
+        // Generate random 6-character code
+        function generateRandomCode() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        }
+        
+        // Generate unique code (not already in use)
+        function generateUniqueCode(existingCodes) {
+            let code;
+            let attempts = 0;
+            do {
+                code = generateRandomCode();
+                attempts++;
+                if (attempts > 100) break;
+            } while (existingCodes.some(c => c.code === code));
+            return code;
+        }
+        
+        // Generate Link Code (for /link)
+        function generateLinkCode() {
             const btn = document.getElementById('getCodeBtn');
             btn.innerHTML = 'Generating... <span class="loading"></span>';
             btn.disabled = true;
             
-            try {
-                const response = await fetch(`${API_URL}/api/generate-code`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentCode = data.code;
-                    document.getElementById('verificationCode').innerText = currentCode;
-                    document.getElementById('codeDisplay').style.display = 'block';
-                    document.getElementById('codeStep').classList.add('completed');
-                    document.getElementById('codeStep').classList.remove('active');
-                    document.getElementById('verifyStep').style.display = 'block';
-                    document.getElementById('verifyStep').classList.add('active');
-                    showMessage(`✅ Code generated: ${currentCode}. Type /link ${currentCode} in Minecraft!`, 'success');
-                    
-                    // Start checking if code was used
-                    startCheckingVerification();
-                } else {
-                    showMessage(`❌ ${data.message}`, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = 'Generate Verification Code →';
-                }
-            } catch (error) {
-                showMessage('❌ Failed to generate code', 'error');
+            // Check if already linked
+            if (linkedAccount === 'true') {
+                showMessage('❌ Your Minecraft account is already linked!', 'error');
                 btn.disabled = false;
-                btn.innerHTML = 'Generate Verification Code →';
+                btn.innerHTML = 'Generate Link Code →';
+                return;
             }
-        }
-
-        function startCheckingVerification() {
-            if (checkInterval) clearInterval(checkInterval);
             
-            checkInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_URL}/api/check-verified?session=${sessionId}`);
-                    const data = await response.json();
-                    
-                    if (data.verified) {
-                        clearInterval(checkInterval);
-                        document.getElementById('verifyStatus').innerHTML = '✅ Verified! Your Minecraft account is linked!';
-                        document.getElementById('verifyStatus').className = 'step-status status-completed';
-                        document.getElementById('verifyStep').classList.add('completed');
-                        document.getElementById('verifyStep').classList.remove('active');
-                        document.getElementById('claimStep').style.display = 'block';
-                        document.getElementById('claimStep').classList.add('active');
-                        document.getElementById('getRewardBtn').disabled = false;
-                        showMessage('✅ Minecraft account verified! You can now claim your monthly reward.', 'success');
-                    }
-                } catch (error) {
-                    console.error('Check failed:', error);
-                }
-            }, 3000);
+            // Clean expired codes first
+            cleanExpiredCodes();
+            
+            // Generate new code
+            const now = Date.now();
+            const expires = now + (10 * 60 * 1000); // 10 minutes
+            
+            const newCode = {
+                code: generateUniqueCode(pendingLinkCodes),
+                playerId: playerId,
+                created: now,
+                expires: expires,
+                used: false,
+                type: 'link'
+            };
+            
+            pendingLinkCodes.push(newCode);
+            localStorage.setItem('crix_pending_links', JSON.stringify(pendingLinkCodes));
+            
+            // Display the code
+            document.getElementById('verificationCode').innerText = newCode.code;
+            document.getElementById('cmdCode').innerText = newCode.code;
+            document.getElementById('codeDisplay').style.display = 'block';
+            document.getElementById('codeStep').classList.add('completed');
+            document.getElementById('codeStep').classList.remove('active');
+            document.getElementById('verifyStep').style.display = 'block';
+            document.getElementById('verifyStep').classList.add('active');
+            
+            showMessage(`✅ Code generated: ${newCode.code}. Type /link ${newCode.code} in Minecraft!`, 'success');
+            btn.disabled = false;
+            btn.innerHTML = 'Generate Link Code →';
+            
+            // Start checking for verification
+            startCheckingVerification();
+            
+            // Update pending display
+            updatePendingDisplay();
         }
-
-        async function getRedeemCode() {
+        
+        // Generate Redeem Code (for /redeem - 100M)
+        function generateRedeemCode() {
             const btn = document.getElementById('getRewardBtn');
             btn.innerHTML = 'Generating... <span class="loading"></span>';
             btn.disabled = true;
             
-            try {
-                const response = await fetch(`${API_URL}/api/generate-redeem`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId })
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    currentRedeemCode = data.code;
-                    document.getElementById('redeemCode').innerText = currentRedeemCode;
-                    document.getElementById('redeemDisplay').style.display = 'block';
-                    document.getElementById('claimStep').classList.add('completed');
-                    document.getElementById('claimStep').classList.remove('active');
-                    showMessage(`✅ Redeem code generated! Type /redeem ${currentRedeemCode} in Minecraft for 100M!`, 'success');
-                } else {
-                    showMessage(`❌ ${data.message}`, 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = 'Generate Redeem Code →';
-                }
-            } catch (error) {
-                showMessage('❌ Failed to generate redeem code', 'error');
+            // Check if already claimed this month
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            if (lastClaimMonth === currentMonth) {
+                showMessage('❌ You already claimed your 100M this month! Come back next month.', 'error');
                 btn.disabled = false;
                 btn.innerHTML = 'Generate Redeem Code →';
+                return;
+            }
+            
+            // Check if account is linked
+            if (linkedAccount !== 'true') {
+                showMessage('❌ You need to link your Minecraft account first! Use /link with a verification code.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Redeem Code →';
+                return;
+            }
+            
+            // Clean expired codes
+            cleanExpiredCodes();
+            
+            // Get IP (approximate - using localStorage as proxy)
+            let playerIP = localStorage.getItem('crix_ip');
+            if (!playerIP) {
+                // Try to fetch IP from API
+                fetch('https://api.ipify.org?format=json')
+                    .then(res => res.json())
+                    .then(data => {
+                        playerIP = data.ip;
+                        localStorage.setItem('crix_ip', playerIP);
+                        continueGenerate();
+                    })
+                    .catch(() => {
+                        playerIP = 'unknown';
+                        continueGenerate();
+                    });
+            } else {
+                continueGenerate();
+            }
+            
+            function continueGenerate() {
+                const now = Date.now();
+                const expires = now + (10 * 60 * 1000);
+                
+                const newCode = {
+                    code: generateUniqueCode(pendingRedeemCodes),
+                    playerId: playerId,
+                    created: now,
+                    expires: expires,
+                    used: false,
+                    lockedIP: playerIP,
+                    type: 'redeem'
+                };
+                
+                pendingRedeemCodes.push(newCode);
+                localStorage.setItem('crix_pending_redeems', JSON.stringify(pendingRedeemCodes));
+                
+                // Display the code
+                document.getElementById('redeemCode').innerText = newCode.code;
+                document.getElementById('redeemCmdCode').innerText = newCode.code;
+                document.getElementById('redeemDisplay').style.display = 'block';
+                document.getElementById('claimStep').classList.add('completed');
+                document.getElementById('claimStep').classList.remove('active');
+                
+                showMessage(`✅ Redeem code generated: ${newCode.code}. Type /redeem ${newCode.code} in Minecraft for 100M!`, 'success');
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Redeem Code →';
+                
+                updatePendingDisplay();
             }
         }
-
+        
+        // Check if code was used (polling)
+        let checkInterval = null;
+        
+        function startCheckingVerification() {
+            if (checkInterval) clearInterval(checkInterval);
+            
+            checkInterval = setInterval(() => {
+                // Check if any link code was used
+                const updatedCodes = JSON.parse(localStorage.getItem('crix_pending_links') || '[]');
+                const ourCode = updatedCodes.find(c => c.playerId === playerId && c.used === true);
+                
+                if (ourCode) {
+                    clearInterval(checkInterval);
+                    linkedAccount = 'true';
+                    localStorage.setItem('crix_linked', 'true');
+                    
+                    document.getElementById('verifyStatus').innerHTML = '✅ Verified! Your Minecraft account is linked!';
+                    document.getElementById('verifyStatus').className = 'step-status status-completed';
+                    document.getElementById('verifyStep').classList.add('completed');
+                    document.getElementById('verifyStep').classList.remove('active');
+                    document.getElementById('claimStep').style.display = 'block';
+                    document.getElementById('claimStep').classList.add('active');
+                    document.getElementById('getRewardBtn').disabled = false;
+                    showMessage('✅ Minecraft account verified! You can now claim your monthly reward.', 'success');
+                    
+                    // Update pending codes
+                    pendingLinkCodes = updatedCodes;
+                    localStorage.setItem('crix_pending_links', JSON.stringify(pendingLinkCodes));
+                    updatePendingDisplay();
+                }
+            }, 3000);
+        }
+        
+        function updatePendingDisplay() {
+            const container = document.getElementById('pendingList');
+            const displayDiv = document.getElementById('pendingCodesDisplay');
+            
+            cleanExpiredCodes();
+            
+            const activeLinks = pendingLinkCodes.filter(c => !c.used && c.playerId === playerId);
+            const activeRedeems = pendingRedeemCodes.filter(c => !c.used && c.playerId === playerId);
+            
+            if (activeLinks.length === 0 && activeRedeems.length === 0) {
+                displayDiv.style.display = 'none';
+                return;
+            }
+            
+            displayDiv.style.display = 'block';
+            let html = '';
+            
+            if (activeLinks.length > 0) {
+                html += '<div class="step" style="margin-top:0"><h4>🔗 Active Link Codes</h4>';
+                activeLinks.forEach(code => {
+                    const remaining = Math.max(0, Math.ceil((code.expires - Date.now()) / 60000));
+                    html += `<div class="code-box" style="padding:10px; margin:5px 0">
+                                <code style="font-size:1.2rem">${code.code}</code>
+                                <span style="font-size:0.7rem"> (expires in ${remaining} min)</span>
+                             </div>`;
+                });
+                html += '</div>';
+            }
+            
+            if (activeRedeems.length > 0) {
+                html += '<div class="step"><h4>💰 Active Redeem Codes</h4>';
+                activeRedeems.forEach(code => {
+                    const remaining = Math.max(0, Math.ceil((code.expires - Date.now()) / 60000));
+                    html += `<div class="code-box" style="padding:10px; margin:5px 0">
+                                <code style="font-size:1.2rem">${code.code}</code>
+                                <span style="font-size:0.7rem"> (expires in ${remaining} min)</span>
+                             </div>`;
+                });
+                html += '</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function copyCode(elementId) {
+            const code = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(code);
+            showMessage(`✅ Copied: ${code}`, 'success');
+        }
+        
         function showMessage(msg, type) {
             const errorDiv = document.getElementById('errorMsg');
             errorDiv.innerHTML = `<span class="${type === 'error' ? 'error-text' : 'success-text'}">${msg}</span>`;
@@ -354,8 +550,27 @@
                 if (errorDiv.innerHTML === `<span class="${type === 'error' ? 'error-text' : 'success-text'}">${msg}</span>`) {
                     errorDiv.innerHTML = '';
                 }
-            }, 8000);
+            }, 5000);
         }
+        
+        // Check if already linked on load
+        if (linkedAccount === 'true') {
+            document.getElementById('codeStep').style.display = 'none';
+            document.getElementById('verifyStep').style.display = 'none';
+            document.getElementById('claimStep').style.display = 'block';
+            document.getElementById('claimStep').classList.add('active');
+            document.getElementById('getRewardBtn').disabled = false;
+        }
+        
+        // Initial cleanup
+        cleanExpiredCodes();
+        updatePendingDisplay();
+        
+        // Update display every 30 seconds
+        setInterval(() => {
+            cleanExpiredCodes();
+            updatePendingDisplay();
+        }, 30000);
     </script>
 </body>
 </html>
