@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRIX SMP - Admin Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0c10;
+            font-family: 'Courier New', monospace;
+            color: #e0e4f0;
+            padding: 2rem;
+        }
+        .admin-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #1a1d24;
+            border: 3px solid #2A43E0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        h1 { color: #FF2A1F; margin-bottom: 1rem; }
+        h2 { color: #FFD966; margin-bottom: 1rem; }
+        input, select {
+            background: #0a0c10;
+            border: 2px solid #2a2e3a;
+            color: #e0e4f0;
+            padding: 0.5rem;
+            border-radius: 6px;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        button {
+            background: #2A43E0;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        button:hover { transform: translate(-2px, -2px); background: #1f36c2; }
+        .danger-btn { background: #FF2A1F; }
+        .success-btn { background: #22c55e; }
+        .sale-item {
+            background: #0f1219;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 8px;
+        }
+        .access-denied {
+            text-align: center;
+            padding: 3rem;
+            color: #FF2A1F;
+        }
+        .ip-list {
+            background: #0a0c10;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="admin-container" id="adminContent">
+    <h1>🔧 CRIX SMP Admin Panel</h1>
+    
+    <!-- IP Whitelist Check -->
+    <div id="accessDenied" class="access-denied" style="display:none;">
+        <h2>⛔ ACCESS DENIED</h2>
+        <p>Your IP address is not whitelisted to access this panel.</p>
+        <p>Contact the server administrator for access.</p>
+    </div>
+    
+    <div id="adminPanel" style="display:none;">
+        <!-- Active Sale Management -->
+        <div class="card">
+            <h2>🎯 Active Sale Management</h2>
+            <div class="sale-controls">
+                <select id="saleSelect">
+                    <option value="">-- Select Sale to Activate --</option>
+                </select>
+                <div style="margin-top: 0.5rem;">
+                    <label>Custom Discount (%):</label>
+                    <input type="number" id="customDiscount" placeholder="Enter discount percentage">
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <label>Custom Sale Name:</label>
+                    <input type="text" id="customSaleName" placeholder="Enter sale name">
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <label>Start Date (YYYY-MM-DD):</label>
+                    <input type="date" id="customStartDate">
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <label>End Date (YYYY-MM-DD):</label>
+                    <input type="date" id="customEndDate">
+                </div>
+                <button id="activateCustomSale" class="success-btn" style="margin-top: 1rem;">Activate Custom Sale</button>
+                <button id="deactivateSale" class="danger-btn" style="margin-top: 0.5rem;">Deactivate Current Sale</button>
+            </div>
+            <div id="currentSaleInfo" style="margin-top: 1rem; padding: 0.5rem; background: #0f1219; border-radius: 8px;"></div>
+        </div>
+        
+        <!-- Whitelisted IPs Management -->
+        <div class="card">
+            <h2>🔒 Whitelisted IPs</h2>
+            <p>Only these IPs can access this admin panel.</p>
+            <div class="ip-list" id="ipList"></div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <input type="text" id="newIp" placeholder="Enter IP address to add">
+                <button id="addIpBtn">Add IP</button>
+            </div>
+        </div>
+        
+        <!-- Permanent Creator Code -->
+        <div class="card">
+            <h2>💎 Permanent Creator Code</h2>
+            <p>Current creator code: <strong id="creatorCodeDisplay">cgvr</strong> (20% off)</p>
+            <button id="editCreatorCodeBtn">Change Creator Code</button>
+        </div>
+        
+        <!-- Logout -->
+        <div class="card">
+            <button id="logoutBtn" class="danger-btn">Logout</button>
+        </div>
+    </div>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>
