@@ -2,16 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>CRIX SMP | Official Site</title>
-    <link rel="icon" type="image/png" href="images/crixsmplogo.png">
-    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="crixsmplogo.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Additional inline styles for social links */
+        .social-link {
+            color: #cbd5e6;
+            text-decoration: none;
+            padding: 0.4rem 0.8rem;
+            border: 2px solid transparent;
+            transition: 0.2s;
+        }
+        .social-link:hover {
+            border-color: #FF2A1F;
+            background: rgba(255,42,31,0.1);
+        }
+        .btn-group {
+            display: flex;
+            gap: 1.2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+        .download-section {
+            background: #0f1219;
+            border: 3px solid #2d3a60;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .download-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        .download-card {
+            background: #0f1622;
+            padding: 1rem;
+            flex: 1;
+            min-width: 180px;
+            text-align: center;
+            border-top: 4px solid #2A43E0;
+            border-radius: 6px;
+        }
+        .download-card a {
+            color: white;
+            background: #2A43E0;
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin-top: 0.8rem;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+        .voice-warning {
+            background: #1a0a0a;
+            border-left: 6px solid #FF2A1F;
+            padding: 0.8rem;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #ffaaaa;
+        }
+        h2 {
+            font-size: 2rem;
+            border-left: 8px solid #FF2A1F;
+            padding-left: 1rem;
+            margin: 1.8rem 0 1rem;
+        }
+    </style>
 </head>
 <body>
 <div class="site-wrapper">
+    <!-- Navigation -->
     <nav class="navbar">
         <div class="logo-area">
-            <img src="images/crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img">
+            <img src="crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img" onerror="this.src='https://placehold.co/64x64/2A43E0/white?text=CRIX'">
             <span class="logo-text">CRIX SMP</span>
         </div>
         <div class="nav-links">
@@ -19,36 +87,47 @@
             <a href="#features">FEATURES</a>
             <a href="shop.html">SHOP</a>
             <a href="#downloads">VOICE CHAT</a>
-            <button id="rulesBtn">📜 RULES</button>
-            <button id="themeToggle">🌓 LIGHT/DARK</button>
+            <button class="rules-btn" id="rulesBtn">📜 RULES</button>
+            <button class="theme-toggle" id="themeToggle">🌓 LIGHT/DARK</button>
             <a href="https://discord.gg/MbQvJGDAst" target="_blank" class="social-link">💬 Discord</a>
             <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-link">📺 YouTube</a>
             <a href="https://www.patreon.com/cw/IMCRIX123" target="_blank" class="social-link">🎯 Patreon</a>
         </div>
     </nav>
 
+    <!-- Hero Section -->
     <section id="home">
         <div class="hero">
-            <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
-            <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
-            <div class="btn-group">
-                <a href="https://discord.gg/MbQvJGDAst" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a>
-                <a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a>
+            <div class="hero-content">
+                <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
+                <p>Donut SMP style — less chaos, more soul. <strong>⚔️ Dueling · Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
+                <div class="btn-group">
+                    <a href="https://discord.gg/MbQvJGDAst" target="_blank" class="btn btn-primary">🎮 JOIN THE REALM</a>
+                    <a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a>
+                </div>
             </div>
         </div>
     </section>
 
+    <!-- Server Status Panel -->
     <div class="status-panel">
         <div class="status-grid">
             <div class="server-ip-display">🌐 <strong>play.crixsmp.net</strong> | Port: 19132</div>
             <div class="status-stats">
-                <div class="stat-box"><span class="status-led" id="statusLed"></span><span id="statusText">Checking...</span></div>
-                <div class="stat-box"><span class="stat-label">👥 PLAYERS</span><span class="stat-value" id="playerCount">?</span></div>
+                <div class="stat-box">
+                    <span class="status-led" id="statusLed"></span>
+                    <span id="statusText">Checking...</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">👥 PLAYERS</span>
+                    <span class="stat-value" id="playerCount">?</span>
+                </div>
                 <button class="ping-btn" id="pingServerBtn">🔄 REFRESH</button>
             </div>
         </div>
     </div>
 
+    <!-- Features Section -->
     <section id="features">
         <h2>🔥 SERVER FEATURES</h2>
         <div class="features-grid">
@@ -61,15 +140,18 @@
         </div>
     </section>
 
+    <!-- Downloads Section -->
     <section id="downloads">
         <div class="download-section">
             <h2>🎙️ VOICE CHAT SETUP</h2>
+            <p>To enable proximity voice on CRIX SMP, install Fabric Loader + Simple Voice Chat mod.</p>
             <div class="download-grid">
                 <div class="download-card"><h3>🧵 FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
                 <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
                 <div class="download-card"><h3>📦 FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
             </div>
             <div class="voice-warning">⚠️ Voice chat <strong>NOT supported on Bedrock</strong> — Java only.</div>
+            <p style="margin-top:1rem;">💡 Java: <strong>play.crixsmp.net</strong> | Bedrock: same IP port 19132</p>
         </div>
     </section>
 </div>
@@ -79,6 +161,7 @@
         <a href="#home">Home</a>
         <a href="#features">Features</a>
         <a href="shop.html">Shop</a>
+        <a href="#downloads">Voice Chat</a>
         <a href="https://discord.gg/MbQvJGDAst" target="_blank">Discord</a>
         <a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a>
         <a href="https://www.patreon.com/cw/IMCRIX123" target="_blank">Patreon</a>
@@ -86,6 +169,7 @@
     <div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div>
 </footer>
 
+<!-- Rules Modal -->
 <div id="rulesModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" id="closeModalBtn">&times;</span>
@@ -94,6 +178,6 @@
     </div>
 </div>
 
-<script src="js/main.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
