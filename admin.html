@@ -7,146 +7,288 @@
     <link rel="icon" type="image/png" href="crixsmplogo.png">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        @font-face {
-            font-family: 'MinecraftBold';
-            src: url('MinecraftBold-nMK1.otf') format('opentype');
-        }
-        body {
-            background: #0a0c10;
-            font-family: 'MinecraftBold', 'Courier New', monospace;
-            color: #e0e4f0;
-            padding: 2rem;
-        }
-        .admin-container { max-width: 800px; margin: 0 auto; }
-        .card {
-            background: #1a1d24;
-            border: 3px solid #2A43E0;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
+        @font-face { font-family: 'MinecraftBold'; src: url('MinecraftBold-nMK1.otf') format('opentype'); }
+        body { background: #0a0c10; font-family: 'MinecraftBold', monospace; color: #e0e4f0; padding: 2rem; }
+        .admin-container { max-width: 1200px; margin: 0 auto; }
+        .card { background: #1a1d24; border: 3px solid #2A43E0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
         h1 { color: #FF2A1F; margin-bottom: 1rem; }
         h2 { color: #FFD966; margin-bottom: 1rem; }
-        input, select {
-            background: #0a0c10;
-            border: 2px solid #2a2e3a;
-            color: #e0e4f0;
-            padding: 0.5rem;
-            border-radius: 6px;
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-        button {
-            background: #2A43E0;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            border-radius: 6px;
-            font-family: inherit;
-        }
+        .order-table { width: 100%; border-collapse: collapse; }
+        .order-table th, .order-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #2a2e3a; }
+        .order-table th { color: #FFD966; }
+        .valid { color: #22c55e; }
+        .invalid { color: #FF2A1F; }
+        .test-order { background: #1a2a1a; }
+        button { background: #2A43E0; color: white; border: none; padding: 0.5rem 1rem; cursor: pointer; border-radius: 6px; margin-top: 1rem; margin-right: 0.5rem; }
         button:hover { transform: translate(-2px, -2px); background: #1f36c2; }
         .danger-btn { background: #FF2A1F; }
-        .success-btn { background: #22c55e; }
+        .danger-btn:hover { background: #cc1a10; }
+        .access-denied { text-align: center; padding: 3rem; color: #FF2A1F; background: #1a1d24; border-radius: 12px; }
         .ip-list { background: #0a0c10; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
-        .access-denied { text-align: center; padding: 3rem; color: #FF2A1F; }
-        .ip-item { display: flex; justify-content: space-between; padding: 0.25rem; }
+        .ip-item { display: flex; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid #2a2e3a; }
+        .refresh-btn { background: #22c55e; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .stat-card { background: #0f1219; padding: 1rem; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 2rem; color: #22c55e; }
+        .stat-label { font-size: 0.8rem; color: #a0a8c0; }
+        .current-ip { background: #1a2a1a; padding: 0.5rem; border-radius: 6px; margin-bottom: 1rem; text-align: center; }
     </style>
 </head>
 <body>
-<div class="admin-container" id="adminContent">
+<div class="admin-container">
     <div id="accessDenied" class="access-denied" style="display:none;">
         <h2>⛔ ACCESS DENIED</h2>
         <p>Your IP address is not whitelisted to access this panel.</p>
+        <p>If you believe this is an error, contact the server administrator.</p>
+        <div id="currentIpDisplay"></div>
     </div>
     <div id="adminPanel" style="display:none;">
-        <h1>🔧 CRIX SMP Admin Panel</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <h1>🔧 CRIX SMP Admin Panel</h1>
+            <button class="refresh-btn" onclick="loadOrders()">🔄 Refresh Data</button>
+        </div>
+        <div class="current-ip" id="adminIpDisplay"></div>
         
         <div class="card">
-            <h2>🎯 Active Sale Management</h2>
-            <select id="saleSelect"><option value="">-- Select Sale to Activate --</option></select>
-            <input type="number" id="customDiscount" placeholder="Custom Discount %">
-            <input type="text" id="customSaleName" placeholder="Custom Sale Name">
-            <input type="date" id="customStartDate">
-            <input type="date" id="customEndDate">
-            <button id="activateCustomSale" class="success-btn">Activate Custom Sale</button>
-            <button id="deactivateSale" class="danger-btn">Deactivate Current Sale</button>
-            <div id="currentSaleInfo" style="margin-top:1rem; padding:0.5rem; background:#0f1219; border-radius:8px;"></div>
+            <h2>📊 Order Statistics</h2>
+            <div id="stats" class="stats-grid"></div>
         </div>
         
         <div class="card">
-            <h2>🔒 Whitelisted IPs</h2>
-            <div class="ip-list" id="ipList"></div>
-            <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-                <input type="text" id="newIp" placeholder="Enter IP address">
+            <h2>💰 Real Orders (Valid - Money Received)</h2>
+            <div id="realOrdersList">Loading...</div>
+        </div>
+        
+        <div class="card">
+            <h2>🧪 Test Orders (Fake - No Money - For Testing Only)</h2>
+            <div id="testOrdersList">Loading...</div>
+        </div>
+        
+        <div class="card">
+            <h2>🔒 Whitelisted IPs (Admin Access)</h2>
+            <div id="ipList" class="ip-list"></div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                <input type="text" id="newIp" placeholder="Enter new IP to whitelist" style="flex:1; background:#0a0c10; border:1px solid #2A43E0; color:white; padding:0.5rem; border-radius:6px;">
                 <button id="addIpBtn">Add IP</button>
             </div>
+            <p style="font-size:0.7rem; margin-top:0.5rem; color:#6c757d;">⚠️ Adding IPs only affects this browser's localStorage. For permanent whitelist, update data/whitelist.json on server.</p>
         </div>
         
         <div class="card">
-            <h2>💎 Permanent Creator Code</h2>
-            <p>Current code: <strong id="creatorCodeDisplay">cgvr</strong> (20% off)</p>
-            <button id="editCreatorCodeBtn">Change Creator Code</button>
+            <h2>🛠️ Admin Actions</h2>
+            <button onclick="exportOrders()">📥 Export Orders (JSON)</button>
+            <button onclick="clearOrders()" class="danger-btn">🗑️ Clear All Orders</button>
+            <button onclick="clearTestOrders()" class="danger-btn">🧪 Clear Test Orders Only</button>
         </div>
-        
-        <div class="card"><button id="logoutBtn" class="danger-btn">Logout</button></div>
     </div>
 </div>
+
 <script>
-    const WHITELISTED_IPS = ['127.0.0.1', 'localhost', 'YOUR_IP_HERE'];
-    async function getUserIP() { try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); return d.ip; } catch { return '127.0.0.1'; } }
+    // Whitelist loaded from JSON file
+    let WHITELISTED_IPS = [];
+    
+    async function loadWhitelist() {
+        try {
+            const response = await fetch('data/whitelist.json?t=' + Date.now());
+            if (response.ok) {
+                const data = await response.json();
+                WHITELISTED_IPS = data.whitelisted_ips || ['127.0.0.1', 'localhost'];
+            } else {
+                WHITELISTED_IPS = ['127.0.0.1', 'localhost'];
+            }
+        } catch (error) {
+            console.error('Failed to load whitelist:', error);
+            WHITELISTED_IPS = ['127.0.0.1', 'localhost'];
+        }
+        // Also check localStorage for locally added IPs
+        const localIps = JSON.parse(localStorage.getItem('crix_admin_ips') || '[]');
+        WHITELISTED_IPS = [...new Set([...WHITELISTED_IPS, ...localIps])];
+    }
+    
+    async function getUserIP() {
+        try {
+            const response = await fetch('https://api.ipify.org?format=json');
+            const data = await response.json();
+            return data.ip;
+        } catch (error) {
+            return '127.0.0.1';
+        }
+    }
+    
     async function checkAccess() {
-        const ip = await getUserIP();
-        if (!WHITELISTED_IPS.includes(ip) && ip !== 'YOUR_IP_HERE') {
+        await loadWhitelist();
+        const userIP = await getUserIP();
+        const isWhitelisted = WHITELISTED_IPS.includes(userIP) || WHITELISTED_IPS.includes('YOUR_IP_HERE');
+        
+        document.getElementById('adminIpDisplay').innerHTML = `🌐 Your IP: <strong>${userIP}</strong> | Whitelisted: ${isWhitelisted ? '✅ Yes' : '❌ No'}`;
+        
+        if (!isWhitelisted) {
             document.getElementById('accessDenied').style.display = 'block';
             document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('currentIpDisplay').innerHTML = `<p>Your IP: <strong>${userIP}</strong></p><p>Contact admin to add this IP to whitelist.</p>`;
         } else {
             document.getElementById('accessDenied').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
-            loadSalesList(); loadCurrentSale(); loadIPList();
+            loadOrders();
+            displayIPList();
         }
     }
-    async function loadSalesList() {
-        try {
-            const r = await fetch('data/sales.json?t='+Date.now());
-            const sales = await r.json();
-            const select = document.getElementById('saleSelect');
-            select.innerHTML = '<option value="">-- Select Sale --</option>';
-            sales.forEach(s => { const o = document.createElement('option'); o.value = s.name; o.textContent = `${s.name} (${s.discount}%)`; select.appendChild(o); });
-        } catch(e) {}
+    
+    function loadOrders() {
+        // Load real orders
+        const realOrders = JSON.parse(localStorage.getItem('crix_orders') || '[]');
+        const testOrders = JSON.parse(localStorage.getItem('crix_test_orders') || '[]');
+        const now = new Date();
+        
+        // Calculate stats
+        const totalRevenue = realOrders.reduce((sum, o) => sum + o.total, 0);
+        const validOrders = realOrders.filter(o => now <= new Date(o.refundDeadline)).length;
+        const expiredOrders = realOrders.length - validOrders;
+        
+        document.getElementById('stats').innerHTML = `
+            <div class="stat-card"><div class="stat-number">${realOrders.length}</div><div class="stat-label">Total Orders</div></div>
+            <div class="stat-card"><div class="stat-number">$${totalRevenue.toFixed(2)}</div><div class="stat-label">Total Revenue</div></div>
+            <div class="stat-card"><div class="stat-number">${validOrders}</div><div class="stat-label">Valid (Refund Available)</div></div>
+            <div class="stat-card"><div class="stat-number">${expiredOrders}</div><div class="stat-label">Expired (No Refund)</div></div>
+            <div class="stat-card"><div class="stat-number">${testOrders.length}</div><div class="stat-label">Test Orders (No Money)</div></div>
+        `;
+        
+        // Real Orders Table
+        let realHtml = '<table class="order-table"><tr><th>Transaction ID</th><th>Username</th><th>Coins</th><th>Total</th><th>Payment</th><th>Date</th><th>Refund Deadline</th><th>Status</th></tr>';
+        
+        for (const order of realOrders) {
+            const refundDate = new Date(order.refundDeadline);
+            const isValid = now <= refundDate;
+            realHtml += `<tr>
+                <td>${order.transactionId}</td>
+                <td>${order.username}${order.giftTo ? `<br><small>🎁 → ${order.giftTo}</small>` : ''}</td>
+                <td>${order.coins.toLocaleString()}</td>
+                <td>$${order.total.toFixed(2)}</td>
+                <td>${order.paymentMethod}</td>
+                <td>${new Date(order.date).toLocaleDateString()}</td>
+                <td>${refundDate.toLocaleDateString()}</td>
+                <td class="${isValid ? 'valid' : 'invalid'}">${isValid ? '✅ Valid' : '❌ Expired'}</td>
+            </tr>`;
+        }
+        if (realOrders.length === 0) realHtml += '<tr><td colspan="8">No real orders yet.</td></tr>';
+        realHtml += '</table>';
+        document.getElementById('realOrdersList').innerHTML = realHtml;
+        
+        // Test Orders Table
+        let testHtml = '<table class="order-table"><tr><th>Transaction ID</th><th>Username</th><th>Coins</th><th>Total (Fake)</th><th>Payment</th><th>Date</th><th>Refund Deadline</th><th>Status</th></tr>';
+        
+        for (const order of testOrders) {
+            const refundDate = new Date(order.refundDeadline);
+            const isValid = now <= refundDate;
+            testHtml += `<tr class="test-order">
+                <td>🧪 ${order.transactionId}</td>
+                <td>${order.username}${order.giftTo ? `<br><small>🎁 → ${order.giftTo}</small>` : ''}</td>
+                <td>${order.coins.toLocaleString()}</td>
+                <td>$${order.total.toFixed(2)} <small>(TEST)</small></td>
+                <td>${order.paymentMethod}</td>
+                <td>${new Date(order.date).toLocaleDateString()}</td>
+                <td>${refundDate.toLocaleDateString()}</td>
+                <td class="${isValid ? 'valid' : 'invalid'}">${isValid ? '✅ TEST' : '❌ Expired Test'}</td>
+            </tr>`;
+        }
+        if (testOrders.length === 0) testHtml += '<tr><td colspan="8">No test orders yet. Use username "test" to create one.</td></tr>';
+        testHtml += '</table>';
+        document.getElementById('testOrdersList').innerHTML = testHtml;
     }
-    function loadCurrentSale() {
-        const custom = localStorage.getItem('crix_custom_sale');
-        const info = document.getElementById('currentSaleInfo');
-        if (custom) { const s = JSON.parse(custom); info.innerHTML = `<strong>Active Custom Sale:</strong> ${s.name} - ${s.discount}% OFF`; }
-        else info.innerHTML = `<strong>No active sale.</strong>`;
+    
+    function displayIPList() {
+        const ipListDiv = document.getElementById('ipList');
+        const allIPs = [...WHITELISTED_IPS];
+        ipListDiv.innerHTML = allIPs.map(ip => `<div class="ip-item"><span>${ip}</span><button onclick="removeIP('${ip}')" style="background:#FF2A1F; padding:2px 8px;">Remove</button></div>`).join('');
+        if (allIPs.length === 0) ipListDiv.innerHTML = '<p>No IPs whitelisted.</p>';
     }
-    function activateCustomSale() {
-        const discount = document.getElementById('customDiscount').value;
-        const name = document.getElementById('customSaleName').value;
-        const start = document.getElementById('customStartDate').value;
-        const end = document.getElementById('customEndDate').value;
-        if (!discount || !name || !start || !end) { alert('Fill all fields'); return; }
-        localStorage.setItem('crix_custom_sale', JSON.stringify({ name: name.toUpperCase(), start, end, discount: parseInt(discount), active: true }));
-        alert(`Custom sale "${name}" activated!`); location.reload();
+    
+    function addIP() {
+        const newIp = document.getElementById('newIp').value.trim();
+        if (!newIp) return;
+        let ips = JSON.parse(localStorage.getItem('crix_admin_ips') || '[]');
+        if (!ips.includes(newIp)) {
+            ips.push(newIp);
+            localStorage.setItem('crix_admin_ips', JSON.stringify(ips));
+            WHITELISTED_IPS.push(newIp);
+            displayIPList();
+            alert(`Added ${newIp} to whitelist (local only). To make permanent, add to data/whitelist.json`);
+        } else {
+            alert('IP already in whitelist');
+        }
+        document.getElementById('newIp').value = '';
     }
-    function deactivateSale() { localStorage.removeItem('crix_custom_sale'); alert('Sale deactivated!'); location.reload(); }
-    function loadIPList() {
-        let ips = JSON.parse(localStorage.getItem('crix_whitelisted_ips') || '["127.0.0.1","localhost"]');
-        const div = document.getElementById('ipList');
-        div.innerHTML = ips.map(ip => `<div class="ip-item"><span>${ip}</span><button onclick="removeIP('${ip}')" style="background:#FF2A1F;">Remove</button></div>`).join('');
+    
+    function removeIP(ip) {
+        let ips = JSON.parse(localStorage.getItem('crix_admin_ips') || '[]');
+        ips = ips.filter(i => i !== ip);
+        localStorage.setItem('crix_admin_ips', JSON.stringify(ips));
+        const index = WHITELISTED_IPS.indexOf(ip);
+        if (index !== -1) WHITELISTED_IPS.splice(index, 1);
+        displayIPList();
+        alert(`Removed ${ip} from local whitelist.`);
     }
-    function addIP() { const ip = document.getElementById('newIp').value.trim(); if(!ip) return; let ips = JSON.parse(localStorage.getItem('crix_whitelisted_ips') || '[]'); if(!ips.includes(ip)){ ips.push(ip); localStorage.setItem('crix_whitelisted_ips',JSON.stringify(ips)); loadIPList(); alert(`Added ${ip}`); } }
-    function removeIP(ip) { let ips = JSON.parse(localStorage.getItem('crix_whitelisted_ips') || '[]'); ips = ips.filter(i=>i!==ip); localStorage.setItem('crix_whitelisted_ips',JSON.stringify(ips)); loadIPList(); }
-    function editCreatorCode() { const newCode = prompt('Enter new creator code:', localStorage.getItem('crix_creator_code') || 'cgvr'); if(newCode) { localStorage.setItem('crix_creator_code', newCode.toLowerCase()); document.getElementById('creatorCodeDisplay').innerText = newCode.toLowerCase(); alert(`Creator code changed to "${newCode}"`); } }
+    
+    function exportOrders() {
+        const realOrders = JSON.parse(localStorage.getItem('crix_orders') || '[]');
+        const testOrders = JSON.parse(localStorage.getItem('crix_test_orders') || '[]');
+        const exportData = {
+            exportDate: new Date().toISOString(),
+            realOrders: realOrders,
+            testOrders: testOrders,
+            totalRealRevenue: realOrders.reduce((s, o) => s + o.total, 0),
+            totalRealOrders: realOrders.length,
+            totalTestOrders: testOrders.length
+        };
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `crix_orders_${new Date().toISOString().slice(0,19)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        alert('Orders exported successfully!');
+    }
+    
+    function clearOrders() {
+        if (confirm('⚠️ WARNING: This will delete ALL REAL order records. This cannot be undone. Are you sure?')) {
+            localStorage.removeItem('crix_orders');
+            loadOrders();
+            alert('All real orders cleared.');
+        }
+    }
+    
+    function clearTestOrders() {
+        if (confirm('⚠️ This will delete all TEST orders (fake orders). Are you sure?')) {
+            localStorage.removeItem('crix_test_orders');
+            loadOrders();
+            alert('Test orders cleared.');
+        }
+    }
+    
+    // Auto-refresh every 10 seconds
+    let refreshInterval;
+    function startAutoRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => {
+            if (document.getElementById('adminPanel').style.display !== 'none') {
+                loadOrders();
+            }
+        }, 10000);
+    }
+    
     document.addEventListener('DOMContentLoaded', () => {
         checkAccess();
-        document.getElementById('creatorCodeDisplay').innerText = localStorage.getItem('crix_creator_code') || 'cgvr';
-        document.getElementById('activateCustomSale')?.addEventListener('click', activateCustomSale);
-        document.getElementById('deactivateSale')?.addEventListener('click', deactivateSale);
+        startAutoRefresh();
         document.getElementById('addIpBtn')?.addEventListener('click', addIP);
-        document.getElementById('editCreatorCodeBtn')?.addEventListener('click', editCreatorCode);
     });
+    
+    window.loadOrders = loadOrders;
+    window.exportOrders = exportOrders;
+    window.clearOrders = clearOrders;
+    window.clearTestOrders = clearTestOrders;
+    window.addIP = addIP;
     window.removeIP = removeIP;
 </script>
 </body>
