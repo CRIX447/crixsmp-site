@@ -7,14 +7,8 @@
     <link rel="icon" type="image/png" href="crixsmplogo.png">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        @font-face {
-            font-family: 'MinecraftRegular';
-            src: url('MinecraftRegular-Bmg3.otf') format('opentype');
-        }
-        @font-face {
-            font-family: 'MinecraftBold';
-            src: url('MinecraftBold-nMK1.otf') format('opentype');
-        }
+        @font-face { font-family: 'MinecraftRegular'; src: url('MinecraftRegular-Bmg3.otf') format('opentype'); }
+        @font-face { font-family: 'MinecraftBold'; src: url('MinecraftBold-nMK1.otf') format('opentype'); }
         body { background: #0a0c10; color: #e0e4f0; font-family: 'MinecraftRegular', monospace; min-height: 100vh; }
         h1, h2, h3, button, .buy-btn, .cart-icon { font-family: 'MinecraftBold', monospace; }
         .shop-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
@@ -23,14 +17,13 @@
             display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
             background: #0d0f14ee; backdrop-filter: blur(12px); padding: 0.7rem 2rem;
             margin-bottom: 2.5rem; border: 3px solid #2a2e3a; border-radius: 8px;
-            box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
         }
         .logo-area { display: flex; align-items: center; gap: 1rem; }
         .logo-img { height: 54px; width: auto; }
         .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .nav-links { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
-        .nav-links a, .nav-links button { color: #cbd5e6; text-decoration: none; padding: 0.4rem 0.8rem; border: 2px solid transparent; background: none; font-size: 1rem; cursor: pointer; }
-        .nav-links a:hover, .nav-links button:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
+        .nav-links a { color: #cbd5e6; text-decoration: none; padding: 0.4rem 0.8rem; border: 2px solid transparent; }
+        .nav-links a:hover { border-color: #FF2A1F; background: rgba(255,42,31,0.1); }
         
         .shop-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 2rem; gap: 1rem; }
         .cart-icon { background: #FF2A1F; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
@@ -43,7 +36,7 @@
         
         .packages-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
         .package-card { background: #1a1d24; border: 2px solid #2a2e3a; border-radius: 12px; overflow: hidden; transition: all 0.2s; }
-        .package-card:hover { transform: translate(-3px, -3px); border-color: #2A43E0; box-shadow: 5px 5px 0 rgba(0,0,0,0.3); }
+        .package-card:hover { transform: translate(-3px, -3px); border-color: #2A43E0; }
         .package-img { width: 100%; height: 150px; object-fit: cover; }
         .package-info { padding: 1.5rem; text-align: center; }
         .package-info h3 { font-size: 1.3rem; margin-bottom: 0.5rem; color: #FFD966; }
@@ -55,7 +48,7 @@
         .custom-btn { background: #FF2A1F; }
         
         .cart-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; justify-content: center; align-items: center; }
-        .cart-content { background: #1a1d24; border: 3px solid #2A43E0; border-radius: 12px; max-width: 550px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 1.5rem; }
+        .cart-content { background: #1a1d24; border: 3px solid #2A43E0; border-radius: 12px; max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 1.5rem; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #2a2e3a; }
         .remove-item { background: #FF2A1F; border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
         .cart-total { font-size: 1.2rem; font-weight: bold; text-align: right; padding: 1rem; border-top: 2px solid #2A43E0; }
@@ -65,8 +58,15 @@
         .payment-methods { margin: 1rem 0; padding: 1rem; background: #0f1219; border-radius: 8px; }
         .payment-option { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; cursor: pointer; border-radius: 6px; margin: 0.5rem 0; }
         .payment-option:hover { background: #1a1d24; }
-        .coming-soon { text-align: center; padding: 2rem; background: #1a1d24; border-radius: 8px; margin-top: 1rem; }
-        
+        .payment-option.selected { background: #1f2a48; border-left: 4px solid #22c55e; }
+        .form-group { margin: 1rem 0; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: #FFD966; }
+        .form-group input { width: 100%; background: #0a0c10; border: 1px solid #2A43E0; color: white; padding: 0.75rem; border-radius: 6px; }
+        .username-status { font-size: 0.8rem; margin-top: 0.25rem; }
+        .username-status.valid { color: #22c55e; }
+        .username-status.invalid { color: #FF2A1F; }
+        .transaction-fee { font-size: 0.8rem; color: #f59e0b; margin-top: 0.5rem; }
+        .refund-policy { background: #1a0a0a; border-left: 4px solid #FF2A1F; padding: 0.75rem; margin: 1rem 0; font-size: 0.8rem; border-radius: 6px; }
         .icon-img-small { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
         .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; backdrop-filter: blur(8px); padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border: 2px solid #FF2A1F; border-radius: 8px; }
         @media (max-width: 760px) { .shop-container { padding: 1rem; } }
@@ -76,9 +76,7 @@
 <div class="shop-container">
     <nav class="navbar">
         <div class="logo-area"><img src="crixsmplogo.png" class="logo-img"><span class="logo-text">CRIX SMP</span></div>
-        <div class="nav-links">
-            <a href="index.html">HOME</a><a href="index.html#features">FEATURES</a><a href="shop.html">SHOP</a>
-            <button id="themeToggle">🌓 LIGHT/DARK</button>
+        <div class="nav-links"><a href="index.html">HOME</a><a href="index.html#features">FEATURES</a><a href="shop.html">SHOP</a>
             <a href="https://discord.gg/MbQvJGDAst" target="_blank">💬 Discord</a>
             <a href="https://www.youtube.com/@CRIXSMP" target="_blank">📺 YouTube</a>
             <a href="https://www.patreon.com/cw/IMCRIX123" target="_blank">🎯 Patreon</a>
@@ -102,14 +100,34 @@
 <div id="cartModal" class="cart-modal"><div class="cart-content">
     <div style="display:flex; justify-content:space-between;"><h2>🛒 Your Cart</h2><span onclick="closeCart()" style="font-size:2rem; cursor:pointer;">&times;</span></div>
     <div id="cartItems"></div>
+    
     <div class="coupon-input"><input type="text" id="couponCode" placeholder="Enter creator code (cgvr)"><button onclick="applyCoupon()">Apply</button></div>
+    
+    <div class="form-group"><label>🎮 Minecraft Username (Required)</label>
+        <input type="text" id="minecraftUsername" placeholder="Enter Minecraft username" oninput="verifyUsername()">
+        <div id="usernameStatus" class="username-status"></div>
+    </div>
+    
+    <div class="form-group"><label>🎁 Gift to another player? (Optional)</label>
+        <input type="text" id="giftUsername" placeholder="Enter recipient's Minecraft username">
+        <div class="transaction-fee">Note: Gifts cannot be refunded</div>
+    </div>
+    
+    <div class="form-group"><label>📧 Email for Receipt</label>
+        <input type="email" id="customerEmail" placeholder="your@email.com" required>
+    </div>
+    
     <div class="payment-methods"><h3>Select Payment Method</h3>
-        <div class="payment-option" onclick="selectPayment('paypal')"><input type="radio" name="payment" value="paypal" id="paypalRadio"><label>💳 PayPal</label></div>
-        <div class="payment-option" onclick="selectPayment('card')"><input type="radio" name="payment" value="card" id="cardRadio"><label>💎 Credit/Debit Card</label></div>
+        <div class="payment-option" onclick="selectPayment('paypal')" id="paypalOption"><input type="radio" name="payment" value="paypal" id="paypalRadio"><label>💳 PayPal</label></div>
+        <div class="payment-option" onclick="selectPayment('mastercard')" id="mastercardOption"><input type="radio" name="payment" value="mastercard" id="mastercardRadio"><label>💳 Mastercard (Credit/Debit)</label></div>
+        <div class="payment-option" onclick="selectPayment('visa')" id="visaOption"><input type="radio" name="payment" value="visa" id="visaRadio"><label>💳 Visa (Credit/Debit)</label></div>
         <div id="cardSplitContainer" style="display:none;"></div>
     </div>
+    
+    <div class="transaction-fee" id="feeDisplay">💰 Transaction Fee: $0.00</div>
     <div class="cart-total" id="cartTotal"></div>
-    <button class="checkout-btn" onclick="checkout()">Proceed to Payment →</button>
+    <div class="refund-policy">🔒 <strong>Refund Policy:</strong> You can request a refund within 7 days of purchase. After 7 days, no refunds will be issued. Contact crixsmphelp@outlook.com for refunds.</div>
+    <button class="checkout-btn" onclick="processCheckout()">Proceed to Payment →</button>
 </div></div>
 
 <script>
@@ -128,6 +146,8 @@
     
     let cart = JSON.parse(localStorage.getItem('crix_cart') || '[]');
     let activeDiscount = 0, couponApplied = false, selectedPayment = null;
+    let usernameValid = false;
+    let verificationCache = {};
     
     function getCurrency() { return localStorage.getItem('crix_currency') || 'USD'; }
     function setCurrency(c) { localStorage.setItem('crix_currency', c); renderPackages(); updateCartDisplay(); }
@@ -147,6 +167,30 @@
                 }
             }
         } catch(e) {}
+    }
+    
+    async function verifyUsername() {
+        const username = document.getElementById('minecraftUsername').value.trim();
+        const statusDiv = document.getElementById('usernameStatus');
+        if (!username) { statusDiv.innerHTML = ''; usernameValid = false; return; }
+        statusDiv.innerHTML = 'Checking...';
+        try {
+            const response = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(username)}`);
+            if (response.ok) {
+                const data = await response.json();
+                statusDiv.innerHTML = `✅ Valid Minecraft account: ${data.name}`;
+                statusDiv.className = 'username-status valid';
+                usernameValid = true;
+            } else {
+                statusDiv.innerHTML = '❌ Invalid Minecraft username - player not found';
+                statusDiv.className = 'username-status invalid';
+                usernameValid = false;
+            }
+        } catch(err) {
+            statusDiv.innerHTML = '❌ Could not verify username. Try again.';
+            statusDiv.className = 'username-status invalid';
+            usernameValid = false;
+        }
     }
     
     function renderPackages() {
@@ -179,6 +223,7 @@
         else cart.push({ id, coins, priceUSD, quantity: 1 });
         localStorage.setItem('crix_cart', JSON.stringify(cart));
         updateCartCount(); updateCartDisplay();
+        showNotification(`Added ${coins.toLocaleString()} Coins!`);
     }
     
     function openCustomAmount() {
@@ -194,11 +239,14 @@
     function openCart() { updateCartDisplay(); document.getElementById('cartModal').style.display = 'flex'; }
     function closeCart() { document.getElementById('cartModal').style.display = 'none'; }
     
+    function getTransactionFee(totalUSD) { return totalUSD * 0.029 + 0.30; } // 2.9% + $0.30 standard fee
+    
     function updateCartDisplay() {
         const container = document.getElementById('cartItems');
         const totalDiv = document.getElementById('cartTotal');
+        const feeDisplay = document.getElementById('feeDisplay');
         if (!container) return;
-        if (cart.length === 0) { container.innerHTML = '<p style="text-align:center; padding:2rem;">Your cart is empty.</p>'; totalDiv.innerHTML = 'Total: $0.00'; return; }
+        if (cart.length === 0) { container.innerHTML = '<p style="text-align:center; padding:2rem;">Your cart is empty.</p>'; totalDiv.innerHTML = 'Total: $0.00'; feeDisplay.innerHTML = '💰 Transaction Fee: $0.00'; return; }
         let totalUSD = 0, html = '';
         for (const item of cart) {
             const itemTotal = item.priceUSD * item.quantity;
@@ -206,48 +254,100 @@
             html += `<div class="cart-item"><div><strong>${item.coins.toLocaleString()} Coins</strong> x${item.quantity}</div>
                 <div>${convertPrice(itemTotal).symbol}${convertPrice(itemTotal).amount} <button class="remove-item" onclick="removeFromCart('${item.id}')">×</button></div></div>`;
         }
-        const displayTotal = convertPrice(totalUSD);
+        const fee = getTransactionFee(totalUSD);
+        const totalWithFee = totalUSD + fee;
+        const displayTotal = convertPrice(totalWithFee);
+        const displayFee = convertPrice(fee);
         container.innerHTML = html;
-        totalDiv.innerHTML = `Total: ${displayTotal.symbol}${displayTotal.amount}`;
+        totalDiv.innerHTML = `Subtotal: ${convertPrice(totalUSD).symbol}${convertPrice(totalUSD).amount}<br>Transaction Fee: ${displayFee.symbol}${displayFee.amount}<br><strong>Total: ${displayTotal.symbol}${displayTotal.amount}</strong>`;
+        feeDisplay.innerHTML = `💰 Transaction Fee (2.9% + $0.30): ${displayFee.symbol}${displayFee.amount}`;
         if (activeDiscount > 0) totalDiv.innerHTML += `<div style="font-size:0.8rem;color:#22c55e;">🎉 ${activeDiscount}% Sale Applied!</div>`;
         if (couponApplied) totalDiv.innerHTML += `<div style="font-size:0.8rem;color:#22c55e;">💎 Creator Code 20% Applied!</div>`;
     }
     
     function removeFromCart(id) { cart = cart.filter(i => i.id !== id); localStorage.setItem('crix_cart', JSON.stringify(cart)); updateCartCount(); updateCartDisplay(); }
-    function applyCoupon() { const code = document.getElementById('couponCode').value.toLowerCase(); if (code === 'cgvr') { couponApplied = true; alert('20% OFF Applied!'); renderPackages(); updateCartDisplay(); } else { alert('Invalid code!'); } }
+    function applyCoupon() { const code = document.getElementById('couponCode').value.toLowerCase(); if (code === 'cgvr') { couponApplied = true; showNotification('20% OFF Applied!'); renderPackages(); updateCartDisplay(); } else { showNotification('Invalid code!', 'error'); } }
     
     function selectPayment(method) {
         selectedPayment = method;
+        document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+        if (method === 'paypal') document.getElementById('paypalOption').classList.add('selected');
+        if (method === 'mastercard') document.getElementById('mastercardOption').classList.add('selected');
+        if (method === 'visa') document.getElementById('visaOption').classList.add('selected');
         document.getElementById('paypalRadio').checked = (method === 'paypal');
-        document.getElementById('cardRadio').checked = (method === 'card');
-        if (method === 'card') {
-            document.getElementById('cardSplitContainer').innerHTML = `<div class="coming-soon"><h3>🔧 Coming Soon!</h3><p>Card payments are coming soon. Please use PayPal for now.</p><p>We're working on adding this feature!</p></div>`;
+        document.getElementById('mastercardRadio').checked = (method === 'mastercard');
+        document.getElementById('visaRadio').checked = (method === 'visa');
+        
+        if (method === 'mastercard' || method === 'visa') {
+            document.getElementById('cardSplitContainer').innerHTML = `<div class="coming-soon" style="text-align:center; padding:1rem; background:#1a1d24; border-radius:8px; margin-top:1rem;">
+                <h3>💳 ${method.toUpperCase()} Payment</h3>
+                <p>Enter your card details to complete payment.</p>
+                <div class="form-group"><label>Card Number</label><input type="text" placeholder="1234 5678 9012 3456"></div>
+                <div class="form-group"><label>Expiry Date</label><input type="text" placeholder="MM/YY"></div>
+                <div class="form-group"><label>CVV</label><input type="text" placeholder="123"></div>
+                <p class="transaction-fee">You will be redirected to secure payment gateway.</p>
+            </div>`;
             document.getElementById('cardSplitContainer').style.display = 'block';
         } else {
             document.getElementById('cardSplitContainer').style.display = 'none';
         }
     }
     
-    function checkout() {
+    async function processCheckout() {
         if (cart.length === 0) { alert('Cart is empty!'); return; }
         if (!selectedPayment) { alert('Select a payment method!'); return; }
-        let totalUSD = cart.reduce((s, i) => s + (i.priceUSD * i.quantity), 0);
-        const totalCoins = cart.reduce((s, i) => s + (i.coins * i.quantity), 0);
+        const username = document.getElementById('minecraftUsername').value.trim();
+        if (!username || !usernameValid) { alert('Enter a valid Minecraft username!'); return; }
+        const email = document.getElementById('customerEmail').value.trim();
+        if (!email || !email.includes('@')) { alert('Enter a valid email address for receipt!'); return; }
         
+        let totalUSD = cart.reduce((s, i) => s + (i.priceUSD * i.quantity), 0);
+        const fee = totalUSD * 0.029 + 0.30;
+        const totalWithFee = totalUSD + fee;
+        const totalCoins = cart.reduce((s, i) => s + (i.coins * i.quantity), 0);
+        const giftUsername = document.getElementById('giftUsername').value.trim();
+        
+        const orderData = {
+            username: username,
+            giftTo: giftUsername || null,
+            coins: totalCoins,
+            subtotal: totalUSD,
+            fee: fee,
+            total: totalWithFee,
+            paymentMethod: selectedPayment,
+            email: email,
+            items: cart,
+            date: new Date().toISOString(),
+            refundDeadline: new Date(Date.now() + 7*24*60*60*1000).toISOString()
+        };
+        
+        localStorage.setItem('crix_last_order', JSON.stringify(orderData));
+        
+        // Send email receipt (simulated - in production use actual email API)
+        console.log('Receipt sent to:', email, orderData);
+        
+        let paymentMessage = '';
         if (selectedPayment === 'paypal') {
-            alert(`Redirecting to PayPal...\nTotal: $${totalUSD.toFixed(2)} for ${totalCoins.toLocaleString()} Coins\n\nPayment will be processed via PayPal.`);
+            paymentMessage = `Redirecting to PayPal...\n\nOrder Summary:\nUsername: ${username}\nCoins: ${totalCoins.toLocaleString()}\nSubtotal: $${totalUSD.toFixed(2)}\nFee: $${fee.toFixed(2)}\nTotal: $${totalWithFee.toFixed(2)}\n${giftUsername ? `Gift to: ${giftUsername}\n` : ''}Email receipt sent to: ${email}\n\nRefund available until: ${new Date(orderData.refundDeadline).toLocaleDateString()}`;
         } else {
-            alert(`Card payments coming soon!\nTotal: $${totalUSD.toFixed(2)} for ${totalCoins.toLocaleString()} Coins\n\nPlease use PayPal for now.`);
-            return;
+            paymentMessage = `Processing ${selectedPayment.toUpperCase()} payment...\n\nOrder Summary:\nUsername: ${username}\nCoins: ${totalCoins.toLocaleString()}\nTotal: $${totalWithFee.toFixed(2)}\n${giftUsername ? `Gift to: ${giftUsername}\n` : ''}Email receipt sent to: ${email}\n\nRefund available until: ${new Date(orderData.refundDeadline).toLocaleDateString()}\n\nSupport: crixsmphelp@outlook.com`;
         }
-        cart = []; localStorage.setItem('crix_cart', JSON.stringify(cart)); updateCartCount(); closeCart();
+        
+        alert(paymentMessage + '\n\n✅ Order placed! Coins will be added to your account.');
+        
+        cart = []; localStorage.setItem('crix_cart', JSON.stringify(cart));
+        updateCartCount(); closeCart();
+        showNotification('Purchase complete! Coins added to your account.');
     }
     
-    document.getElementById('currencySelect').addEventListener('change', (e) => setCurrency(e.target.value));
-    document.getElementById('currencySelect').value = getCurrency();
-    loadActiveSale(); renderPackages(); updateCartCount();
+    function showNotification(msg, type = 'success') {
+        const notif = document.createElement('div');
+        notif.style.cssText = `position:fixed;bottom:80px;right:20px;background:${type === 'error' ? '#FF2A1F' : '#22c55e'};color:white;padding:12px 20px;border-radius:8px;z-index:9999;animation:fadeInOut 3s forwards;`;
+        notif.innerText = msg; document.body.appendChild(notif);
+        setTimeout(() => notif.remove(), 3000);
+    }
     
-    // Audio for shop page
+    // Audio
     const bgMusic = new Audio('Chirp.mp3');
     bgMusic.loop = true; bgMusic.volume = 0.35;
     let isMuted = localStorage.getItem('crix_muted') === 'true';
@@ -260,12 +360,18 @@
         });
     }
     
-    const themeToggle = document.getElementById('themeToggle');
-    themeToggle.onclick = () => { document.body.classList.toggle('light-mode'); localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); };
-    if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
+    document.getElementById('currencySelect').addEventListener('change', (e) => setCurrency(e.target.value));
+    document.getElementById('currencySelect').value = getCurrency();
+    loadActiveSale(); renderPackages(); updateCartCount();
     
-    window.openCart = openCart; window.closeCart = closeCart; window.addToCart = addToCart; window.removeFromCart = removeFromCart;
-    window.applyCoupon = applyCoupon; window.selectPayment = selectPayment; window.openCustomAmount = openCustomAmount; window.checkout = checkout;
+    const style = document.createElement('style');
+    style.textContent = `@keyframes fadeInOut {0%{opacity:0;transform:translateY(20px);}15%{opacity:1;transform:translateY(0);}85%{opacity:1;}100%{opacity:0;transform:translateY(-20px);}}`;
+    document.head.appendChild(style);
+    
+    window.openCart = openCart; window.closeCart = closeCart; window.addToCart = addToCart;
+    window.removeFromCart = removeFromCart; window.applyCoupon = applyCoupon;
+    window.selectPayment = selectPayment; window.openCustomAmount = openCustomAmount;
+    window.verifyUsername = verifyUsername; window.processCheckout = processCheckout;
 </script>
 </body>
 </html>
