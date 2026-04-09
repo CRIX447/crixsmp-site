@@ -1,0 +1,8 @@
+[
+    { "name": "CHRISTMAS", "start": "2024-12-15", "end": "2024-12-26", "discount": 30 },
+    { "name": "HALLOWEEN", "start": "2025-10-20", "end": "2025-10-31", "discount": 25 },
+    { "name": "EASTER", "start": "2025-04-01", "end": "2025-04-10", "discount": 20 },
+    { "name": "SUMMER SALE", "start": "2025-06-01", "end": "2025-08-31", "discount": 15 },
+    { "name": "BLACK FRIDAY", "start": "2025-11-25", "end": "2025-11-30", "discount": 40 },
+    { "name": "4TH OF JULY", "start": "2025-07-01", "end": "2025-07-05", "discount": 20 }
+]
