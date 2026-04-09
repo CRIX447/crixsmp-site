@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRIX SMP - Admin Panel</title>
+    <link rel="icon" type="image/png" href="crixsmplogo.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @font-face {
+            font-family: 'MinecraftBold';
+            src: url('MinecraftBold-nMK1.otf') format('opentype');
+        }
+        body {
+            background: #0a0c10;
+            font-family: 'MinecraftBold', 'Courier New', monospace;
+            color: #e0e4f0;
+            padding: 2rem;
+        }
+        .admin-container { max-width: 800px; margin: 0 auto; }
+        .card {
+            background: #1a1d24;
+            border: 3px solid #2A43E0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        h1 { color: #FF2A1F; margin-bottom: 1rem; }
+        h2 { color: #FFD966; margin-bottom: 1rem; }
+        input, select {
+            background: #0a0c10;
+            border: 2px solid #2a2e3a;
+            color: #e0e4f0;
+            padding: 0.5rem;
+            border-radius: 6px;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        button {
+            background: #2A43E0;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+        button:hover { transform: translate(-2px, -2px); background: #1f36c2; }
+        .danger-btn { background: #FF2A1F; }
+        .success-btn { background: #22c55e; }
+        .ip-list { background: #0a0c10; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+        .access-denied { text-align: center; padding: 3rem; color: #FF2A1F; }
+        .ip-item { display: flex; justify-content: space-between; padding: 0.25rem; }
+    </style>
+</head>
+<body>
+<div class="admin-container" id="adminContent">
+    <div id="accessDenied" class="access-denied" style="display:none;">
+        <h2>⛔ ACCESS DENIED</h2>
+        <p>Your IP address is not whitelisted to access this panel.</p>
+    </div>
+    <div id="adminPanel" style="display:none;">
+        <h1>🔧 CRIX SMP Admin Panel</h1>
+        
+        <div class="card">
+            <h2>🎯 Active Sale Management</h2>
+            <select id="saleSelect"><option value="">-- Select Sale to Activate --</option></select>
+            <input type="number" id="customDiscount" placeholder="Custom Discount %">
+            <input type="text" id="customSaleName" placeholder="Custom Sale Name">
+            <input type="date" id="customStartDate">
+            <input type="date" id="customEndDate">
+            <button id="activateCustomSale" class="success-btn">Activate Custom Sale</button>
+            <button id="deactivateSale" class="danger-btn">Deactivate Current Sale</button>
+            <div id="currentSaleInfo" style="margin-top:1rem; padding:0.5rem; background:#0f1219; border-radius:8px;"></div>
+        </div>
+        
+        <div class="card">
+            <h2>🔒 Whitelisted IPs</h2>
+            <div class="ip-list" id="ipList"></div>
+            <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                <input type="text" id="newIp" placeholder="Enter IP address">
+                <button id="addIpBtn">Add IP</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>💎 Permanent Creator Code</h2>
+            <p>Current code: <strong id="creatorCodeDisplay">cgvr</strong> (20% off)</p>
+            <button id="editCreatorCodeBtn">Change Creator Code</button>
+        </div>
+        
+        <div class="card"><button id="logoutBtn" class="danger-btn">Logout</button></div>
+    </div>
+</div>
+<script>
+    const WHITELISTED_IPS = ['127.0.0.1', 'localhost', 'YOUR_IP_HERE'];
+    async function getUserIP() { try { const r = await fetch('https://api.ipify.org?format=json'); const d = await r.json(); return d.ip; } catch { return '127.0.0.1'; } }
+    async function checkAccess() {
+        const ip = await getUserIP();
+        if (!WHITELISTED_IPS.includes(ip) && ip !== 'YOUR_IP_HERE') {
+            document.getElementById('accessDenied').style.display = 'block';
+            document.getElementById('adminPanel').style.display = 'none';
+        } else {
+            document.getElementById('accessDenied').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            loadSalesList(); loadCurrentSale(); loadIPList();
+        }
+    }
+    async function loadSalesList() {
+        try {
+            const r = await fetch('data/sales.json?t='+Date.now());
+            const sales = await r.json();
+            const select = document.getElementById('saleSelect');
+            select.innerHTML = '<option value="">-- Select Sale --</option>';
+            sales.forEach(s => { const o = document.createElement('option'); o.value = s.name; o.textContent = `${s.name} (${s.discount}%)`; select.appendChild(o); });
+        } catch(e) {}
+    }
+    function loadCurrentSale() {
+        const custom = localStorage.getItem('crix_custom_sale');
+        const info = document.getElementById('currentSaleInfo');
+        if (custom) { const s = JSON.parse(custom); info.innerHTML = `<strong>Active Custom Sale:</strong> ${s.name} - ${s.discount}% OFF`; }
+        else info.innerHTML = `<strong>No active sale.</strong>`;
+    }
+    function activateCustomSale() {
+        const discount = document.getElementById('customDiscount').value;
+        const name = document.getElementById('customSaleName').value;
+        const start = document.getElementById('customStartDate').value;
+        const end = document.getElementById('customEndDate').value;
+        if (!discount || !name || !start || !end) { alert('Fill all fields'); return; }
+        localStorage.setItem('crix_custom_sale', JSON.stringify({ name: name.toUpperCase(), start, end, discount: parseInt(discount), active: true }));
+        alert(`Custom sale "${name}" activated!`); location.reload();
+    }
+    function deactivateSale() { localStorage.removeItem('crix_custom_sale'); alert('Sale deactivated!'); location.reload(); }
+    function loadIPList() {
+        let ips = JSON.parse(localStorage.getItem('crix_whitelisted_ips') || '["127.0.0.1","localhost"]');
+        const div = document.getElementById('ipList');
+        div.innerHTML = ips.map(ip => `<div class="ip-item"><span>${ip}</span><button onclick="removeIP('${ip}')" style="background:#FF2A1F;">Remove</button></div>`).join('');
+    }
+    function addIP() { const ip = document.getElementById('newIp').value.trim(); if(!ip) return; let ips = JSON.parse(localStorage.getItem('crix_whitelisted_ips') || '[]'); if(!ips.includes(ip)){ ips.push(ip); localStorage.setItem('crix_whitelisted_ips',JSON.stringify(ips)); loadIPList(); alert(`Added ${ip}`); } }
+    function removeIP(ip) { let ips = JSON.parse(localStorage.getItem('crix_whitelisted_ips') || '[]'); ips = ips.filter(i=>i!==ip); localStorage.setItem('crix_whitelisted_ips',JSON.stringify(ips)); loadIPList(); }
+    function editCreatorCode() { const newCode = prompt('Enter new creator code:', localStorage.getItem('crix_creator_code') || 'cgvr'); if(newCode) { localStorage.setItem('crix_creator_code', newCode.toLowerCase()); document.getElementById('creatorCodeDisplay').innerText = newCode.toLowerCase(); alert(`Creator code changed to "${newCode}"`); } }
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAccess();
+        document.getElementById('creatorCodeDisplay').innerText = localStorage.getItem('crix_creator_code') || 'cgvr';
+        document.getElementById('activateCustomSale')?.addEventListener('click', activateCustomSale);
+        document.getElementById('deactivateSale')?.addEventListener('click', deactivateSale);
+        document.getElementById('addIpBtn')?.addEventListener('click', addIP);
+        document.getElementById('editCreatorCodeBtn')?.addEventListener('click', editCreatorCode);
+    });
+    window.removeIP = removeIP;
+</script>
+</body>
+</html>
