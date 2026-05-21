@@ -66,7 +66,7 @@
     body { background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s; }
     .site-wrapper { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem; flex: 1; }
     .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar { border-radius: 8px !important; border-style: solid; border-width: 3px; }
-    button, .btn, .social-icon, .theme-toggle, .rules-btn, .refresh-btn { border-radius: 6px !important; border-width: 2px; text-transform: uppercase; cursor: pointer; }
+    button, .btn, .social-icon, .theme-toggle, .rules-btn, .refresh-btn, .copy-btn { border-radius: 6px !important; border-width: 2px; text-transform: uppercase; cursor: pointer; }
     .card:hover, .btn:hover, button:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0px rgba(0,0,0,0.3); }
     h1 { font-size: 3.4rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); }
     h2 { font-size: 2rem; border-left: 8px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; }
@@ -91,7 +91,6 @@
     .hero { background: var(--hero-bg); padding: 2.5rem 2rem; margin-bottom: 2rem; text-align: center; }
     .btn-group { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
     .btn { display: inline-flex; align-items: center; gap: 8px; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; border: 3px solid; color: white; cursor: pointer; }
-    .btn-primary { background: #FF2A1F; border-color: #cc1a10; box-shadow: 4px 4px 0px #5a0a05; }
     .btn-secondary { background: #1f2a48; border-color: #2A43E0; box-shadow: 4px 4px 0px #0a1430; }
     .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
     .card { background: var(--bg-card); padding: 1.5rem; text-align: center; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); cursor: pointer; }
@@ -100,16 +99,16 @@
     /* Status Panel */
     .status-panel { background: var(--status-bg); padding: 1rem 1.5rem; margin: 2rem 0; border-color: #2A43E0; }
     .status-grid { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
-    .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; border-left: 4px solid #2A43E0; color: white; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .server-ip-display span { margin-right: 15px; }
+    .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; border-left: 4px solid #2A43E0; color: white; display: flex; flex-direction: column; gap: 8px; }
+    .ip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; }
+    .ip-address { font-family: monospace; background: #0a0c10; padding: 4px 8px; border-radius: 4px; }
+    .copy-btn { background: #2A43E0; border-color: #1a2ea0; color: white; padding: 2px 8px; font-size: 0.7rem; }
     .status-stats { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
     .stat-box { background: #00000066; padding: 0.3rem 1rem; border-radius: 6px; display: flex; align-items: center; gap: 8px; }
     .status-led { width: 12px; height: 12px; background: #6b7280; display: inline-block; border-radius: 0px; }
     .status-led.online { background: #22c55e; animation: pulse 1.5s infinite; }
     .status-led.offline { background: #FF2A1F; }
-    .status-led.restarting { background: #f59e0b; animation: blink 1s infinite; }
     @keyframes pulse { 0% { opacity: 0.6; transform: scale(0.9);} 100% { opacity: 1; transform: scale(1.2);} }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     
     .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border-color: #FF2A1F; }
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
@@ -123,7 +122,7 @@
     .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem; text-align: center; margin-top: 3rem; }
     .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
     .footer-links a { color: var(--text-secondary); text-decoration: none; }
-    @media (max-width: 760px) { .site-wrapper { padding: 1rem; } .hero h1 { font-size: 2.2rem; } }
+    @media (max-width: 760px) { .site-wrapper { padding: 1rem; } .hero h1 { font-size: 2.2rem; } .ip-row { flex-wrap: wrap; } }
   </style>
 </head>
 <body>
@@ -161,9 +160,24 @@
   <div class="status-panel">
     <div class="status-grid">
       <div class="server-ip-display">
-        <img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/server_ip.png" class="icon-img-small" onerror="this.style.display='none'">
-        <span>☕ JAVA: <strong>crixsmp.minekeep.gg</strong></span>
-        <span>📱 BEDROCK: <strong>crixsmp.bedrock.minekeep.gg</strong></span>
+        <!-- Java IP with port -->
+        <div class="ip-row">
+          <span>☕ JAVA:</span>
+          <span class="ip-address" id="javaIp">crixsmp.minekeep.gg</span>
+          <span>Port: <span id="javaPort">25565</span></span>
+          <button class="copy-btn" data-copy="javaIp">📋 Copy IP</button>
+          <button class="copy-btn" data-copy="javaPort">📋 Copy Port</button>
+          <button class="copy-btn" data-copy="javaFull">📋 Copy Full</button>
+        </div>
+        <!-- Bedrock IP with port -->
+        <div class="ip-row">
+          <span>📱 BEDROCK:</span>
+          <span class="ip-address" id="bedrockIp">crixsmp.bedrock.minekeep.gg</span>
+          <span>Port: <span id="bedrockPort">19132</span></span>
+          <button class="copy-btn" data-copy="bedrockIp">📋 Copy IP</button>
+          <button class="copy-btn" data-copy="bedrockPort">📋 Copy Port</button>
+          <button class="copy-btn" data-copy="bedrockFull">📋 Copy Full</button>
+        </div>
       </div>
       <div class="status-stats">
         <div class="stat-box">
@@ -173,10 +187,6 @@
         <div class="stat-box">
           <img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/player_icon.png" class="icon-img-small" onerror="this.style.display='none'"> 
           <span class="stat-value" id="playerCount">0/0</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">🔒</span>
-          <span class="stat-value" id="whitelistStatus">?</span>
         </div>
         <button class="refresh-btn" id="refreshBtn">🔄 REFRESH</button>
       </div>
@@ -203,8 +213,7 @@
         <div class="download-card"><h3>📦 FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
       </div>
       <div class="voice-warning">⚠️ Voice chat <strong>NOT supported on Bedrock</strong> — Java only.</div>
-      <p style="margin-top:1rem;">💡 Java: <strong>crixsmp.minekeep.gg</strong> | Bedrock: <strong>crixsmp.bedrock.minekeep.gg</strong></p>
-      <p style="margin-top:0.5rem;">📖 <a href="setup_guide.txt" target="_blank">Click here for full voice chat setup guide</a></p>
+      <p style="margin-top:1rem;">💡 Java: <strong>crixsmp.minekeep.gg:25565</strong> | Bedrock: <strong>crixsmp.bedrock.minekeep.gg:19132</strong></p>
     </div>
   </section>
 </div>
@@ -315,107 +324,157 @@ EXTRA RULES
   };
   if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
 
-  // Server status - RELIABLE detection with multiple APIs
+  // Copy functionality for IPs and ports
+  function setupCopyButtons() {
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const copyType = btn.getAttribute('data-copy');
+        let textToCopy = '';
+        
+        if (copyType === 'javaIp') {
+          textToCopy = document.getElementById('javaIp').innerText;
+        } else if (copyType === 'javaPort') {
+          textToCopy = document.getElementById('javaPort').innerText;
+        } else if (copyType === 'javaFull') {
+          textToCopy = `${document.getElementById('javaIp').innerText}:${document.getElementById('javaPort').innerText}`;
+        } else if (copyType === 'bedrockIp') {
+          textToCopy = document.getElementById('bedrockIp').innerText;
+        } else if (copyType === 'bedrockPort') {
+          textToCopy = document.getElementById('bedrockPort').innerText;
+        } else if (copyType === 'bedrockFull') {
+          textToCopy = `${document.getElementById('bedrockIp').innerText}:${document.getElementById('bedrockPort').innerText}`;
+        }
+        
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '✅ COPIED!';
+          setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+        } catch (err) {
+          console.error('Failed to copy:', err);
+        }
+      });
+    });
+  }
+  
+  // Server status detection with multiple APIs
   const serverHost = 'crixsmp.minekeep.gg';
   const statusTextSpan = document.getElementById('statusText');
   const playerCountSpan = document.getElementById('playerCount');
-  const whitelistStatusSpan = document.getElementById('whitelistStatus');
   const statusLedSpan = document.getElementById('statusLed');
   const refreshBtn = document.getElementById('refreshBtn');
 
+  let currentStatus = null;
+  
   async function checkServerWithDetails() {
     statusTextSpan.innerText = 'Pinging...';
-    statusLedSpan?.classList.remove('online', 'offline', 'restarting');
+    statusLedSpan?.classList.remove('online', 'offline');
     playerCountSpan.innerText = '0/0';
     
+    let online = false;
+    let players = 0;
+    let maxPlayers = 0;
+    
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      // Try multiple APIs in parallel for faster response
+      // Try multiple APIs in sequence for reliability
       const apis = [
-        `https://api.mcsrvstat.us/2/${serverHost}`,
-        `https://mcapi.us/server/status?ip=${serverHost}&port=25565`
-      ];
-      
-      let online = false;
-      let players = 0;
-      let maxPlayers = 0;
-      let motdString = '';
-      
-      // Try each API until we get a successful response
-      for (const apiUrl of apis) {
-        try {
-          const response = await fetch(apiUrl, { signal: controller.signal });
+        // Try mcstatus.io first (most reliable for Java servers)
+        async () => {
+          const response = await fetch(`https://api.mcstatus.io/v2/status/java/${serverHost}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          });
           if (response.ok) {
             const data = await response.json();
-            
-            // Handle different API response formats
-            if (apiUrl.includes('mcsrvstat')) {
-              if (data && data.online === true) {
-                online = true;
-                players = data.players?.online || 0;
-                maxPlayers = data.players?.max || 0;
-                if (data.motd?.clean) motdString = data.motd.clean.join(' ').toLowerCase();
-                break; // Success, stop trying other APIs
-              }
-            } else if (apiUrl.includes('mcapi.us')) {
-              if (data && data.online === true) {
-                online = true;
-                players = data.players?.now || 0;
-                maxPlayers = data.players?.max || 0;
-                motdString = (data.motd || '').toLowerCase();
-                break; // Success, stop trying other APIs
-              }
+            if (data && data.online === true) {
+              return { online: true, players: data.players?.online || 0, max: data.players?.max || 0 };
             }
           }
+          return null;
+        },
+        // Try mcsrvstat as fallback
+        async () => {
+          const response = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.online === true) {
+              return { online: true, players: data.players?.online || 0, max: data.players?.max || 0 };
+            }
+          }
+          return null;
+        },
+        // Try mcapi.us as last resort
+        async () => {
+          const response = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=25565`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.online === true) {
+              return { online: true, players: data.players?.now || 0, max: data.players?.max || 0 };
+            }
+          }
+          return null;
+        }
+      ];
+      
+      // Try each API until we get a successful response
+      for (const apiCall of apis) {
+        try {
+          const result = await apiCall();
+          if (result && result.online) {
+            online = true;
+            players = result.players;
+            maxPlayers = result.max;
+            console.log(`Server is ONLINE via API, Players: ${players}/${maxPlayers}`);
+            break;
+          }
         } catch (e) {
-          console.log(`API ${apiUrl} failed:`, e);
+          console.log("API attempt failed:", e);
           continue;
         }
       }
       
-      clearTimeout(timeoutId);
-      
+      // Update UI based on result
       if (online) {
         statusTextSpan.innerHTML = '✅ ONLINE';
         statusLedSpan?.classList.add('online');
         playerCountSpan.innerText = `${players}/${maxPlayers || '?'}`;
-        
-        if (motdString.includes('whitelist')) {
-          whitelistStatusSpan.innerText = '✓ ON';
-          whitelistStatusSpan.style.color = '#facc15';
-        } else {
-          whitelistStatusSpan.innerText = '✗ OFF';
-          whitelistStatusSpan.style.color = '#22c55e';
-        }
+        currentStatus = 'online';
       } else {
         statusTextSpan.innerHTML = '❌ OFFLINE';
         statusLedSpan?.classList.add('offline');
         playerCountSpan.innerText = '0/0';
-        whitelistStatusSpan.innerText = 'N/A';
+        currentStatus = 'offline';
       }
     } catch (err) {
       console.error("Server check error:", err);
       statusTextSpan.innerHTML = '⚠️ UNREACHABLE';
       playerCountSpan.innerText = '0/0';
-      whitelistStatusSpan.innerText = '?';
       if(statusLedSpan) statusLedSpan.style.background = '#f59e0b';
+      currentStatus = 'error';
     }
   }
   
   // Manual refresh button
-  refreshBtn.addEventListener('click', () => {
+  refreshBtn.addEventListener('click', async () => {
+    const originalText = refreshBtn.innerHTML;
     refreshBtn.innerHTML = '🔄 ...';
-    checkServerWithDetails();
+    refreshBtn.disabled = true;
+    await checkServerWithDetails();
     setTimeout(() => {
-      refreshBtn.innerHTML = '🔄 REFRESH';
-    }, 2000);
+      refreshBtn.innerHTML = originalText;
+      refreshBtn.disabled = false;
+    }, 1500);
   });
   
-  // Initial check and refresh every 30 seconds
+  // Initial check and auto-refresh every 15 seconds
   checkServerWithDetails();
-  setInterval(() => checkServerWithDetails(), 30000);
+  setInterval(() => checkServerWithDetails(), 15000);
+  
+  // Setup copy buttons
+  setupCopyButtons();
   
   // Smooth scroll for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -428,7 +487,7 @@ EXTRA RULES
     });
   });
   
-  console.log("CRIX SMP — Server IP: crixsmp.minekeep.gg | Refresh button added");
+  console.log("CRIX SMP — Server status monitoring active, auto-refreshes every 15 seconds");
 </script>
 </body>
 </html>
