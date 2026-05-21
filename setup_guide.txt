@@ -1,0 +1,46 @@
+========================================
+   CRIX SMP - VOICE CHAT SETUP GUIDE
+========================================
+
+📌 REQUIREMENTS:
+- Minecraft Java Edition (NOT Bedrock)
+- Internet connection
+
+🔧 STEP 1: INSTALL FABRIC LOADER
+1. Download Fabric Installer from: https://fabricmc.net/use/
+2. Run the installer
+3. Select your Minecraft version (use the same as the server)
+4. Click "Install"
+
+🔧 STEP 2: DOWNLOAD REQUIRED MODS
+1. Fabric API: https://modrinth.com/mod/fabric-api
+2. Simple Voice Chat: https://modrinth.com/plugin/simple-voice-chat
+
+🔧 STEP 3: INSTALL MODS
+1. Open your Minecraft directory:
+   - Windows: Press Win+R, type %appdata%\.minecraft
+   - Mac: ~/Library/Application Support/minecraft
+   - Linux: ~/.minecraft
+2. Go to the "mods" folder (create it if it doesn't exist)
+3. Drag both downloaded .jar files into the "mods" folder
+
+🔧 STEP 4: LAUNCH AND CONNECT
+1. Launch Minecraft using the "fabric-loader" profile
+2. Go to Multiplayer → Add Server
+3. Server IP: crixsmp.minekeep.gg
+4. Join and press "V" (default) to talk!
+
+🎮 CONTROLS:
+- V: Push-to-talk (default)
+- G: Voice chat settings menu
+- O: Toggle mute
+
+❌ TROUBLESHOOTING:
+- No voice icon? Check that Simple Voice Chat mod is in mods folder
+- Can't hear anyone? Check your microphone permissions
+- Mod not loading? Make sure Fabric API is also installed
+
+========================================
+   Need help? Join our Discord!
+   discord.gg/KufFPEptTG
+========================================
