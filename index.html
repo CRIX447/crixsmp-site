@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CRIX SMP — Minecraft Survival Multiplayer | Java + Bedrock</title>
-<meta name="description" content="CRIX SMP is a Minecraft survival multiplayer server for Java and Bedrock. Server IP: play.crixsmp.net. Check the live player count and see how to join.">
+<meta name="description" content="CRIX SMP is a Minecraft survival multiplayer server for Java and Bedrock. Server IP: play.crixsmp.net. Live player count and connection instructions.">
 <link rel="canonical" href="https://crixsmp.net/">
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="/crixsmplogo.png" type="image/png">
@@ -22,15 +22,18 @@
 
 <header>
   <div class="wrap bar">
-    <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="32" height="32"><span>CRIX SMP</span></a>
-    <button id="menu" aria-expanded="false" aria-label="Menu">☰</button>
-    <nav>
-      <a class="active" href="/">Home</a>
-      <a href="/rules">Rules</a>
-      <a href="/join">How to Join</a>
-      <a href="/voice-chat">Simple Voice Chat</a>
-      <a class="btn discord" data-discord href="#" target="_blank" rel="noopener">Discord</a>
-    </nav>
+    <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="36" height="36"><span>CRIX SMP</span></a>
+    <div class="tools">
+      <nav>
+        <a class="active" href="/">Home</a>
+        <a href="/rules">Rules</a>
+        <a href="/join">How to Join</a>
+        <a href="/voice-chat">Voice Chat</a>
+        <a class="btn discord" data-discord href="#" target="_blank" rel="noopener">Discord</a>
+      </nav>
+      <button id="sound" title="UI sounds">ON</button>
+      <button id="menu" aria-expanded="false" aria-label="Menu">☰</button>
+    </div>
   </div>
 </header>
 
@@ -38,15 +41,13 @@
 
 <section class="hero">
   <div class="wrap">
-    <img class="logo" src="/crixsmplogo.png" alt="CRIX SMP logo" width="132" height="132">
-
-    <div class="editions"><span>Java</span><span>+</span><span>Bedrock</span></div>
-
-    <h1>CRIX<span> SMP</span></h1>
+    <img class="logo" src="/crixsmplogo.png" alt="CRIX SMP" width="120" height="120">
+    <div class="editions"><span>JAVA</span><span>+</span><span>BEDROCK</span></div>
+    <h1>CRIX <em>SMP</em></h1>
+    <div id="splash">Java and Bedrock!</div>
     <p class="tagline">A Minecraft Survival Multiplayer Server</p>
     <p class="lead">
-      Java and Bedrock players share the same world here — same map, same chat, same builds.
-      Add the IP below, join in, and go make something with the rest of us.
+      One world, both editions. Add the IP, spawn in, and start building with everyone else.
     </p>
 
     <div class="ip">
@@ -58,20 +59,19 @@
     </div>
 
     <div class="row mt">
-      <a class="btn solid" href="/join">How to Join</a>
-      <a class="btn discord" data-discord href="#" target="_blank" rel="noopener">Join Discord</a>
+      <a class="btn blue big" href="/join">HOW TO JOIN</a>
+      <a class="btn discord big" data-discord href="#" target="_blank" rel="noopener">JOIN DISCORD</a>
     </div>
   </div>
 </section>
 
 <section id="live">
   <div class="wrap">
-    <span class="eyebrow">Live server status</span>
-    <h2>Is the server up?</h2>
+    <div class="title"><h2>Live server status</h2></div>
 
-    <div class="status mt" id="status">
+    <div id="status">
       <div class="top">
-        <span>Live server status</span>
+        <span>Multiplayer</span>
         <button id="recheck">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
           Refresh
@@ -79,10 +79,10 @@
       </div>
 
       <div class="main">
-        <div class="icon"><img src="/crixsmplogo.png" alt="" width="48" height="48"></div>
+        <div class="icon"><img src="/crixsmplogo.png" alt="" width="56" height="56"></div>
         <div class="meta">
           <div class="name">CRIX SMP <span class="tag" id="state"><em></em>Checking</span></div>
-          <div class="motd" id="motd">Checking the server…</div>
+          <div class="motd" id="motd">Pinging the server...</div>
         </div>
         <div class="count">
           <b id="players"><u>—</u></b>
@@ -105,43 +105,64 @@
       </div>
     </div>
 
-    <p class="small muted mt">
-      Read live from the server. If it says offline, it's offline — we don't leave an old
-      number on the screen.
+    <p class="small grey mt-s">
+      Read live from the server. If it says offline, it is offline. No old numbers left on screen.
     </p>
   </div>
 </section>
 
 <section>
   <div class="wrap">
-    <span class="eyebrow">About the server</span>
-    <h2>What CRIX SMP is</h2>
+    <div class="title"><h2>What CRIX SMP is</h2></div>
     <p class="lead">
-      A survival server built around the people playing on it. No application form, no hoops —
-      grab the IP, read the rules, and you're in.
+      A survival server built around the people playing on it. No application, no forms. Grab
+      the IP, read the rules, get building.
     </p>
 
     <div class="grid mt">
       <div class="card">
-        <span class="kicker">Survival</span>
-        <h3>Straight survival multiplayer</h3>
-        <p>Everyone starts the same way and builds up from there. Gather, farm, mine, fight things, settle somewhere that suits you.</p>
+        <span class="kicker">SURVIVAL</span>
+        <h3>Straight survival</h3>
+        <p>Everyone starts the same way. Gather, farm, mine, fight things, settle somewhere that suits you.</p>
       </div>
       <div class="card">
-        <span class="kicker red">Crossplay</span>
-        <h3>Java and Bedrock, one world</h3>
-        <p>Whatever edition you own, you're on the same map as everyone else, using the same address.</p>
+        <span class="kicker red">CROSSPLAY</span>
+        <h3>Java and Bedrock</h3>
+        <p>Whichever edition you own, you land on the same map as everyone else using the same address.</p>
       </div>
       <div class="card">
-        <span class="kicker">Community</span>
-        <h3>Built with other members</h3>
-        <p>Build together, explore together, or go off and do your own thing. Chat and coordination happen in our Discord.</p>
+        <span class="kicker">COMMUNITY</span>
+        <h3>Built together</h3>
+        <p>Team up on a megabuild or go off and do your own thing. Chat and planning happen in Discord.</p>
       </div>
       <div class="card">
-        <span class="kicker red">Ongoing</span>
-        <h3>Regular updates and events</h3>
-        <p>The server gets updated and we run events. Announcements go out in Discord first, so that's the place to watch.</p>
+        <span class="kicker red">EVENTS</span>
+        <h3>Updates and events</h3>
+        <p>The server gets updated and we run events. Announcements go out in Discord first.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENSHOTS
+     Swap img/screenshot-1.png, -2 and -3 for real builds from the server
+     (16:9 works best). Delete this whole section if you'd rather not have it. -->
+<section>
+  <div class="wrap">
+    <div class="title red"><h2>On the server</h2></div>
+    <div class="shots">
+      <figure>
+        <img src="/img/screenshot-1.png" alt="" width="640" height="360" loading="lazy">
+        <figcaption>Replace img/screenshot-1.png</figcaption>
+      </figure>
+      <figure>
+        <img src="/img/screenshot-2.png" alt="" width="640" height="360" loading="lazy">
+        <figcaption>Replace img/screenshot-2.png</figcaption>
+      </figure>
+      <figure>
+        <img src="/img/screenshot-3.png" alt="" width="640" height="360" loading="lazy">
+        <figcaption>Replace img/screenshot-3.png</figcaption>
+      </figure>
     </div>
   </div>
 </section>
@@ -151,11 +172,11 @@
     <div class="cta">
       <div>
         <h2>Ready when you are</h2>
-        <p>Connection steps for both editions, plus what to do if it won't connect first time.</p>
+        <p>Connection steps for both editions, plus fixes for when it won't connect first try.</p>
       </div>
       <div class="row">
-        <a class="btn solid" href="/join">How to Join</a>
-        <a class="btn red" href="/rules">Read the rules</a>
+        <a class="btn blue" href="/join">HOW TO JOIN</a>
+        <a class="btn red" href="/rules">RULES</a>
       </div>
     </div>
   </div>
@@ -167,9 +188,9 @@
   <div class="wrap">
     <div class="fgrid">
       <div>
-        <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="32" height="32"><span>CRIX SMP</span></a>
+        <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="36" height="36"><span>CRIX SMP</span></a>
         <div class="ipline" data-ip>play.crixsmp.net</div>
-        <span class="plat">Java + Bedrock</span>
+        <span class="plat">JAVA + BEDROCK</span>
       </div>
       <div>
         <h4>Pages</h4>
