@@ -1,16 +1,87 @@
-/* CRIX SMP — everything the site needs, in one file.
-   Change the three values below and you're done. */
+/* ============================================================
+   CRIX SMP — site script
+   Edit the settings block, everything else follows.
+   ============================================================ */
 
 const IP = 'play.crixsmp.net';
 const BEDROCK_PORT = '19132';
 const DISCORD = 'YOUR_DISCORD_INVITE_HERE';
 
-const REFRESH_MS = 45000; // how often the status panel re-checks
+/* Title-screen splash lines. One is picked at random on every load.
+   Add, remove, rewrite — keep them short so they don't wrap. */
+const SPLASHES = [
+  'Java and Bedrock!',
+  'Same world, either edition!',
+  'Bring a shovel!',
+  'No whitelist!',
+  'Now with more chunks!',
+  'Watch out for creepers!',
+  'Built by the community!',
+  '100% survival!'
+];
 
-/* ---------- fill in IP / port / Discord links ---------- */
+const REFRESH_MS = 45000;      // how often the status panel re-checks
+const VOLUME = 0.35;           // UI sound volume, 0 to 1
+
+/* ---------- fill in IP / port / Discord ---------- */
 document.querySelectorAll('[data-ip]').forEach(el => (el.textContent = IP));
 document.querySelectorAll('[data-port]').forEach(el => (el.textContent = BEDROCK_PORT));
 document.querySelectorAll('[data-discord]').forEach(el => (el.href = DISCORD));
+
+/* ---------- UI sounds ----------
+   Drop your own files into sounds/ as click.ogg and hover.ogg.
+   If they aren't there, the site stays silent and nothing breaks. */
+let muted = localStorage.getItem('crix-muted') === '1';
+
+let soundsAvailable = true;
+
+const sounds = {
+  click: new Audio('/sounds/click.ogg'),
+  hover: new Audio('/sounds/hover.ogg')
+};
+Object.values(sounds).forEach(a => {
+  a.volume = VOLUME;
+  a.preload = 'none';
+  // if the file isn't there, stop trying rather than 404 on every click
+  a.addEventListener('error', () => { soundsAvailable = false; });
+});
+
+function play(name) {
+  if (muted || !soundsAvailable || !sounds[name]) return;
+  const s = sounds[name].cloneNode();
+  s.volume = VOLUME;
+  s.play().catch(() => {}); // no file yet, or the browser blocked it
+}
+
+const soundBtn = document.getElementById('sound');
+function paintSound() {
+  if (!soundBtn) return;
+  soundBtn.textContent = muted ? 'OFF' : 'ON';
+  soundBtn.setAttribute('aria-label', muted ? 'Turn UI sounds on' : 'Turn UI sounds off');
+  soundBtn.setAttribute('aria-pressed', String(!muted));
+}
+paintSound();
+
+if (soundBtn) {
+  soundBtn.addEventListener('click', () => {
+    muted = !muted;
+    localStorage.setItem('crix-muted', muted ? '1' : '0');
+    paintSound();
+    play('click');
+  });
+}
+
+// every button and nav link clicks; hovering a button ticks
+document.querySelectorAll('.btn, nav a, button, summary').forEach(el => {
+  el.addEventListener('click', () => play('click'));
+});
+document.querySelectorAll('.btn, nav a').forEach(el => {
+  el.addEventListener('mouseenter', () => play('hover'));
+});
+
+/* ---------- splash text ---------- */
+const splash = document.getElementById('splash');
+if (splash) splash.textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
 
 /* ---------- mobile menu ---------- */
 const menuBtn = document.getElementById('menu');
@@ -18,13 +89,13 @@ const nav = document.querySelector('nav');
 if (menuBtn) {
   menuBtn.addEventListener('click', () => {
     const open = nav.classList.toggle('open');
-    menuBtn.setAttribute('aria-expanded', open);
+    menuBtn.setAttribute('aria-expanded', String(open));
     menuBtn.textContent = open ? '✕' : '☰';
   });
 }
 
 /* ---------- copy buttons ----------
-   Any <button data-copy="ip"> or data-copy="port" works. */
+   <button data-copy="ip"> or data-copy="port" ---------- */
 function toast(msg) {
   let t = document.getElementById('toast');
   if (!t) {
@@ -44,7 +115,6 @@ async function copy(text) {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    // fallback for browsers/contexts without the clipboard API
     const f = document.createElement('textarea');
     f.value = text;
     f.style.cssText = 'position:fixed;top:-1000px';
@@ -72,9 +142,9 @@ document.querySelectorAll('[data-copy]').forEach(btn => {
 });
 
 /* ---------- live server status ----------
-   Real data from api.mcsrvstat.us — public, no API key, so nothing
-   secret ends up in this file. Java and Bedrock are checked separately
-   because they're different protocols on different ports. */
+   Real data from api.mcsrvstat.us. Free, public, no API key, so there's
+   nothing secret sitting in this file. Java and Bedrock are checked
+   separately because they're different protocols on different ports. */
 const status = document.getElementById('status');
 
 if (status) {
@@ -97,7 +167,7 @@ if (status) {
 
   function tag(node, up, name) {
     node.className = 'tag ' + (up ? 'on' : 'off');
-    node.innerHTML = `<em></em>${name} · ${up ? 'Online' : 'Offline'}`;
+    node.innerHTML = `<em></em>${name}: ${up ? 'Online' : 'Offline'}`;
   }
 
   async function check() {
@@ -134,10 +204,9 @@ if (status) {
       el('fill').style.width = '0%';
       el('motd').textContent = 'Not responding right now.';
       el('err').hidden = false;
-      el('err').textContent =
-        !java && !bedrock
-          ? "Couldn't reach the status service, so the live count is unavailable. The server itself may still be up — try connecting, or ask in Discord."
-          : 'The server did not answer. It may be restarting or down for maintenance. Check Discord for updates.';
+      el('err').textContent = (!java && !bedrock)
+        ? "Couldn't reach the status service, so the live count is unavailable. The server itself may still be up. Try connecting, or ask in Discord."
+        : 'The server did not answer. It may be restarting or down for maintenance. Check Discord for updates.';
     }
 
     checkedAt = Date.now();
