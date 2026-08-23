@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to Join — CRIX SMP | Java &amp; Bedrock</title>
+<meta name="description" content="Connect to CRIX SMP from Minecraft Java or Bedrock Edition. Server address play.crixsmp.net, Bedrock port 19132, plus troubleshooting for connection problems.">
+<link rel="canonical" href="https://crixsmp.net/join">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="/crixsmplogo.png" type="image/png">
+<link rel="apple-touch-icon" href="/crixsmplogo.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="CRIX SMP">
+<meta property="og:title" content="How to Join — CRIX SMP">
+<meta property="og:description" content="Step-by-step connection instructions for Java and Bedrock. Server IP: play.crixsmp.net">
+<meta property="og:url" content="https://crixsmp.net/join">
+<meta property="og:image" content="https://crixsmp.net/crixsmplogo.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="32" height="32"><span>CRIX SMP</span></a>
+    <button id="menu" aria-expanded="false" aria-label="Menu">☰</button>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/rules">Rules</a>
+      <a class="active" href="/join">How to Join</a>
+      <a href="/voice-chat">Simple Voice Chat</a>
+      <a class="btn discord" data-discord href="#" target="_blank" rel="noopener">Discord</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">Connect</span>
+    <h1>How to join</h1>
+    <p class="lead">
+      CRIX SMP runs Java and Bedrock together, so pick whichever edition you own — both use the
+      same address and land in the same world.
+    </p>
+
+    <div class="ip">
+      <div class="val">
+        <small>Server address</small>
+        <b data-ip>play.crixsmp.net</b>
+      </div>
+      <button data-copy="ip">Copy IP</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="grid">
+
+      <div class="panel blue">
+        <div class="head"><h2>Java Edition</h2><span class="tag">PC</span></div>
+        <div class="body">
+          <ol class="steps">
+            <li>Open <b>Minecraft Java Edition</b>.</li>
+            <li>Select <b>Multiplayer</b>.</li>
+            <li>Select <b>Add Server</b>.</li>
+            <li>Enter the server address below. The name field is just a label — call it CRIX SMP.</li>
+            <li>Select <b>Done</b> to save the server.</li>
+            <li>Select <b>CRIX SMP</b> in the list and connect.</li>
+          </ol>
+          <div class="mt">
+            <div class="field">
+              <span>Server address</span>
+              <b data-ip>play.crixsmp.net</b>
+              <button data-copy="ip">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel red">
+        <div class="head"><h2>Bedrock Edition</h2><span class="tag">Console · Mobile · Windows</span></div>
+        <div class="body">
+          <ol class="steps r">
+            <li>Open <b>Minecraft Bedrock Edition</b>.</li>
+            <li>Select <b>Play</b>, then the <b>Servers</b> tab.</li>
+            <li>Scroll down and select <b>Add Server</b>.</li>
+            <li>Enter a name, then the address and port below.</li>
+            <li>Save, then select CRIX SMP and join.</li>
+          </ol>
+          <div class="mt">
+            <div class="field">
+              <span>Server address</span>
+              <b data-ip>play.crixsmp.net</b>
+              <button data-copy="ip">Copy</button>
+            </div>
+            <div class="field">
+              <span>Port</span>
+              <b data-port>19132</b>
+              <button data-copy="port">Copy</button>
+            </div>
+          </div>
+          <p class="small muted mt">
+            Some consoles restrict adding custom servers. If your platform won't let you add one
+            directly, ask in Discord and we'll point you at the setup for it.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow red">If it won't connect</span>
+    <h2>Troubleshooting</h2>
+    <p class="lead">Work down this list — it's almost always one of these.</p>
+
+    <div class="mt">
+      <details>
+        <summary>The server shows as offline</summary>
+        <p>Check the live status panel on the <a href="/#live">homepage</a>. If it says offline there too, the server is genuinely down — usually a restart or maintenance. Give it a few minutes and check Discord for an announcement.</p>
+      </details>
+
+      <details>
+        <summary>I can't connect, but the server is online</summary>
+        <p>Run through these in order:</p>
+        <ul>
+          <li>Retype the address by hand — a stray space or typo is the usual culprit.</li>
+          <li>Delete the saved server entry and add it again from scratch.</li>
+          <li>Fully close Minecraft and your launcher, then reopen.</li>
+          <li>Restart your router if nothing else worked.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>It says my version is wrong or unsupported</summary>
+        <p>Your client version has to match what the server is running. Switch your launcher profile to that version and try again — ask in Discord if you're unsure which one to pick.</p>
+      </details>
+
+      <details>
+        <summary>Java and Bedrock connect differently</summary>
+        <p>Java uses the address on its own. Bedrock needs the address <em>and</em> the port field filled in — leaving the port blank is the most common reason a Bedrock connection fails. Both editions end up in the same world.</p>
+      </details>
+
+      <details>
+        <summary>Connection drops, lag spikes, or timeouts</summary>
+        <p>Try a wired connection or move closer to your router, and close anything else eating bandwidth. VPNs, school and work networks often block game traffic — if you're on one, that's likely the problem.</p>
+      </details>
+    </div>
+
+    <div class="cta mt">
+      <div>
+        <h2>Still stuck?</h2>
+        <p>Ask in Discord. Someone's usually around, and it's the fastest way to sort it out.</p>
+      </div>
+      <a class="btn discord" data-discord href="#" target="_blank" rel="noopener">Join Discord</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="32" height="32"><span>CRIX SMP</span></a>
+        <div class="ipline" data-ip>play.crixsmp.net</div>
+        <span class="plat">Java + Bedrock</span>
+      </div>
+      <div>
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/rules">Rules</a></li>
+          <li><a href="/join">How to Join</a></li>
+          <li><a href="/voice-chat">Simple Voice Chat</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a data-discord href="#" target="_blank" rel="noopener">Discord</a></li>
+          <li><a href="/rules">Server rules</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>&copy; CRIX SMP. All rights reserved.</span>
+      <span>Not affiliated with Mojang Studios or Microsoft.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/script.js"></script>
+</body>
+</html>
