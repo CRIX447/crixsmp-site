@@ -1,493 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>CRIX SMP | Official Site</title>
-  <!-- Preload custom fonts from GitHub raw -->
-  <link rel="preload" href="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftRegular-Bmg3.otf" as="font" crossorigin="anonymous">
-  <link rel="preload" href="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftBold-nMK1.otf" as="font" crossorigin="anonymous">
-  <link rel="preload" href="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftItalic-R8Mo.otf" as="font" crossorigin="anonymous">
-  <link rel="preload" href="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftBoldItalic-1yle.otf" as="font" crossorigin="anonymous">
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/crixsmplogo.png">
-  <link rel="shortcut icon" href="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/crixsmplogo.png">
-  <style>
-    /* Font-face definitions */
-    @font-face {
-      font-family: 'MinecraftRegular';
-      src: url('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftRegular-Bmg3.otf') format('opentype');
-      font-weight: normal;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: 'MinecraftBold';
-      src: url('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftBold-nMK1.otf') format('opentype');
-      font-weight: bold;
-      font-style: normal;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: 'MinecraftItalic';
-      src: url('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftItalic-R8Mo.otf') format('opentype');
-      font-weight: normal;
-      font-style: italic;
-      font-display: swap;
-    }
-    @font-face {
-      font-family: 'MinecraftBoldItalic';
-      src: url('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/MinecraftBoldItalic-1yle.otf') format('opentype');
-      font-weight: bold;
-      font-style: italic;
-      font-display: swap;
-    }
-
-    /* Global font rules */
-    * { font-family: 'MinecraftRegular', monospace !important; }
-    h1, h2, h3, h4, .logo-text, .nav-links a, .btn, button, strong, b, .crix-blue, .smp-red, .stat-value {
-      font-family: 'MinecraftBold', monospace !important;
-    }
-
-    /* CSS Variables */
-    :root {
-      --bg-primary: #0a0c10; --bg-secondary: #14161c; --bg-card: #1a1d24e6;
-      --bg-nav: #0d0f14ee; --text-primary: #e0e4f0; --text-secondary: #a0a8c0;
-      --border-color: #2a2e3a; --card-border-left: #2A43E0; --card-border-bottom: #FF2A1F;
-      --hero-bg: #0f1219cc; --status-bg: #0a0c12cc; --footer-bg: #080a0e;
-    }
-    body.light-mode {
-      --bg-primary: #e8ecef; --bg-secondary: #d0d5dd; --bg-card: #ffffffea;
-      --bg-nav: #f0f2f5ee; --text-primary: #1a1e2c; --text-secondary: #2d3348;
-      --border-color: #b0b8c4; --hero-bg: #f4f6facc; --status-bg: #ffffffcc; --footer-bg: #dce2e8;
-    }
-
-    /* Blocky theme */
-    * { margin: 0; padding: 0; box-sizing: border-box; image-rendering: pixelated; }
-    body { background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column; transition: background 0.3s; }
-    .site-wrapper { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem; flex: 1; }
-    .navbar, .hero, .card, .status-panel, .download-section, .modal-content, .music-bar { border-radius: 8px !important; border-style: solid; border-width: 3px; }
-    button, .btn, .social-icon, .theme-toggle, .rules-btn, .refresh-btn, .copy-btn { border-radius: 6px !important; border-width: 2px; text-transform: uppercase; cursor: pointer; }
-    .card:hover, .btn:hover, button:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0px rgba(0,0,0,0.3); }
-    h1 { font-size: 3.4rem; text-shadow: 3px 3px 0px rgba(0,0,0,0.3); }
-    h2 { font-size: 2rem; border-left: 8px solid #FF2A1F; padding-left: 1rem; margin: 1.8rem 0 1rem; }
-    .crix-blue { color: #2A43E0; text-shadow: 2px 2px 0px #0a0e1a; }
-    .smp-red { color: #FF2A1F; text-shadow: 2px 2px 0px #3a0a0a; }
-    
-    .icon-img { width: 24px; height: 24px; vertical-align: middle; image-rendering: pixelated; display: inline-block; margin-right: 6px; }
-    .icon-img-small { width: 18px; height: 18px; vertical-align: middle; margin-right: 4px; }
-    
-    .navbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; background: var(--bg-nav); padding: 0.7rem 2rem; margin-bottom: 2.5rem; border-color: var(--border-color); box-shadow: 6px 6px 0px rgba(0,0,0,0.2); }
-    .logo-area { display: flex; align-items: center; gap: 1rem; }
-    .logo-img { height: 54px; width: auto; image-rendering: pixelated; }
-    .logo-text { font-size: 1.9rem; background: linear-gradient(135deg, #2A43E0, #FF2A1F); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .nav-links { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
-    .social-icon, .theme-toggle, .rules-btn { display: inline-flex; align-items: center; gap: 6px; background: #1a1e2c; padding: 0.45rem 1rem; transition: 0.1s; text-decoration: none; border: 2px solid; }
-    .social-icon.discord { background: #5865F2; border-color: #3b48c4; color: white; }
-    .social-icon.youtube { background: #FF0000; border-color: #cc0000; color: white; }
-    .social-icon.patreon { background: #FF424D; border-color: #cc3540; color: white; }
-    .theme-toggle { background: #2A43E0; border-color: #1a2ea0; color: white; }
-    .rules-btn { background: #FF2A1F; border-color: #cc1a10; color: white; }
-    .refresh-btn { background: #2A43E0; border-color: #1a2ea0; color: white; padding: 0.3rem 0.8rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; }
-    .hero { background: var(--hero-bg); padding: 2.5rem 2rem; margin-bottom: 2rem; text-align: center; }
-    .btn-group { display: flex; gap: 1.2rem; justify-content: center; flex-wrap: wrap; }
-    .btn { display: inline-flex; align-items: center; gap: 8px; background: #1e293b; padding: 0.8rem 2rem; text-decoration: none; border: 3px solid; color: white; cursor: pointer; }
-    .btn-secondary { background: #1f2a48; border-color: #2A43E0; box-shadow: 4px 4px 0px #0a1430; }
-    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
-    .card { background: var(--bg-card); padding: 1.5rem; text-align: center; border-left: 8px solid var(--card-border-left); border-bottom: 4px solid var(--card-border-bottom); cursor: pointer; }
-    .card h3 { margin-top: 8px; }
-    
-    /* Status Panel */
-    .status-panel { background: var(--status-bg); padding: 1rem 1.5rem; margin: 2rem 0; border-color: #2A43E0; }
-    .status-grid { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
-    .server-ip-display { background: #000000aa; padding: 0.5rem 1rem; border-left: 4px solid #2A43E0; color: white; display: flex; flex-direction: column; gap: 8px; }
-    .ip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; }
-    .ip-address { font-family: monospace; background: #0a0c10; padding: 4px 8px; border-radius: 4px; }
-    .copy-btn { background: #2A43E0; border-color: #1a2ea0; color: white; padding: 2px 8px; font-size: 0.7rem; }
-    .status-stats { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
-    .stat-box { background: #00000066; padding: 0.3rem 1rem; border-radius: 6px; display: flex; align-items: center; gap: 8px; }
-    .status-led { width: 12px; height: 12px; background: #6b7280; display: inline-block; border-radius: 0px; }
-    .status-led.online { background: #22c55e; animation: pulse 1.5s infinite; }
-    .status-led.offline { background: #FF2A1F; }
-    @keyframes pulse { 0% { opacity: 0.6; transform: scale(0.9);} 100% { opacity: 1; transform: scale(1.2);} }
-    
-    .music-bar { position: fixed; bottom: 20px; right: 20px; background: #1a1d28e6; padding: 0.5rem 1rem; display: flex; gap: 10px; align-items: center; z-index: 1000; border-color: #FF2A1F; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; justify-content: center; align-items: center; }
-    .modal-content { background: var(--bg-card); max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; border: 4px solid #FF2A1F; }
-    .close-modal { position: absolute; top: 0.8rem; right: 1rem; font-size: 2rem; cursor: pointer; color: #FF2A1F; }
-    .download-section { background: var(--bg-secondary); padding: 1.5rem; margin: 2rem 0; border-color: #2d3a60; }
-    .download-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
-    .download-card { background: #0f1622; padding: 1rem; flex: 1; min-width: 180px; text-align: center; border-top: 4px solid #2A43E0; }
-    .download-card a { color: white; background: #2A43E0; display: inline-flex; align-items: center; gap: 6px; padding: 0.5rem 1rem; margin-top: 0.8rem; text-decoration: none; }
-    .voice-warning { background: #1a0a0a; border-left: 6px solid #FF2A1F; padding: 0.8rem; margin-top: 1rem; font-size: 0.85rem; color: #ffaaaa; }
-    .main-footer { background: var(--footer-bg); border-top: 4px solid #FF2A1F; padding: 1.5rem; text-align: center; margin-top: 3rem; }
-    .footer-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .footer-links a { color: var(--text-secondary); text-decoration: none; }
-    @media (max-width: 760px) { .site-wrapper { padding: 1rem; } .hero h1 { font-size: 2.2rem; } .ip-row { flex-wrap: wrap; } }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CRIX SMP — Minecraft Survival Multiplayer | Java + Bedrock</title>
+<meta name="description" content="CRIX SMP is a Minecraft survival multiplayer server for Java and Bedrock. Server IP: play.crixsmp.net. Check the live player count and see how to join.">
+<link rel="canonical" href="https://crixsmp.net/">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="/crixsmplogo.png" type="image/png">
+<link rel="apple-touch-icon" href="/crixsmplogo.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CRIX SMP">
+<meta property="og:title" content="CRIX SMP — Minecraft Survival Multiplayer">
+<meta property="og:description" content="Survival SMP with Java and Bedrock crossplay. Join at play.crixsmp.net.">
+<meta property="og:url" content="https://crixsmp.net/">
+<meta property="og:image" content="https://crixsmp.net/crixsmplogo.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="site-wrapper">
-  <nav class="navbar">
-    <div class="logo-area">
-      <img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/crixsmplogo.png" alt="CRIX SMP Logo" class="logo-img">
-      <span class="logo-text">CRIX SMP</span>
-    </div>
-    <div class="nav-links">
-      <a href="#home">HOME</a>
-      <a href="#features">FEATURES</a>
-      <a href="#downloads">VOICE CHAT</a>
-      <button class="rules-btn" id="rulesBtn">📜 RULES</button>
-      <button class="theme-toggle" id="themeToggle">🌓 LIGHT/DARK</button>
-      <a href="https://discord.gg/KufFPEptTG" target="_blank" class="social-icon discord"><img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/discord.png" class="icon-img-small" onerror="this.style.display='none'"> Discord</a>
-      <a href="https://www.youtube.com/@CRIXSMP" target="_blank" class="social-icon youtube"><img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/youtube.png" class="icon-img-small" onerror="this.style.display='none'"> YouTube</a>
-      <a href="https://www.patreon.com/cw/CRIXSMP" target="_blank" class="social-icon patreon"><img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/patreon.png" class="icon-img-small" onerror="this.style.display='none'"> Patreon</a>
-    </div>
-  </nav>
 
-  <section id="home">
-    <div class="hero">
-      <div class="hero-content">
-        <h1><span class="crix-blue">CRIX</span> <span class="smp-red">S.M.P</span></h1>
-        <p>Donut SMP style — less chaos, more soul. <strong>🌿 Vanilla Survival · 🎙️ Voice Chat · 🏪 Bigger Shop · 💰 Bounties</strong></p>
-        <div class="btn-group">
-          <a href="#features" class="btn btn-secondary">✨ EXPLORE FEATURES</a>
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="32" height="32"><span>CRIX SMP</span></a>
+    <button id="menu" aria-expanded="false" aria-label="Menu">☰</button>
+    <nav>
+      <a class="active" href="/">Home</a>
+      <a href="/rules">Rules</a>
+      <a href="/join">How to Join</a>
+      <a href="/voice-chat">Simple Voice Chat</a>
+      <a class="btn discord" data-discord href="#" target="_blank" rel="noopener">Discord</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap">
+    <img class="logo" src="/crixsmplogo.png" alt="CRIX SMP logo" width="132" height="132">
+
+    <div class="editions"><span>Java</span><span>+</span><span>Bedrock</span></div>
+
+    <h1>CRIX<span> SMP</span></h1>
+    <p class="tagline">A Minecraft Survival Multiplayer Server</p>
+    <p class="lead">
+      Java and Bedrock players share the same world here — same map, same chat, same builds.
+      Add the IP below, join in, and go make something with the rest of us.
+    </p>
+
+    <div class="ip">
+      <div class="val">
+        <small>Server address</small>
+        <b data-ip>play.crixsmp.net</b>
+      </div>
+      <button data-copy="ip">Copy IP</button>
+    </div>
+
+    <div class="row mt">
+      <a class="btn solid" href="/join">How to Join</a>
+      <a class="btn discord" data-discord href="#" target="_blank" rel="noopener">Join Discord</a>
+    </div>
+  </div>
+</section>
+
+<section id="live">
+  <div class="wrap">
+    <span class="eyebrow">Live server status</span>
+    <h2>Is the server up?</h2>
+
+    <div class="status mt" id="status">
+      <div class="top">
+        <span>Live server status</span>
+        <button id="recheck">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <div class="main">
+        <div class="icon"><img src="/crixsmplogo.png" alt="" width="48" height="48"></div>
+        <div class="meta">
+          <div class="name">CRIX SMP <span class="tag" id="state"><em></em>Checking</span></div>
+          <div class="motd" id="motd">Checking the server…</div>
+        </div>
+        <div class="count">
+          <b id="players"><u>—</u></b>
+          <small>Players online</small>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- Server Status Panel -->
-  <div class="status-panel">
-    <div class="status-grid">
-      <div class="server-ip-display">
-        <!-- Java IP with port -->
-        <div class="ip-row">
-          <span>☕ JAVA:</span>
-          <span class="ip-address" id="javaIp">crixsmp.minekeep.gg</span>
-          <span>Port: <span id="javaPort">25565</span></span>
-          <button class="copy-btn" data-copy="javaIp">📋 Copy IP</button>
-          <button class="copy-btn" data-copy="javaPort">📋 Copy Port</button>
-          <button class="copy-btn" data-copy="javaFull">📋 Copy Full</button>
-        </div>
-        <!-- Bedrock IP with port -->
-        <div class="ip-row">
-          <span>📱 BEDROCK:</span>
-          <span class="ip-address" id="bedrockIp">crixsmp.bedrock.minekeep.gg</span>
-          <span>Port: <span id="bedrockPort">19132</span></span>
-          <button class="copy-btn" data-copy="bedrockIp">📋 Copy IP</button>
-          <button class="copy-btn" data-copy="bedrockPort">📋 Copy Port</button>
-          <button class="copy-btn" data-copy="bedrockFull">📋 Copy Full</button>
-        </div>
+      <div class="track"><div id="fill"></div></div>
+
+      <div class="tags">
+        <span class="tag" id="tagJava"><em></em>Java</span>
+        <span class="tag" id="tagBedrock"><em></em>Bedrock</span>
       </div>
-      <div class="status-stats">
-        <div class="stat-box">
-          <span class="status-led" id="statusLed"></span>
-          <span id="statusText">Checking...</span>
-        </div>
-        <div class="stat-box">
-          <img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/player_icon.png" class="icon-img-small" onerror="this.style.display='none'"> 
-          <span class="stat-value" id="playerCount">0/0</span>
-        </div>
-        <button class="refresh-btn" id="refreshBtn">🔄 REFRESH</button>
+
+      <div class="err" id="err" hidden></div>
+
+      <div class="foot">
+        <span data-ip>play.crixsmp.net</span>
+        <span>Last checked: <b id="stamp" style="font-weight:400">just now</b></span>
+      </div>
+    </div>
+
+    <p class="small muted mt">
+      Read live from the server. If it says offline, it's offline — we don't leave an old
+      number on the screen.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <span class="eyebrow">About the server</span>
+    <h2>What CRIX SMP is</h2>
+    <p class="lead">
+      A survival server built around the people playing on it. No application form, no hoops —
+      grab the IP, read the rules, and you're in.
+    </p>
+
+    <div class="grid mt">
+      <div class="card">
+        <span class="kicker">Survival</span>
+        <h3>Straight survival multiplayer</h3>
+        <p>Everyone starts the same way and builds up from there. Gather, farm, mine, fight things, settle somewhere that suits you.</p>
+      </div>
+      <div class="card">
+        <span class="kicker red">Crossplay</span>
+        <h3>Java and Bedrock, one world</h3>
+        <p>Whatever edition you own, you're on the same map as everyone else, using the same address.</p>
+      </div>
+      <div class="card">
+        <span class="kicker">Community</span>
+        <h3>Built with other members</h3>
+        <p>Build together, explore together, or go off and do your own thing. Chat and coordination happen in our Discord.</p>
+      </div>
+      <div class="card">
+        <span class="kicker red">Ongoing</span>
+        <h3>Regular updates and events</h3>
+        <p>The server gets updated and we run events. Announcements go out in Discord first, so that's the place to watch.</p>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- Features Section -->
-  <section id="features">
-    <h2>🔥 SERVER FEATURES</h2>
-    <div class="features-grid">
-      <div class="card"><h3>🌿 VANILLA SURVIVAL</h3><p>Pure Minecraft experience with a friendly community.</p></div>
-      <div class="card"><h3>🎙️ VOICE CHAT</h3><p>Proximity voice (Simple Voice Chat) - Java only.</p></div>
-      <div class="card"><h3>🏪 BIGGER SHOP</h3><p>Massive admin & player shops for trading.</p></div>
-      <div class="card"><h3>💰 BOUNTIES</h3><p>Place bounties on players, hunt or be hunted.</p></div>
-    </div>
-  </section>
-
-  <section id="downloads">
-    <div class="download-section">
-      <h2>🎙️ VOICE CHAT SETUP</h2>
-      <div class="download-grid">
-        <div class="download-card"><h3>🧵 FABRIC LOADER</h3><a href="https://fabricmc.net/use/" target="_blank">Download →</a></div>
-        <div class="download-card"><h3>🎤 SIMPLE VOICE CHAT</h3><a href="https://modrinth.com/plugin/simple-voice-chat" target="_blank">Get Mod →</a></div>
-        <div class="download-card"><h3>📦 FABRIC API</h3><a href="https://modrinth.com/mod/fabric-api" target="_blank">Download →</a></div>
+<section>
+  <div class="wrap">
+    <div class="cta">
+      <div>
+        <h2>Ready when you are</h2>
+        <p>Connection steps for both editions, plus what to do if it won't connect first time.</p>
       </div>
-      <div class="voice-warning">⚠️ Voice chat <strong>NOT supported on Bedrock</strong> — Java only.</div>
-      <p style="margin-top:1rem;">💡 Java: <strong>crixsmp.minekeep.gg:25565</strong> | Bedrock: <strong>crixsmp.bedrock.minekeep.gg:19132</strong></p>
+      <div class="row">
+        <a class="btn solid" href="/join">How to Join</a>
+        <a class="btn red" href="/rules">Read the rules</a>
+      </div>
     </div>
-  </section>
-</div>
-
-<footer class="main-footer">
-  <div class="footer-links">
-    <a href="#home">Home</a>
-    <a href="#features">Features</a>
-    <a href="#downloads">Voice Chat</a>
-    <a href="https://discord.gg/KufFPEptTG" target="_blank">Discord</a>
-    <a href="https://www.youtube.com/@CRIXSMP" target="_blank">YouTube</a>
-    <a href="https://www.patreon.com/cw/CRIXSMP" target="_blank">Patreon</a>
   </div>
-  <div class="copyright">© 2023 2026 CRIXGAMING VR. ltd all rights reserved</div>
-  <div class="copyright" style="margin-top:6px;">CRIX SMP — donut-style, voice chat for Java only.</div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <a class="brand" href="/"><img src="/crixsmplogo.png" alt="" width="32" height="32"><span>CRIX SMP</span></a>
+        <div class="ipline" data-ip>play.crixsmp.net</div>
+        <span class="plat">Java + Bedrock</span>
+      </div>
+      <div>
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/rules">Rules</a></li>
+          <li><a href="/join">How to Join</a></li>
+          <li><a href="/voice-chat">Simple Voice Chat</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Community</h4>
+        <ul>
+          <li><a data-discord href="#" target="_blank" rel="noopener">Discord</a></li>
+          <li><a href="/join">Connect to the server</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>&copy; CRIX SMP. All rights reserved.</span>
+      <span>Not affiliated with Mojang Studios or Microsoft.</span>
+    </div>
+  </div>
 </footer>
 
-<div class="music-bar">
-  <img src="https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/chirp_disc.png" class="icon-img-small" onerror="this.style.display='none'"> 
-  <span>Chirp</span> 
-  <button id="muteToggleBtn">🔊 Mute</button>
-</div>
-
-<div id="rulesModal" class="modal">
-  <div class="modal-content">
-    <span class="close-modal" id="closeModalBtn">&times;</span>
-    <h2>📜 CRIX SMP RULES</h2>
-    <div class="rules-text" id="rulesText"></div>
-  </div>
-</div>
-
-<script>
-  // Audio setup
-  const hoverSound = new Audio('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/scroll.mp3');
-  const clickSound = new Audio('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/go.mp3');
-  const bgMusic = new Audio('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/Chirp.mp3');
-  const muteSound = new Audio('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/mute.mp3');
-  const unmuteSound = new Audio('https://raw.githubusercontent.com/CRIX447/crixsmp-site/main/ok.mp3');
-  bgMusic.loop = true; bgMusic.volume = 0.35;
-  let isMuted = false;
-  function playHover() { hoverSound.currentTime = 0; hoverSound.play().catch(()=>{}); }
-  function playClick() { clickSound.currentTime = 0; clickSound.play().catch(()=>{}); }
-  document.querySelectorAll('a, button, .card, .btn').forEach(el => {
-    el.addEventListener('mouseenter', playHover);
-    el.addEventListener('click', playClick);
-  });
-  const muteBtn = document.getElementById('muteToggleBtn');
-  muteBtn.addEventListener('click', () => {
-    if (!isMuted) { muteSound.play().catch(()=>{}); isMuted = true; bgMusic.pause(); muteBtn.innerHTML = '🔇 Unmute'; }
-    else { unmuteSound.play().catch(()=>{}); isMuted = false; bgMusic.play().catch(()=>{}); muteBtn.innerHTML = '🔊 Mute'; }
-  });
-  document.body.addEventListener('click', () => { if (!isMuted && bgMusic.paused) bgMusic.play().catch(()=>{}); }, { once: true });
-
-  // Rules modal
-  const rulesModal = document.getElementById('rulesModal');
-  document.getElementById('rulesBtn').onclick = () => rulesModal.style.display = 'flex';
-  document.getElementById('closeModalBtn').onclick = () => rulesModal.style.display = 'none';
-  window.onclick = (e) => { if (e.target === rulesModal) rulesModal.style.display = 'none'; };
-  document.getElementById('rulesText').innerText = `CRIX SMP RULES
-
-GENERAL RULES
-1. Respect everyone - No bullying, harassment, or hate speech.
-2. No spamming - Includes chat, commands, or advertising.
-3. Keep it appropriate - No NSFW content or offensive builds.
-4. Listen to staff - Follow staff instructions.
-5. No impersonation - Do not pretend to be staff or other players.
-
-GAMEPLAY RULES
-1. No hacking or cheating (X-ray, kill aura, fly hacks, etc.)
-2. No exploiting glitches - Report them instead.
-3. No griefing - Do not destroy other players builds.
-4. No stealing - Only take what is yours.
-5. PvP only if both players agree (unless in PvP zones).
-
-BUILDING RULES
-1. No inappropriate builds.
-2. Do not build too close without permission.
-3. No lag machines or server-crashing builds.
-4. Keep redstone reasonable.
-
-CHAT RULES
-1. No excessive swearing.
-2. No advertising other servers.
-3. Use the main server language in public chat.
-4. No toxicity or drama.
-
-CROSSPLAY RULES
-1. Do not exploit version differences.
-2. Be respectful of different platforms.
-3. Report version-specific bugs.
-
-PUNISHMENTS
-1st Offense: Warning
-2nd Offense: Kick or mute
-3rd Offense: Temporary ban
-Severe offenses: Instant ban
-
-EXTRA RULES
-- Do not ask for admin.
-- Do not beg for items or ranks.
-- Have fun and respect others.`;
-
-  // Theme toggle
-  const themeToggle = document.getElementById('themeToggle');
-  themeToggle.onclick = () => {
-    document.body.classList.toggle('light-mode');
-    localStorage.setItem('crixTheme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
-  };
-  if (localStorage.getItem('crixTheme') === 'light') document.body.classList.add('light-mode');
-
-  // Copy functionality for IPs and ports
-  function setupCopyButtons() {
-    document.querySelectorAll('.copy-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const copyType = btn.getAttribute('data-copy');
-        let textToCopy = '';
-        
-        if (copyType === 'javaIp') {
-          textToCopy = document.getElementById('javaIp').innerText;
-        } else if (copyType === 'javaPort') {
-          textToCopy = document.getElementById('javaPort').innerText;
-        } else if (copyType === 'javaFull') {
-          textToCopy = `${document.getElementById('javaIp').innerText}:${document.getElementById('javaPort').innerText}`;
-        } else if (copyType === 'bedrockIp') {
-          textToCopy = document.getElementById('bedrockIp').innerText;
-        } else if (copyType === 'bedrockPort') {
-          textToCopy = document.getElementById('bedrockPort').innerText;
-        } else if (copyType === 'bedrockFull') {
-          textToCopy = `${document.getElementById('bedrockIp').innerText}:${document.getElementById('bedrockPort').innerText}`;
-        }
-        
-        try {
-          await navigator.clipboard.writeText(textToCopy);
-          const originalText = btn.innerHTML;
-          btn.innerHTML = '✅ COPIED!';
-          setTimeout(() => { btn.innerHTML = originalText; }, 1500);
-        } catch (err) {
-          console.error('Failed to copy:', err);
-        }
-      });
-    });
-  }
-  
-  // Server status detection with multiple APIs
-  const serverHost = 'crixsmp.minekeep.gg';
-  const statusTextSpan = document.getElementById('statusText');
-  const playerCountSpan = document.getElementById('playerCount');
-  const statusLedSpan = document.getElementById('statusLed');
-  const refreshBtn = document.getElementById('refreshBtn');
-
-  let currentStatus = null;
-  
-  async function checkServerWithDetails() {
-    statusTextSpan.innerText = 'Pinging...';
-    statusLedSpan?.classList.remove('online', 'offline');
-    playerCountSpan.innerText = '0/0';
-    
-    let online = false;
-    let players = 0;
-    let maxPlayers = 0;
-    
-    try {
-      // Try multiple APIs in sequence for reliability
-      const apis = [
-        // Try mcstatus.io first (most reliable for Java servers)
-        async () => {
-          const response = await fetch(`https://api.mcstatus.io/v2/status/java/${serverHost}`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.online === true) {
-              return { online: true, players: data.players?.online || 0, max: data.players?.max || 0 };
-            }
-          }
-          return null;
-        },
-        // Try mcsrvstat as fallback
-        async () => {
-          const response = await fetch(`https://api.mcsrvstat.us/2/${serverHost}`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.online === true) {
-              return { online: true, players: data.players?.online || 0, max: data.players?.max || 0 };
-            }
-          }
-          return null;
-        },
-        // Try mcapi.us as last resort
-        async () => {
-          const response = await fetch(`https://mcapi.us/server/status?ip=${serverHost}&port=25565`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data && data.online === true) {
-              return { online: true, players: data.players?.now || 0, max: data.players?.max || 0 };
-            }
-          }
-          return null;
-        }
-      ];
-      
-      // Try each API until we get a successful response
-      for (const apiCall of apis) {
-        try {
-          const result = await apiCall();
-          if (result && result.online) {
-            online = true;
-            players = result.players;
-            maxPlayers = result.max;
-            console.log(`Server is ONLINE via API, Players: ${players}/${maxPlayers}`);
-            break;
-          }
-        } catch (e) {
-          console.log("API attempt failed:", e);
-          continue;
-        }
-      }
-      
-      // Update UI based on result
-      if (online) {
-        statusTextSpan.innerHTML = '✅ ONLINE';
-        statusLedSpan?.classList.add('online');
-        playerCountSpan.innerText = `${players}/${maxPlayers || '?'}`;
-        currentStatus = 'online';
-      } else {
-        statusTextSpan.innerHTML = '❌ OFFLINE';
-        statusLedSpan?.classList.add('offline');
-        playerCountSpan.innerText = '0/0';
-        currentStatus = 'offline';
-      }
-    } catch (err) {
-      console.error("Server check error:", err);
-      statusTextSpan.innerHTML = '⚠️ UNREACHABLE';
-      playerCountSpan.innerText = '0/0';
-      if(statusLedSpan) statusLedSpan.style.background = '#f59e0b';
-      currentStatus = 'error';
-    }
-  }
-  
-  // Manual refresh button
-  refreshBtn.addEventListener('click', async () => {
-    const originalText = refreshBtn.innerHTML;
-    refreshBtn.innerHTML = '🔄 ...';
-    refreshBtn.disabled = true;
-    await checkServerWithDetails();
-    setTimeout(() => {
-      refreshBtn.innerHTML = originalText;
-      refreshBtn.disabled = false;
-    }, 1500);
-  });
-  
-  // Initial check and auto-refresh every 15 seconds
-  checkServerWithDetails();
-  setInterval(() => checkServerWithDetails(), 15000);
-  
-  // Setup copy buttons
-  setupCopyButtons();
-  
-  // Smooth scroll for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function(e) {
-      const targetId = this.getAttribute('href').substring(1);
-      if (targetId && document.getElementById(targetId)) {
-        e.preventDefault();
-        document.getElementById(targetId).scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  });
-  
-  console.log("CRIX SMP — Server status monitoring active, auto-refreshes every 15 seconds");
-</script>
+<script src="/script.js"></script>
 </body>
 </html>
