@@ -1,5 +1,5 @@
 /* ============================================================
-   CRIX SMP — site script
+   CRIX S.M.P — site script
    Edit the settings block, everything else follows.
    ============================================================ */
 
@@ -29,15 +29,15 @@ document.querySelectorAll('[data-port]').forEach(el => (el.textContent = BEDROCK
 document.querySelectorAll('[data-discord]').forEach(el => (el.href = DISCORD));
 
 /* ---------- UI sounds ----------
-   Drop your own files into sounds/ as click.ogg and hover.ogg.
+   Drop your own files into sounds/ as click.mp3 and hover.mp3.
    If they aren't there, the site stays silent and nothing breaks. */
 let muted = localStorage.getItem('crix-muted') === '1';
 
 let soundsAvailable = true;
 
 const sounds = {
-  click: new Audio('/sounds/click.ogg'),
-  hover: new Audio('/sounds/hover.ogg')
+  click: new Audio('/sounds/click.mp3'),
+  hover: new Audio('/sounds/hover.mp3')
 };
 Object.values(sounds).forEach(a => {
   a.volume = VOLUME;
