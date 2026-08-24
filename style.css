@@ -1,5 +1,5 @@
 /* ============================================================
-   CRIX SMP
+   CRIX S.M.P
    Built on Minecraft's own GUI language: 4px bevels, hard text
    shadows, inventory slots, hotbar selection. Everything sits on
    a 4px pixel grid, nothing is rounded, nothing is blurred.
@@ -111,6 +111,17 @@ code{
 .panel.blue > .head{ background:var(--blue); }
 .panel.red  > .head{ background:var(--red); }
 
+/* ---------- the wordmark ----------
+   CRIX is always blue, S.M.P is always red, everywhere it appears.
+   Shadows are darkened versions of each colour, the way Minecraft
+   draws text shadow, so the mark never renders white. */
+.crix{ color:var(--blue); text-shadow:2px 2px 0 #050f3d; }
+.crix i{ font-style:normal; color:var(--red); text-shadow:2px 2px 0 #3d0e08; }
+
+/* bigger mark, bigger shadow */
+.hero h1.crix{ text-shadow:6px 6px 0 #050f3d; }
+.hero h1.crix i{ text-shadow:6px 6px 0 #3d0e08; }
+
 /* ---------- header / hotbar nav ---------- */
 header{
   position:sticky; top:0; z-index:60;
@@ -124,7 +135,7 @@ header{
 
 .brand{ display:flex; align-items:center; gap:10px; font-size:20px; font-weight:700; }
 .brand img{ width:36px; height:36px; }
-.brand:hover span{ color:var(--blue); }
+.brand:hover{ filter:brightness(1.25); }
 
 nav{ display:flex; align-items:center; gap:6px; }
 /* each link is a hotbar slot; the current page is the selected slot */
@@ -194,11 +205,7 @@ nav a.btn{ box-shadow:var(--bevel), 0 4px 0 #000; }
 
 .hero .logo{ width:120px; margin-bottom:20px; }
 
-.hero h1{
-  font-size:76px; line-height:1;
-  text-shadow:6px 6px 0 var(--blue);   /* title-screen treatment */
-}
-.hero h1 em{ font-style:normal; color:var(--white); text-shadow:6px 6px 0 var(--red); }
+.hero h1{ font-size:76px; line-height:1; }
 
 /* splash text, angled and pulsing, exactly like the title screen */
 #splash{
@@ -424,8 +431,9 @@ footer ul a:hover{ color:var(--white); }
   }
   nav.open{ display:flex; }
   nav a{ padding:14px; font-size:16px; }
-  .hero h1{ font-size:52px; text-shadow:4px 4px 0 var(--blue); }
-  .hero h1 em{ text-shadow:4px 4px 0 var(--red); }
+  .hero h1{ font-size:52px; }
+  .hero h1.crix{ text-shadow:4px 4px 0 #050f3d; }
+  .hero h1.crix i{ text-shadow:4px 4px 0 #3d0e08; }
   h1{ font-size:32px; }
   h2{ font-size:25px; }
   .fgrid{ grid-template-columns:1fr; }
