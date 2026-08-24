@@ -5,7 +5,7 @@
 
 const IP = 'play.crixsmp.net';
 const BEDROCK_PORT = '19132';
-const DISCORD = 'YOUR_DISCORD_INVITE_HERE';
+const DISCORD = 'https//:discord.gg/KufFPEptTG';
 
 /* Title-screen splash lines. One is picked at random on every load.
    Add, remove, rewrite — keep them short so they don't wrap. */
