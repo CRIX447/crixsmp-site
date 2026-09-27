@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRIX SMP · Minecraft Bedrock survival server</title>
+<meta name="description" content="CRIX SMP is a Minecraft Bedrock survival server with its own economy, crates, spawners, seven ranks and 1v1 duels. Realm code WrxFsoWk5fc.">
+<meta name="theme-color" content="#080b11">
+<!-- Link previews (Discord etc.). If the site moves to another address, change the two https://crixsmp.vercel.app links below. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CRIX SMP">
+<meta property="og:title" content="CRIX SMP">
+<meta property="og:description" content="CRIX SMP is a Minecraft Bedrock survival server with its own economy, crates, spawners, seven ranks and 1v1 duels. Realm code WrxFsoWk5fc.">
+<meta property="og:url" content="https://crixsmp.vercel.app/">
+<meta property="og:image" content="https://crixsmp.vercel.app/images/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="images/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Jersey+10&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<a class="skip" href="#join">Skip to how to join</a>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="#top" aria-label="CRIX SMP, back to top">
+      <span class="logo pic" data-img="logo" data-size="512×512, square" data-alt="CRIX SMP logo"><span class="ph" aria-hidden="true"><span class="b">C</span><span class="r">X</span></span></span>
+      <span class="word"><span class="b">CRIX</span> <span class="r">SMP</span></span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#ranks">Ranks</a>
+      <a href="#crates">Crates</a>
+      <a href="#gear">Gear</a>
+      <a href="#join">Join</a>
+    </nav>
+    <a class="btn btn-sm btn-red" data-link="discord" href="https://discord.gg/VmW6mXzU7z" target="_blank" rel="noopener">Discord</a>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-media pic" data-img="hero" data-size="1920×1080" data-alt="">
+    <canvas id="terrain" aria-hidden="true"></canvas>
+  </div>
+  <div class="wrap hero-in">
+    <p class="eyebrow">Minecraft Bedrock · Survival economy · PvP</p>
+    <h1 class="logotype" id="hero-title" aria-label="CRIX SMP"><span class="b" aria-hidden="true"><i style="--i:0">C</i><i style="--i:1">R</i><i style="--i:2">I</i><i style="--i:3">X</i></span><span class="r" aria-hidden="true"><i style="--i:5">S</i><i style="--i:6">M</i><i style="--i:7">P</i></span></h1>
+    <p class="lead">You start with $500. Sell what you mine, earn shards while you play, open crates, stack spawners and climb seven ranks from Member to CRIX+.</p>
+    <div class="realm">
+      <div class="realm-top">
+        <span class="label">Realm code</span>
+        <span class="legend"><b>Blue</b> letters are capitals</span>
+      </div>
+      <div class="code" data-code role="img" aria-label="Realm code WrxFsoWk5fc"><span class="up">W</span><span>r</span><span>x</span><span class="up">F</span><span>s</span><span>o</span><span class="up">W</span><span>k</span><span class="num">5</span><span>f</span><span>c</span></div>
+      <div class="actions">
+        <button class="btn" type="button" data-copy>Copy Realm code</button>
+        <a class="btn btn-red" data-link="discord" href="https://discord.gg/VmW6mXzU7z" target="_blank" rel="noopener">Join the Discord</a>
+      </div>
+      <p class="how">In Minecraft: <b>Play</b> → <b>Realms</b> → <b>Join Realm</b>, then type the code.</p>
+    </div>
+  </div>
+  <div class="wrap bar">
+    <p class="held" id="held" aria-live="polite"><span class="held-cmd">/spawn</span>Back to spawn, from anywhere</p>
+    <div class="hotbar" role="group" aria-label="Main commands. Press 1 to 9 to switch.">
+      <button type="button" aria-pressed="true" data-what="Back to spawn, from anywhere"><span class="n">1</span>/spawn</button>
+      <button type="button" aria-pressed="false" data-what="A random spot in the Overworld, Nether or End"><span class="n">2</span>/rtp</button>
+      <button type="button" aria-pressed="false" data-what="Buy from 300+ items in 15 categories"><span class="n">3</span>/shop</button>
+      <button type="button" aria-pressed="false" data-what="Drop items in the chest, close it, get paid"><span class="n">4</span>/sell</button>
+      <button type="button" aria-pressed="false" data-what="Auction house: buy and sell with players"><span class="n">5</span>/ah</button>
+      <button type="button" aria-pressed="false" data-what="Open crates. A Common key is free every hour"><span class="n">6</span>/crates</button>
+      <button type="button" aria-pressed="false" data-what="1v1 in a private arena. The winner loots"><span class="n">7</span>/duel</button>
+      <button type="button" aria-pressed="false" data-what="Team up with up to 8 players"><span class="n">8</span>/team</button>
+      <button type="button" aria-pressed="false" data-what="Daily reward with a 7-day streak"><span class="n">9</span>/daily</button>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">On the server</p>
+      <h2 id="features-title">Mine it, sell it, spend it</h2>
+      <p class="lead">Spawn, the duel arenas and the AFK room each have their own world, so the survival world stays wild and untouched.</p>
+    </div>
+    <div class="features">
+      <article class="feature">
+        <div class="pic shot t-blue" data-img="spawn" data-size="1280×720" data-alt="The CRIX SMP spawn"><span class="ph" aria-hidden="true">/spawn</span></div>
+        <div class="txt"><h3>Spawn</h3><p class="desc">A valley built around the CRIX monument, with NPCs, crates and floating leaderboards. /rtp drops you on solid ground in the Overworld, Nether or End.</p><p class="cmd">/spawn · /rtp</p></div>
+      </article>
+      <article class="feature">
+        <div class="pic shot t-red" data-img="shop" data-size="1280×720" data-alt="The /shop menu"><span class="ph" aria-hidden="true">/shop</span></div>
+        <div class="txt"><h3>Shop and sell</h3><p class="desc">Buy from 300+ items in 15 categories. /sell opens a chest: drop items in, close it and you're paid. One hot item pays 25% extra each hour.</p><p class="cmd">/shop · /sell</p></div>
+      </article>
+      <article class="feature">
+        <div class="pic shot t-blue" data-img="auction" data-size="1280×720" data-alt="The auction house"><span class="ph" aria-hidden="true">/ah</span></div>
+        <div class="txt"><h3>Auction house</h3><p class="desc">List items for 48 hours with a 5% tax, or post a buy order and the money is held until someone fills it. /quickbuy grabs the cheapest listing.</p><p class="cmd">/ah · /orders</p></div>
+      </article>
+      <article class="feature">
+        <div class="pic shot t-red" data-img="crates" data-size="1280×720" data-alt="Crates at spawn"><span class="ph" aria-hidden="true">/crates</span></div>
+        <div class="txt"><h3>Crates</h3><p class="desc">Five crates at spawn. Each one shows every reward and its chance before you open it. A Common key is free every hour.</p><p class="cmd">/crates</p></div>
+      </article>
+      <article class="feature">
+        <div class="pic shot t-blue" data-img="spawners" data-size="1280×720" data-alt="Stacked spawners"><span class="ph" aria-hidden="true">x64</span></div>
+        <div class="txt"><h3>Spawners</h3><p class="desc">Spawners never spawn mobs, so there's no lag. They store drops and XP for you to collect or sell, and stack up to 64 in one block.</p><p class="cmd">place it, then tap it</p></div>
+      </article>
+      <article class="feature">
+        <div class="pic shot t-red" data-img="duels" data-size="1280×720" data-alt="A duel arena"><span class="ph" aria-hidden="true">/duel</span></div>
+        <div class="txt"><h3>Duels and bounties</h3><p class="desc">Fight 1v1 in a private arena with your own gear. The loser drops it and the winner loots. Kills pay $250 plus streak bonuses.</p><p class="cmd">/duel · /bounty</p></div>
+      </article>
+      <article class="feature">
+        <div class="pic shot t-blue" data-img="afk" data-size="1280×720" data-alt="The AFK room"><span class="ph" aria-hidden="true">/afk</span></div>
+        <div class="txt"><h3>AFK room</h3><p class="desc">The only place where going AFK earns anything: 1 shard every 5 minutes, with no PvP and no damage.</p><p class="cmd">/afk</p></div>
+      </article>
+      <article class="feature">
+        <div class="pic shot t-red" data-img="teams" data-size="1280×720" data-alt="A team base"><span class="ph" aria-hidden="true">/team</span></div>
+        <div class="txt"><h3>Teams and claims</h3><p class="desc">Teams of up to 8 with a [TAG], a team home and team chat. Claim chunks to protect your base, then trust your friends.</p><p class="cmd">/team · /claim</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="block block-alt" id="economy" aria-labelledby="economy-title">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Two currencies</p>
+      <h2 id="economy-title">Money and shards</h2>
+    </div>
+    <div class="econ">
+      <div class="cur">
+        <span class="sym sym-money" aria-hidden="true">$</span>
+        <h3>Money</h3>
+        <p class="desc">Everyone starts with <b>$500</b>. Earn more by selling to the server, filling buy orders, auctions and PvP kills. Spend it in the shop, on ranks and on armor.</p>
+        <p class="cmd">/bal · /pay · /baltop</p>
+      </div>
+      <div class="cur">
+        <span class="sym sym-shard" aria-hidden="true"><i></i></span>
+        <h3>Shards</h3>
+        <ul>
+          <li><b>1</b> every 10 minutes of active play</li>
+          <li><b>1</b> every 5 minutes in the AFK room</li>
+          <li><b>2</b> for every player kill</li>
+        </ul>
+        <p class="desc">Spend them on crate keys, tools and netherite gear in the shard shop.</p>
+        <p class="cmd">/shards</p>
+      </div>
+      <div class="cur">
+        <span class="sym sym-event" aria-hidden="true">!</span>
+        <h3>Events</h3>
+        <p class="desc">Every 90 minutes, when 3 or more players are online:</p>
+        <p class="desc"><b>Supply Drop</b>: a loot crate lands in the Overworld and chat gets the coordinates. The first player to open it wins.</p>
+        <p class="desc"><b>Shard Rush</b>: shards count double for 20 minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="ranks" aria-labelledby="ranks-title">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Ranks</p>
+      <h2 id="ranks-title">Seven ranks, all earned in game</h2>
+      <p class="lead">Ranks aren't sold for real money. Save up the in-game cost, reach the playtime, then type /rankup. Every rank keeps the kits of the ranks below it.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">Rank</th><th scope="col">Cost</th><th scope="col">Playtime</th><th scope="col">Homes</th><th scope="col">Auction listings</th><th scope="col">Claim chunks</th><th scope="col">Kit</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="rank rk-member">Member</td><td class="cost">Free</td><td><div class="hrs"><span>0h</span></div></td><td>2</td><td>5</td><td>4</td><td>Starter</td></tr>
+          <tr><td class="rank rk-vip">VIP</td><td class="cost">$250,000</td><td><div class="hrs"><span>5h</span><i style="--h:5"></i></div></td><td>3</td><td>7</td><td>6</td><td>VIP</td></tr>
+          <tr><td class="rank rk-vip">VIP<span class="r">+</span></td><td class="cost">$750,000</td><td><div class="hrs"><span>15h</span><i style="--h:15"></i></div></td><td>4</td><td>9</td><td>8</td><td>VIP</td></tr>
+          <tr><td class="rank rk-mvp">MVP</td><td class="cost">$2,000,000</td><td><div class="hrs"><span>35h</span><i style="--h:35"></i></div></td><td>5</td><td>12</td><td>10</td><td>MVP</td></tr>
+          <tr><td class="rank rk-mvp">MVP<span class="b">+</span></td><td class="cost">$5,000,000</td><td><div class="hrs"><span>70h</span><i style="--h:70"></i></div></td><td>6</td><td>15</td><td>12</td><td>MVP</td></tr>
+          <tr><td class="rank rk-elite">ELITE</td><td class="cost">$15,000,000</td><td><div class="hrs"><span>140h</span><i style="--h:140"></i></div></td><td>8</td><td>18</td><td>16</td><td>Elite</td></tr>
+          <tr><td class="rank"><span class="b">CRIX</span><span class="r">+</span></td><td class="cost">$50,000,000</td><td><div class="hrs"><span>280h</span><i style="--h:280"></i></div></td><td>10</td><td>25</td><td>20</td><td>CRIX+</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The Starter kit can be claimed every day and the rank kits once a week with /kit. See your progress with /ranks.</p>
+  </div>
+</section>
+
+<section class="block block-alt" id="crates" aria-labelledby="crates-title">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Crates</p>
+      <h2 id="crates-title">Five crates at spawn</h2>
+      <p class="lead">Tap a crate at spawn to see every reward and its chance, or sneak and tap to open one straight away. Keys come from the free hourly key, /daily and the shard shop.</p>
+    </div>
+    <div class="crates">
+      <article class="crate c-common">
+        <div class="pic crate-pic" data-img="crate-common" data-size="800×800, square" data-alt="The Common Crate"><span class="box ph" aria-hidden="true"></span></div>
+        <div class="txt"><h3>Common Crate</h3><p class="desc">Enchanted diamond armor, a Sharpness IV sword and an Efficiency IV pickaxe, axe or shovel.</p><p class="key"><span>Key</span>Free every hour, or 200 shards</p></div>
+      </article>
+      <article class="crate c-gold">
+        <div class="pic crate-pic" data-img="crate-gold" data-size="800×800, square" data-alt="The Gold Crate"><span class="box ph" aria-hidden="true"></span></div>
+        <div class="txt"><h3>Gold Crate</h3><p class="desc">One mob spawner: Pig, Cow, Zombie, Skeleton, Spider, Blaze, or an Iron Golem (4%).</p><p class="key"><span>Key</span>1,500 shards, or day 5 of /daily</p></div>
+      </article>
+      <article class="crate c-amethyst">
+        <div class="pic crate-pic" data-img="crate-amethyst" data-size="800×800, square" data-alt="The Amethyst Crate"><span class="box ph" aria-hidden="true"></span></div>
+        <div class="txt"><h3>Amethyst Crate</h3><p class="desc">An amethyst pickaxe or shovel that digs 3×3, a tree-felling axe (they break after 3 days), Haste II brews or amethyst shards.</p><p class="key"><span>Key</span>3,000 shards</p></div>
+      </article>
+      <article class="crate c-prime">
+        <div class="pic crate-pic" data-img="crate-prime" data-size="800×800, square" data-alt="The Prime Crate"><span class="box ph" aria-hidden="true"></span></div>
+        <div class="txt"><h3>Prime Crate</h3><p class="desc">Prime netherite armor, a Sharpness V sword, a Density V mace, a crossbow, or the Drill (8.7%).</p><p class="key"><span>Key</span>2,000 shards</p></div>
+      </article>
+    </div>
+    <article class="crate crate-feature c-crimson">
+      <div class="pic crate-pic" data-img="crate-crimson" data-size="800×800, square" data-alt="The Crimson Crate"><span class="box ph" aria-hidden="true"></span></div>
+      <div class="txt">
+        <p class="eyebrow red">The top crate</p>
+        <h3>Crimson Crate</h3>
+        <p class="desc">A piece of the Crimson armor set, or a Crimson sword (Sharpness V), pickaxe (Efficiency V, Fortune III) or axe.</p>
+        <p class="desc rare">Rare prize: the <b>CRIX Chestplate</b>, a 4.5% chance on every key.</p>
+        <p class="key"><span>Key</span>2,500 shards, or day 7 of /daily</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="block" id="gear" aria-labelledby="gear-title">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Gear</p>
+      <h2 id="gear-title">Crimson and CRIX armor</h2>
+      <p class="lead">Trimmed, fully enchanted netherite. Wear all four pieces of a set to get its bonus effects.</p>
+    </div>
+    <div class="sets">
+      <article class="set s-crimson">
+        <div class="pic armor-pic" data-img="armor-crimson" data-size="800×1000, portrait" data-alt="The Crimson armor set"><span class="plate" aria-hidden="true"></span><span class="ph" aria-hidden="true">CRIMSON</span></div>
+        <div class="txt">
+          <h3 class="set-name">Crimson set</h3>
+          <p class="price">$6,000,000<small>per piece</small></p>
+          <p class="label">Full set bonus</p>
+          <ul class="bonus"><li>Fire Resistance</li><li>Speed</li></ul>
+          <p class="where">Buy it in /shop under CRIX &amp; Crimson Armor, or win pieces from the Crimson Crate.</p>
+        </div>
+      </article>
+      <article class="set s-crix">
+        <div class="pic armor-pic" data-img="armor-crix" data-size="800×1000, portrait" data-alt="The CRIX armor set"><span class="plate" aria-hidden="true"></span><span class="ph" aria-hidden="true">CRIX</span></div>
+        <div class="txt">
+          <h3 class="set-name">CRIX set</h3>
+          <p class="price">$25,000,000<small>per piece</small></p>
+          <p class="label">Full set bonus</p>
+          <ul class="bonus"><li>Fire Resistance</li><li>Speed</li><li>Resistance</li><li>Night Vision</li></ul>
+          <p class="where">Buy it in /shop under CRIX &amp; Crimson Armor. The Crimson Crate has a 4.5% chance at the chestplate.</p>
+        </div>
+      </article>
+    </div>
+    <h3 class="sub">Tools from the shard shop</h3>
+    <div class="tools">
+      <div class="tip"><p class="t-name tn-aqua">DRILL</p><p>Enchanted Netherite Pickaxe</p><p>Mines a 3x3 area at once.</p><p>Sneak to mine a single block.</p><p class="t-meta">15,000 shards · also in the Prime Crate</p></div>
+      <div class="tip"><p class="t-name tn-gold">Sell Axe</p><p>Tap a chest, barrel or shulker box to sell everything inside.</p><p>100 uses.</p><p class="t-meta">1,500 shards</p></div>
+      <div class="tip"><p class="t-name tn-yellow">Haste II Brew</p><p>Haste II for 24 hours.</p><p class="t-meta">6,000 shards · also in the Amethyst Crate</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block block-alt" id="daily" aria-labelledby="daily-title">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Daily rewards</p>
+      <h2 id="daily-title">Log in, claim, repeat</h2>
+      <p class="lead">Claim /daily every 20 hours. Miss 48 hours and the streak starts again at day 1.</p>
+    </div>
+    <ol class="days">
+      <li><span class="d">Day 1</span><span class="rw">$1,000</span></li>
+      <li><span class="d">Day 2</span><span class="rw">16 iron and 16 golden carrots</span></li>
+      <li><span class="d">Day 3</span><span class="rw">5 shards</span></li>
+      <li><span class="d">Day 4</span><span class="rw">2 Common keys</span></li>
+      <li><span class="d">Day 5</span><span class="rw">Gold key</span></li>
+      <li><span class="d">Day 6</span><span class="rw">$5,000 and 10 shards</span></li>
+      <li><span class="d">Day 7</span><span class="rw">$15,000 and a Crimson key</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="block" id="gallery" aria-labelledby="gallery-title" hidden>
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Screenshots</p>
+      <h2 id="gallery-title">From the server</h2>
+    </div>
+    <div class="gallery" id="gallery-grid"></div>
+  </div>
+</section>
+
+<section class="block block-alt" id="join" aria-labelledby="join-title">
+  <div class="wrap join">
+    <div class="join-main">
+      <div class="head" style="margin-bottom:0">
+        <p class="eyebrow">Join</p>
+        <h2 id="join-title">Get on the Realm</h2>
+      </div>
+      <ol class="steps">
+        <li><span><b>Open Minecraft</b> on any Bedrock device: phone, tablet, Windows PC, Xbox, PlayStation or Switch.</span></li>
+        <li><span><b>Press Play</b>, open the <b>Realms</b> tab and choose <b>Join Realm</b>.</span></li>
+        <li><span><b>Type the code</b> <code data-realm>WrxFsoWk5fc</code>. Capital letters matter.</span></li>
+        <li><span><b>Download the pack</b> when Minecraft asks. The CRIX menus need it.</span></li>
+      </ol>
+      <div class="actions">
+        <button class="btn" type="button" data-copy>Copy Realm code</button>
+        <a class="btn btn-ghost" data-link="realm" href="https://realms.gg/WrxFsoWk5fc" target="_blank" rel="noopener">Open the invite in Minecraft</a>
+      </div>
+      <div class="server" id="server" hidden>
+        <p class="label">Server address</p>
+        <div class="server-row">
+          <code id="server-ip"></code><code id="server-port"></code>
+          <button class="btn btn-sm btn-ghost" type="button" id="copy-ip">Copy address</button>
+        </div>
+        <p class="status" id="status" hidden><i></i><span></span></p>
+        <p class="how">In Minecraft: <b>Play</b> → <b>Servers</b> → <b>Add Server</b>, then paste the address and port.</p>
+      </div>
+    </div>
+    <aside class="discord" aria-labelledby="discord-title">
+      <p class="eyebrow red">Community</p>
+      <h3 id="discord-title">CRIX SMP Discord</h3>
+      <p class="desc">News, update notes and events, plus help from staff. Find people to team with, or report a problem.</p>
+      <div class="actions"><a class="btn btn-red" data-link="discord" href="https://discord.gg/VmW6mXzU7z" target="_blank" rel="noopener">Join the Discord</a></div>
+      <p class="small" data-discord-text>discord.gg/VmW6mXzU7z</p>
+    </aside>
+  </div>
+</section>
+
+<section class="block guide" id="image-guide" aria-labelledby="guide-title" hidden>
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">For the site owner</p>
+      <h2 id="guide-title">Image names</h2>
+      <p class="lead">Upload pictures to the <code>images</code> folder of the website's GitHub repo (open it, then <b>Add file → Upload files</b>), named exactly like this, all lowercase. .png, .jpg, .jpeg and .webp all work, except the link preview, which must be <code>banner.png</code>. Vercel puts them live about a minute after you commit. Anything you leave out keeps the built-in artwork you see now.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th scope="col">File name</th><th scope="col">Where it shows</th><th scope="col">Best size</th></tr></thead>
+        <tbody>
+          <tr><td><code>logo.png</code></td><td>Top bar and footer. A see-through PNG looks best.</td><td>512×512</td></tr>
+          <tr><td><code>favicon.png</code></td><td>The icon on the browser tab. <span class="opt">Optional: the logo is used if it's missing.</span></td><td>64×64</td></tr>
+          <tr><td><code>hero.png</code></td><td>The big picture behind "CRIX SMP" at the top.</td><td>1920×1080</td></tr>
+          <tr><td><code>banner.png</code></td><td>The preview picture when the link is posted on Discord and other apps.</td><td>1200×630</td></tr>
+          <tr><td><code>spawn.png</code><br><code>shop.png</code><br><code>auction.png</code><br><code>crates.png</code></td><td>The first four feature cards: Spawn, Shop and sell, Auction house, Crates.</td><td>1280×720</td></tr>
+          <tr><td><code>spawners.png</code><br><code>duels.png</code><br><code>afk.png</code><br><code>teams.png</code></td><td>The other four feature cards: Spawners, Duels and bounties, AFK room, Teams and claims.</td><td>1280×720</td></tr>
+          <tr><td><code>crate-common.png</code><br><code>crate-gold.png</code><br><code>crate-amethyst.png</code><br><code>crate-prime.png</code><br><code>crate-crimson.png</code></td><td>The five crates.</td><td>800×800</td></tr>
+          <tr><td><code>armor-crimson.png</code><br><code>armor-crix.png</code></td><td>The two armor sets.</td><td>800×1000</td></tr>
+          <tr><td><code>gallery-1.png</code><br><code>gallery-2.png</code><br>… up to <code>gallery-24.png</code></td><td>The Screenshots section. It only appears once you add <code>gallery-1</code>. Number them without gaps: the site stops at the first missing number.</td><td>Any size</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">This guide and the name labels only show when the address ends in <code>#images</code>, for example crixsmp.vercel.app/#images. Visitors never see them.</p>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="foot-brand">
+      <span class="logo pic" data-img="logo" data-size="512×512, square" data-alt="CRIX SMP logo"><span class="ph" aria-hidden="true"><span class="b">C</span><span class="r">X</span></span></span>
+      <span class="word"><span class="b">CRIX</span> <span class="r">SMP</span></span>
+    </div>
+    <p class="foot-links"><a href="#join">How to join</a><a data-link="discord" href="https://discord.gg/VmW6mXzU7z" target="_blank" rel="noopener">Discord</a><span>Realm code <code data-realm>WrxFsoWk5fc</code></span></p>
+    <p class="legal">NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</p>
+    <p class="legal">© <span data-year>2026</span> CRIX SMP</p>
+  </div>
+</footer>
+
+<button class="btn btn-sm btn-ghost hint-toggle" type="button" id="hint-toggle" aria-pressed="false" hidden>Image names: off</button>
+
+<script src="config.js"></script>
+<script src="site.js"></script>
+</body>
+</html>
