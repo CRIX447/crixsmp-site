@@ -1,0 +1,1050 @@
+// CRIX OPTIMIZER - unofficial Gorilla Tag performance mod. Copyright (C) 2026 CRIX OPTIMIZER contributors.
+// Licensed under the GNU General Public License v3.0 or later; see LICENSE.
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using BepInEx;
+using BepInEx.Configuration;
+using CRIXOptimizer.Adaptive;
+using CRIXOptimizer.Compatibility;
+using CRIXOptimizer.Configuration;
+using CRIXOptimizer.Core;
+using CRIXOptimizer.CPU;
+using CRIXOptimizer.Diagnostics;
+using CRIXOptimizer.Discord;
+using CRIXOptimizer.GPU;
+using CRIXOptimizer.Memory;
+using CRIXOptimizer.ReShade;
+using CRIXOptimizer.Streaming;
+using CRIXOptimizer.UI;
+using CRIXOptimizer.Utilities;
+using CRIXOptimizer.VirtualDesktop;
+using HarmonyLib;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.Scripting;
+
+namespace CRIXOptimizer.Optimization
+{
+    /// <summary>
+    /// Composition root and main loop. Every subsystem is isolated: an exception in one module is logged,
+    /// counted, and after repeated failures that module is shut off while everything else keeps running.
+    /// Per-frame work is O(1) and allocation-free; everything else runs on timers (4 Hz, 2 Hz, 1 Hz, ...).
+    /// </summary>
+    internal sealed class OptimizerRuntime
+    {
+        // ------------------------------------------------------------------ infrastructure
+        private readonly BaseUnityPlugin plugin;
+        private readonly PluginConfig cfg;
+        private readonly ProfileStore profiles;
+        private readonly BepInExLogSink log;
+        private readonly OnceLogger once;
+        private readonly MainThreadQueue mainThread;
+        private readonly Dictionary<string, int> moduleFailures = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly HashSet<string> faultedModules = new HashSet<string>(StringComparer.Ordinal);
+
+        public readonly StatusBoard Status = new StatusBoard();
+        public readonly SettingsLedger Ledger;
+        public readonly XRRuntimeInfo Xr = new XRRuntimeInfo();
+        public readonly FrameTimeMonitor Frames;
+        public readonly GpuTimingProbe Gpu;
+        public readonly MemoryMonitor MemoryStats = new MemoryMonitor();
+        public readonly AdaptiveController Adaptive = new AdaptiveController();
+        public readonly QualityLadderSettings Ladder = new QualityLadderSettings();
+        public readonly DegradationDetector Alerts = new DegradationDetector();
+        public readonly BenchmarkRecorder Benchmark;
+        public readonly EnvironmentScanner Scanner;
+        public readonly VirtualDesktopSupport VirtualDesktop = new VirtualDesktopSupport();
+        public readonly StreamingSupport Streaming = new StreamingSupport();
+        public readonly DiscordSupport Discord = new DiscordSupport();
+        public readonly ReShadeSupport ReShade = new ReShadeSupport();
+
+        public GraphicsSettingsModule Graphics { get; private set; }
+        public PatchSet Patches { get; private set; }
+        public GamePatchCatalog GamePatches { get; private set; }
+        public GameTypes Types { get; private set; }
+
+        // ------------------------------------------------------------------ state
+        public OptimizationSettings ActiveSettings { get; private set; }
+        public string ActiveSection { get; private set; } = "Balanced";
+        public readonly List<string> SettingsNotes = new List<string>();
+        public readonly List<string> Warnings = new List<string>();
+        public bool Suspended { get; private set; }
+        public bool PotassiumInstalled { get; private set; }
+        public List<PluginInventory.Entry> Plugins { get; private set; } = new List<PluginInventory.Entry>();
+        public HarmonyFootprint.Report Footprint { get; private set; }
+        public double OverheadMsPerFrame { get; private set; }
+        public double TargetFps { get; private set; } = 90;
+        public string OutputDirectory { get; }
+        public string StartupTimeUtc { get; } = DateTime.UtcNow.ToString("u");
+        public string LastAlertText { get; private set; } = "";
+        public CompanionApp Apps => Scanner.Latest?.Apps ?? CompanionApp.None;
+        public GraphicsHook Hooks => Scanner.Latest?.Hooks ?? GraphicsHook.None;
+
+        private DashboardOverlay dashboard;
+        private bool dirty;
+        private bool profileDirty;
+        private float applyAt;
+        private bool handlingAction;
+        private bool hotkeysBroken;
+        private bool shutDown;
+        private string lastSuggestion;
+        private int environmentScans;
+        private float alertVisibleUntil;
+        private float lastDeferredUnload = -1e9f;
+        private float lastMemoryWarning = -1e9f;
+
+        // adaptive accumulation (per frame)
+        private double adaptiveFrameSum;
+        private int adaptiveFrameCount;
+        private bool lastCpuBound;
+
+        // timers
+        private float nextQuarter, nextHalf, nextSecond, nextDrift, nextFive, nextDashboard, nextScan;
+        private float lateApplyAt = 5f, compatScanAt = 6f, reportAt = 20f;
+        private bool lateApplied, compatScanned, reportWritten;
+
+        // overhead meter
+        private long ticksAccumulated;
+        private int framesAccumulated;
+        private static readonly double TicksToMs = 1000.0 / Stopwatch.Frequency;
+
+        public OptimizerRuntime(BaseUnityPlugin plugin, PluginConfig cfg, ProfileStore profiles, BepInExLogSink log)
+        {
+            this.plugin = plugin;
+            this.cfg = cfg;
+            this.profiles = profiles;
+            this.log = log;
+            once = new OnceLogger(log);
+            mainThread = new MainThreadQueue(log);
+            Ledger = new SettingsLedger(log);
+            Frames = new FrameTimeMonitor(cfg.AverageWindowSeconds.Value);
+            Gpu = new GpuTimingProbe(Xr);
+            OutputDirectory = Path.Combine(Paths.BepInExRootPath, "CRIXOptimizer");
+            Benchmark = new BenchmarkRecorder(log, Path.Combine(OutputDirectory, "benchmarks"));
+            Scanner = new EnvironmentScanner(log, Paths.GameRootPath);
+        }
+
+        // ================================================================== lifecycle
+
+        public void Initialize()
+        {
+            log.Verbose = cfg.VerboseLogging.Value;
+            FrameClock.SetSource(() => Time.frameCount);
+            PatchGuard.Log = log;
+            PatchGuard.OnFault = (id, message) => Patches?.MarkFaulted(id, message);
+            GcPolicyPatches.IncrementalCollector = TryIncrementalCollect;
+
+            Guard("XR info", () => Xr.Refresh(0f, true));
+            Guard("Graphics settings", () =>
+            {
+                Graphics = new GraphicsSettingsModule(Ledger, log, Xr);
+                Graphics.Initialize();
+                foreach (string note in Graphics.Notes)
+                    log.Info(note);
+            });
+            Guard("GPU timing", Gpu.CheckFrameTimingFeature);
+            Guard("Memory monitor", MemoryStats.Start);
+
+            PotassiumInstalled = PluginInventory.IsLoaded(ModInfo.PotassiumGuid);
+            Guard("Game patches", () =>
+            {
+                var sw = Stopwatch.StartNew();
+                Types = GameTypes.FromLoadedAssemblies();
+                log.Debug($"Indexed {Types.TypeCount} game types from {string.Join(", ", Types.IndexedAssemblies)} in {sw.ElapsedMilliseconds} ms");
+                Patches = new PatchSet(new Harmony(ModInfo.HarmonyId), log, Status);
+                GamePatches = new GamePatchCatalog(Patches, Types, log);
+            });
+
+            ResolveProfile();
+            // With the master switch off nothing is patched now; patches are applied when CRIX is enabled.
+            Guard("Game patches", () => GamePatches?.Initialize(ActiveSettings, Groups(), PotassiumInstalled, cfg.WhenPotassiumInstalled.Value, cfg.Enabled.Value));
+            ApplyAll("startup");
+
+            cfg.File.SettingChanged += OnSettingChanged;
+            cfg.File.ConfigReloaded += OnConfigReloaded;
+            profiles.ProfilesFile.SettingChanged += OnSettingChanged;
+            profiles.ProfilesFile.ConfigReloaded += OnConfigReloaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+
+            if (cfg.DashboardVisible.Value)
+                SetDashboard(true);
+            ScheduleEnvironmentScan(Time.unscaledTime);
+            UpdateStatus();
+
+            log.Info($"{ModInfo.Name} {ModInfo.Version} loaded. Profile: {ActiveSection}. " +
+                     $"Patches active: {Status.Count(ModuleState.Active)}, unavailable: {Status.Count(ModuleState.Unavailable)}, deferred: {Status.Count(ModuleState.Deferred)}. " +
+                     "Unofficial mod - not endorsed by Another Axiom.");
+        }
+
+        public void Shutdown()
+        {
+            if (shutDown)
+                return;
+            shutDown = true;
+            try
+            {
+                cfg.File.SettingChanged -= OnSettingChanged;
+                cfg.File.ConfigReloaded -= OnConfigReloaded;
+                profiles.ProfilesFile.SettingChanged -= OnSettingChanged;
+                profiles.ProfilesFile.ConfigReloaded -= OnConfigReloaded;
+                SceneManager.sceneLoaded -= OnSceneLoaded;
+            }
+            catch
+            {
+                // already detached
+            }
+
+            Guard("Game patches", () => GamePatches?.Shutdown());
+            RestoreEverything("shutdown");
+            Guard("Memory monitor", MemoryStats.Dispose);
+            SetDashboard(false);
+            GcPolicyPatches.IncrementalCollector = null;
+            PatchGuard.OnFault = null;
+        }
+
+        // ================================================================== per frame
+
+        public void Update()
+        {
+            if (shutDown)
+                return;
+            long start = Stopwatch.GetTimestamp();
+            float dt = Time.unscaledDeltaTime;
+            float now = Time.unscaledTime;
+
+            Frames.Sample(dt);
+
+            bool wantGpu = Benchmark.WantsGpuSamples || (cfg.AdaptiveEnabled.Value && !Suspended) || dashboard != null;
+            if (wantGpu && !IsFaulted("GPU timing"))
+            {
+                try { Gpu.Sample(); } catch (Exception e) { Fail("GPU timing", e); }
+            }
+
+            if (Benchmark.State == BenchmarkRecorder.Phase.Warmup || Benchmark.State == BenchmarkRecorder.Phase.Recording)
+            {
+                try { Benchmark.Sample(dt, Gpu.LastGpuMs, Gpu.DroppedFramesTotal); } catch (Exception e) { Fail("Benchmark", e); }
+            }
+
+            if (dt > 0f && dt < 5f)
+            {
+                adaptiveFrameSum += dt * 1000.0;
+                adaptiveFrameCount++;
+            }
+
+            if (GamePatches != null && !IsFaulted("Game patches"))
+            {
+                try { GamePatches.Tick(); } catch (Exception e) { Fail("Game patches", e); }
+            }
+
+            PollHotkeys();
+            mainThread.Drain();
+
+            if (dirty && now >= applyAt)
+                ApplyConfigChange();
+
+            RunTimers(now);
+
+            if (dashboard != null)
+            {
+                ticksAccumulated += dashboard.TicksSpent;
+                dashboard.TicksSpent = 0;
+            }
+            ticksAccumulated += Stopwatch.GetTimestamp() - start;
+            framesAccumulated++;
+        }
+
+        private void RunTimers(float now)
+        {
+            if (now >= nextQuarter)
+            {
+                nextQuarter = now + 0.25f;
+                if (GamePatches != null && !IsFaulted("Game patches"))
+                {
+                    try { GamePatches.Poll(); } catch (Exception e) { Fail("Game patches", e); }
+                }
+            }
+
+            if (now >= nextHalf)
+            {
+                nextHalf = now + 0.5f;
+                try { Gpu.Publish(); } catch (Exception e) { Fail("GPU timing", e); }
+                EvaluateAdaptive(now);
+            }
+
+            if (now >= nextSecond)
+            {
+                nextSecond = now + 1f;
+                OnSecond(now);
+            }
+
+            if (now >= nextDrift)
+            {
+                nextDrift = now + Mathf.Max(0.5f, cfg.DriftCheckSeconds.Value);
+                CheckDrift();
+            }
+
+            if (now >= nextFive)
+            {
+                nextFive = now + 5f;
+                Guard("XR info", () => Xr.Refresh(now));
+                if (Graphics != null && !Suspended && cfg.Enabled.Value)
+                    Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
+                if (cfg.Diagnostics.Value)
+                    TickMemory(now);
+            }
+
+            if (!lateApplied && now >= lateApplyAt)
+            {
+                // XR often finishes initialising after plugins load; re-apply once it is up.
+                lateApplied = true;
+                Guard("XR info", () => Xr.Refresh(now, true));
+                ApplyAll("XR initialised");
+            }
+
+            if (!compatScanned && now >= compatScanAt)
+            {
+                compatScanned = true;
+                if (cfg.CompatibilityScanner.Value)
+                    RunCompatibilityScan();
+            }
+
+            if (!reportWritten && now >= reportAt)
+            {
+                reportWritten = true;
+                if (cfg.WriteSystemReport.Value)
+                    WriteSystemReport();
+            }
+
+            float interval = cfg.CompanionScanIntervalSeconds.Value;
+            if (interval > 0f && now >= nextScan)
+                ScheduleEnvironmentScan(now);
+
+            if (now >= nextDashboard && dashboard != null)
+            {
+                nextDashboard = now + 1f / Mathf.Clamp(cfg.DashboardRefreshHz.Value, 0.5f, 10f);
+                RefreshDashboard(now);
+            }
+        }
+
+        private void OnSecond(float now)
+        {
+            // Overhead of CRIX's own per-frame work (measured with Stopwatch, includes dashboard drawing).
+            if (framesAccumulated > 0)
+                OverheadMsPerFrame = ticksAccumulated * TicksToMs / framesAccumulated;
+            ticksAccumulated = 0;
+            framesAccumulated = 0;
+
+            TargetFps = cfg.AdaptiveTargetFps.Value > 0f ? cfg.AdaptiveTargetFps.Value : (Xr.RefreshRate > 1f ? Xr.RefreshRate : 90f);
+            Frames.BudgetMs = (float)(1000.0 / TargetFps);
+
+            if (GamePatches != null)
+            {
+                try { GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, ActiveSettings, Groups(), Suspended || !cfg.Enabled.Value); }
+                catch (Exception e) { Fail("Game patches", e); }
+            }
+
+            if (cfg.Diagnostics.Value && cfg.AlertsEnabled.Value)
+                UpdateAlerts(now);
+
+            if (alertVisibleUntil > 0f && now > alertVisibleUntil)
+            {
+                alertVisibleUntil = 0f;
+                LastAlertText = "";
+                if (dashboard != null)
+                {
+                    dashboard.Alert = "";
+                    if (!cfg.DashboardVisible.Value)
+                        SetDashboard(false);
+                }
+            }
+        }
+
+        // ================================================================== profile & settings
+
+        private PatchGroups Groups() => new PatchGroups
+        {
+            StutterFixes = cfg.GameStutterFixes.Value,
+            VisualThrottles = cfg.VisualThrottles.Value,
+            CosmeticCulling = cfg.CosmeticCulling.Value,
+        };
+
+        private void ResolveProfile(bool logNotes = true)
+        {
+            ActiveSection = ProfilePresets.SectionFor(cfg.Profile.Value, cfg.VirtualDesktopVariant.Value);
+            OptimizationSettings settings;
+            try
+            {
+                settings = profiles.Resolve(ActiveSection);
+            }
+            catch (Exception e)
+            {
+                log.Error($"Profile '{ActiveSection}' could not be read ({e.Message}); using built-in Balanced values.");
+                settings = ProfilePresets.Balanced();
+            }
+
+            SettingsNotes.Clear();
+            SettingsNotes.AddRange(settings.Validate());
+            if (ReShade.GuardActive)
+                SettingsNotes.AddRange(ReShadeGuard.Apply(settings));
+            if (logNotes)
+                foreach (string note in SettingsNotes)
+                    log.Info($"[{ActiveSection}] {note}");
+
+            ActiveSettings = settings;
+
+            Adaptive.Parameters = new AdaptiveParameters
+            {
+                MinLevel = cfg.AdaptiveMinLevel.Value,
+                MaxLevel = cfg.AdaptiveMaxLevel.Value,
+                Sensitivity = cfg.AdaptiveSensitivity.Value,
+                CooldownSeconds = cfg.AdaptiveCooldownSeconds.Value,
+                DownSustainSeconds = cfg.AdaptiveDownSustainSeconds.Value,
+                UpSustainSeconds = cfg.AdaptiveUpSustainSeconds.Value,
+                GpuHeadroomFraction = settings.AdaptiveGpuHeadroomPercent / 100.0,
+            };
+            Adaptive.ManualLevel = cfg.AdaptiveManualOverride.Value ? cfg.AdaptiveManualLevel.Value : (int?)null;
+            Ladder.RenderScaleStep = cfg.AdaptiveRenderScaleStep.Value;
+            Ladder.MinRenderScale = cfg.AdaptiveMinRenderScale.Value;
+            Ladder.MaxRenderScale = cfg.AdaptiveMaxRenderScale.Value;
+            Ladder.AllowRenderScale = settings.AdaptiveMayChangeRenderScale;
+            Ladder.AllowShadows = settings.AdaptiveMayChangeShadows;
+            Ladder.AllowLod = settings.AdaptiveMayChangeLod;
+
+            Frames.SetWindowSeconds(cfg.AverageWindowSeconds.Value);
+            Alerts.ThresholdFraction = cfg.AlertThresholdPercent.Value / 100.0;
+            Alerts.SustainSeconds = cfg.AlertSustainSeconds.Value;
+            Alerts.CooldownSeconds = cfg.AlertCooldownSeconds.Value;
+            log.Verbose = cfg.VerboseLogging.Value;
+        }
+
+        /// <summary>Pushes the active profile into every module. Safe to call repeatedly; only differing values are written.</summary>
+        private void ApplyAll(string reason)
+        {
+            bool active = cfg.Enabled.Value && !Suspended;
+            log.Debug($"Applying profile {ActiveSection} ({reason}); active={active}");
+
+            if (GamePatches != null && !IsFaulted("Game patches"))
+            {
+                try
+                {
+                    if (active)
+                        GamePatches.Ensure(ActiveSettings, Groups());
+                    GamePatches.UpdateLive(ActiveSettings, Groups(), !active);
+                    GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, ActiveSettings, Groups(), !active);
+                }
+                catch (Exception e)
+                {
+                    Fail("Game patches", e);
+                }
+            }
+
+            if (Graphics != null && !IsFaulted("Graphics settings"))
+            {
+                try
+                {
+                    int level = active && cfg.AdaptiveEnabled.Value ? Adaptive.Level : 0;
+                    Graphics.Apply(active ? ActiveSettings : null, active && cfg.GraphicsSettings.Value, active && cfg.FramePacingSettings.Value, level, Ladder, lastCpuBound);
+                }
+                catch (Exception e)
+                {
+                    Fail("Graphics settings", e);
+                }
+            }
+            UpdateStatus();
+        }
+
+        private void RestoreEverything(string reason)
+        {
+            try
+            {
+                Live.Suspended = true;
+                Graphics?.Apply(null, false, false, 0, Ladder, false);
+                SettingsLedger.RestoreReport report = Ledger.RestoreAll();
+                if (report.Restored > 0 || report.SkippedExternal > 0 || report.Failed > 0)
+                    log.Info($"Restore ({reason}): {report.Restored} setting(s) restored, {report.SkippedExternal} left alone (changed externally), {report.Failed} failed.");
+                foreach (string note in report.Notes)
+                    log.Warn("  " + note);
+            }
+            catch (Exception e)
+            {
+                log.Error("Restoring settings failed: " + e.Message);
+            }
+        }
+
+        private void SetSuspended(bool suspend, string reason)
+        {
+            if (Suspended == suspend)
+                return;
+            Suspended = suspend;
+            if (suspend)
+            {
+                Adaptive.Reset();
+                ApplyAll(reason);
+                RestoreEverything(reason);
+                log.Warn($"CRIX OPTIMIZER suspended ({reason}): original settings restored, patches pass through. Press the RestoreEverything hotkey again to resume.");
+            }
+            else
+            {
+                Ledger.RearmAll();
+                ApplyAll(reason);
+                log.Info($"CRIX OPTIMIZER resumed ({reason}).");
+            }
+        }
+
+        // ================================================================== config events
+
+        private void OnSettingChanged(object sender, SettingChangedEventArgs e)
+        {
+            if (handlingAction || e?.ChangedSetting == null)
+                return;
+            ConfigEntryBase entry = e.ChangedSetting;
+
+            if (entry is ConfigEntry<bool> button && button.Value && entry.Definition.Section == "Actions")
+            {
+                handlingAction = true;
+                try
+                {
+                    button.Value = false;
+                }
+                finally
+                {
+                    handlingAction = false;
+                }
+                // Defer to Update so actions never run inside another plugin's config-editor callback.
+                mainThread.Post(() => RunAction(entry.Definition.Key));
+                return;
+            }
+
+            if (entry == cfg.Profile || entry == cfg.VirtualDesktopVariant || entry.Definition.Section == "Custom" ||
+                ReferenceEquals(sender, profiles.ProfilesFile))
+                profileDirty = true;
+            MarkDirty();
+        }
+
+        private void OnConfigReloaded(object sender, EventArgs e)
+        {
+            profileDirty = true;
+            MarkDirty();
+        }
+
+        private void MarkDirty()
+        {
+            dirty = true;
+            applyAt = Time.unscaledTime + 0.3f; // debounce bursts (config reloads fire one event per entry)
+        }
+
+        private void ApplyConfigChange()
+        {
+            dirty = false;
+            bool rearm = profileDirty;
+            profileDirty = false;
+
+            if (DashboardShouldExist() != (dashboard != null))
+                SetDashboard(DashboardShouldExist());
+
+            if (!cfg.Enabled.Value)
+            {
+                if (!Suspended)
+                {
+                    ApplyAll("disabled in config");
+                    RestoreEverything("disabled in config");
+                }
+                UpdateStatus();
+                return;
+            }
+
+            ResolveProfile(logNotes: rearm);
+            if (rearm)
+                Ledger.RearmAll(); // the user chose a profile: apply it even to settings changed externally before
+            if (!cfg.AdaptiveEnabled.Value)
+                Adaptive.Reset();
+            ApplyAll(rearm ? "profile changed" : "config changed");
+            if (rearm)
+                log.Info($"Profile applied: {ActiveSection}");
+        }
+
+        private void RunAction(string key)
+        {
+            switch (key)
+            {
+                case "RestoreOriginalSettingsNow":
+                    SetSuspended(true, "restore requested");
+                    break;
+                case "ReapplyProfileNow":
+                    Suspended = false;
+                    Ledger.RearmAll();
+                    ResolveProfile();
+                    ApplyAll("re-apply requested");
+                    log.Info("Profile re-applied, including settings that had been changed externally.");
+                    break;
+                case "ResetConfigToDefaults":
+                    ResetConfigToDefaults();
+                    break;
+                case "StartBenchmarkNow":
+                    ToggleBenchmark();
+                    break;
+                case "WriteSystemReportNow":
+                    WriteSystemReport();
+                    break;
+            }
+        }
+
+        private void ResetConfigToDefaults()
+        {
+            handlingAction = true;
+            try
+            {
+                bool save = cfg.File.SaveOnConfigSet;
+                cfg.File.SaveOnConfigSet = false;
+                var entries = new List<ConfigEntryBase>();
+                foreach (KeyValuePair<ConfigDefinition, ConfigEntryBase> pair in cfg.File)
+                    entries.Add(pair.Value);
+                foreach (ConfigEntryBase entry in entries)
+                    entry.BoxedValue = entry.DefaultValue;
+                cfg.File.SaveOnConfigSet = save;
+                cfg.File.Save();
+
+                save = profiles.ProfilesFile.SaveOnConfigSet;
+                profiles.ProfilesFile.SaveOnConfigSet = false;
+                profiles.ResetAllToDefaults();
+                profiles.ProfilesFile.SaveOnConfigSet = save;
+                profiles.ProfilesFile.Save();
+            }
+            finally
+            {
+                handlingAction = false;
+            }
+            log.Info("Configuration and profiles reset to defaults.");
+            profileDirty = true;
+            MarkDirty();
+        }
+
+        // ================================================================== hotkeys
+
+        private void PollHotkeys()
+        {
+            if (hotkeysBroken)
+                return;
+            try
+            {
+                if (cfg.KeyToggleDashboard.Value.IsDown())
+                    cfg.DashboardVisible.Value = !cfg.DashboardVisible.Value;
+                if (cfg.KeyCycleProfile.Value.IsDown())
+                    CycleProfile();
+                if (cfg.KeyRestoreEverything.Value.IsDown())
+                    SetSuspended(!Suspended, "hotkey");
+                if (cfg.KeyToggleAdaptiveFreeze.Value.IsDown())
+                {
+                    Adaptive.Frozen = !Adaptive.Frozen;
+                    log.Info(Adaptive.Frozen ? $"Adaptive quality frozen at level {Adaptive.Level}." : "Adaptive quality unfrozen.");
+                }
+                if (cfg.KeyBenchmark.Value.IsDown())
+                    ToggleBenchmark();
+                if (cfg.KeyReloadConfig.Value.IsDown())
+                {
+                    cfg.File.Reload();
+                    profiles.ProfilesFile.Reload();
+                    log.Info("Configuration reloaded from disk.");
+                }
+            }
+            catch (Exception e)
+            {
+                hotkeysBroken = true;
+                log.Warn("Keyboard input is not available (" + e.Message + "); hotkeys disabled. Use the config file or an in-game config editor instead.");
+            }
+        }
+
+        private void CycleProfile()
+        {
+            var values = (ProfileKind[])Enum.GetValues(typeof(ProfileKind));
+            int index = Array.IndexOf(values, cfg.Profile.Value);
+            cfg.Profile.Value = values[(index + 1) % values.Length];
+        }
+
+        private void ToggleBenchmark()
+        {
+            if (Benchmark.State == BenchmarkRecorder.Phase.Warmup || Benchmark.State == BenchmarkRecorder.Phase.Recording)
+            {
+                Benchmark.Cancel();
+                return;
+            }
+            if (Benchmark.State != BenchmarkRecorder.Phase.Idle)
+                return;
+            Gpu.ResetDroppedBaseline();
+            Benchmark.Start(cfg.BenchmarkWarmupSeconds.Value, cfg.BenchmarkDurationSeconds.Value, new BenchmarkRecorder.Context
+            {
+                Label = cfg.BenchmarkLabel.Value,
+                Profile = cfg.Enabled.Value && !Suspended ? ActiveSection : "Disabled",
+                Adaptive = cfg.AdaptiveEnabled.Value && cfg.Enabled.Value && !Suspended,
+                BudgetMs = 1000.0 / TargetFps,
+                Environment = SystemReport.EnvironmentBlock(this),
+                Settings = SystemReport.SettingsBlock(this),
+            });
+        }
+
+        // ================================================================== adaptive, alerts, memory, drift
+
+        private void EvaluateAdaptive(float now)
+        {
+            double frameMs = adaptiveFrameCount > 0 ? adaptiveFrameSum / adaptiveFrameCount : 0;
+            adaptiveFrameSum = 0;
+            adaptiveFrameCount = 0;
+
+            if (!cfg.AdaptiveEnabled.Value || Suspended || !cfg.Enabled.Value || Graphics == null || IsFaulted("Adaptive"))
+                return;
+            try
+            {
+                AdaptiveDecision decision = Adaptive.Evaluate(new AdaptiveSample
+                {
+                    Now = now,
+                    FrameMs = frameMs,
+                    TargetMs = 1000.0 / TargetFps,
+                    GpuMs = Gpu.HasGpuTime ? Gpu.AverageGpuMs : double.NaN,
+                });
+                bool boundChanged = Adaptive.LastJudgedCpuBound != lastCpuBound;
+                lastCpuBound = Adaptive.LastJudgedCpuBound;
+                if (decision.Changed || (boundChanged && Adaptive.Level < 0))
+                {
+                    Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, Adaptive.Level, Ladder, lastCpuBound);
+                    if (decision.Changed)
+                        log.Info($"Adaptive quality: level {Adaptive.Level} ({decision.Reason}); frame {frameMs:0.0} ms vs target {1000.0 / TargetFps:0.0} ms" +
+                                 (Gpu.HasGpuTime ? $", GPU {Gpu.AverageGpuMs:0.0} ms" : "") + (lastCpuBound ? " (CPU-bound: render scale kept)" : ""));
+                }
+            }
+            catch (Exception e)
+            {
+                Fail("Adaptive", e);
+            }
+        }
+
+        private void UpdateAlerts(float now)
+        {
+            DegradationEvent ev = Alerts.Update(now, Frames.CurrentFps, TargetFps);
+            if (ev == DegradationEvent.Started)
+            {
+                LastAlertText = $"CRIX: performance below target - {Frames.CurrentFps:0} FPS vs {TargetFps:0} for {Alerts.SustainSeconds:0}s+ (profile {ActiveSection})";
+                log.Warn(LastAlertText);
+                if (cfg.AlertOverlayWhenHidden.Value || dashboard != null)
+                {
+                    alertVisibleUntil = now + 10f;
+                    if (dashboard == null)
+                        SetDashboard(true);
+                    if (dashboard != null)
+                        dashboard.Alert = LastAlertText;
+                }
+            }
+            else if (ev == DegradationEvent.Recovered)
+            {
+                log.Info($"CRIX: performance back on target ({Frames.CurrentFps:0} FPS).");
+            }
+        }
+
+        private void TickMemory(float now)
+        {
+            if (IsFaulted("Memory monitor"))
+                return;
+            try
+            {
+                if (!MemoryStats.Tick(now))
+                    return;
+
+                if (MemoryStats.GrowthWindowFull && MemoryStats.ManagedGrowthMBPerMinute > cfg.MemoryGrowthWarnMBPerMinute.Value && now - lastMemoryWarning > 600f)
+                {
+                    lastMemoryWarning = now;
+                    log.Warn($"Managed memory has grown {MemoryStats.ManagedGrowthMBPerMinute:0.0} MB/min over the last 5 minutes " +
+                             $"(now {MemoryMonitor.FormatBytes(MemoryStats.ManagedUsedBytes)}). If this continues, check recently added mods.");
+                }
+
+                if (cfg.DeferredAssetUnload.Value && Live.SkipTimedAssetUnloads && !Suspended &&
+                    MemoryStats.GrowthSinceBaselineBytes >= cfg.DeferredAssetUnloadGrowthMB.Value * 1024L * 1024L &&
+                    now - lastDeferredUnload >= cfg.DeferredAssetUnloadMinIntervalMinutes.Value * 60f &&
+                    GamePatches != null && GamePatches.TryIsInRoom(out bool inRoom) && !inRoom)
+                {
+                    lastDeferredUnload = now;
+                    log.Info($"Deferred unused-asset unload (Unity memory grew {MemoryMonitor.FormatBytes(MemoryStats.GrowthSinceBaselineBytes)}, not in a room).");
+                    Resources.UnloadUnusedAssets();
+                    MemoryStats.ResetGrowthBaseline();
+                }
+            }
+            catch (Exception e)
+            {
+                Fail("Memory monitor", e);
+            }
+        }
+
+        private void CheckDrift()
+        {
+            if (Suspended || !cfg.Enabled.Value)
+                return;
+            try
+            {
+                int drifted = Ledger.CheckDrift();
+                if (drifted > 0 && cfg.ExternalChanges.Value == ExternalChangePolicy.Reapply)
+                {
+                    Ledger.RearmAll();
+                    ApplyAll("re-applying after external change");
+                }
+            }
+            catch (Exception e)
+            {
+                Fail("Drift check", e);
+            }
+        }
+
+        private bool TryIncrementalCollect(ulong nanoseconds)
+        {
+            if (!GarbageCollector.isIncremental)
+                return false;
+            GarbageCollector.CollectIncremental(nanoseconds);
+            return true;
+        }
+
+        // ================================================================== compatibility & environment
+
+        private void RunCompatibilityScan()
+        {
+            Guard("Compatibility scanner", () =>
+            {
+                Plugins = PluginInventory.Snapshot();
+                Footprint = HarmonyFootprint.Scan(ModInfo.HarmonyId);
+                Warnings.RemoveAll(w => w.StartsWith("Compat:", StringComparison.Ordinal));
+                if (Footprint.Error != null)
+                    log.Debug("Harmony scan: " + Footprint.Error);
+                foreach (HarmonyFootprint.Overlap overlap in Footprint.Overlaps)
+                {
+                    string text = $"Compat: {overlap.Method} is also patched by {string.Join(", ", overlap.OtherOwners.ToArray())}" +
+                                  (overlap.OtherPrefixCanSkip ? " (their prefix may skip the original)" : "");
+                    Warnings.Add(text);
+                    log.Info(text);
+                }
+                log.Info($"Compatibility scan: {Plugins.Count} BepInEx plugin(s) loaded, {Footprint.PatchedMethods} method(s) patched by Harmony, {Footprint.Overlaps.Count} overlap(s) with CRIX.");
+            });
+        }
+
+        private void ScheduleEnvironmentScan(float now)
+        {
+            float interval = cfg.CompanionScanIntervalSeconds.Value;
+            nextScan = now + (interval > 0f ? Mathf.Max(5f, interval) : float.MaxValue);
+            bool processes = cfg.CompanionAppDetection.Value;
+            // Loaded DLLs change rarely (ReShade/overlays load at start-up): check them on the first scan and then
+            // on every 10th one, while process names are checked on every scan.
+            bool hooks = cfg.GraphicsHookDetection.Value && environmentScans++ % 10 == 0;
+            if (!processes && !hooks)
+                return;
+            // The hook scan only needs to run once in a while; process names change more often.
+            Scanner.ScanAsync(processes, hooks, result => mainThread.Post(() => OnEnvironmentScanned(result)));
+        }
+
+        private void OnEnvironmentScanned(EnvironmentScanner.Result result)
+        {
+            Guard("Environment detection", () =>
+            {
+                string api = SafeGraphicsApi();
+                bool guardChanged = ReShade.Update(result.Hooks, result.ReShadeDetail, cfg.ReShadeGuard.Value, cfg.Profile.Value, api);
+                VirtualDesktop.Update(result.Apps, Xr.OpenXRRuntimeName, Xr.DeviceName, cfg.Profile.Value);
+                Streaming.Update(result.Apps, result.Hooks, cfg.Profile.Value, cfg.DashboardVisible.Value);
+                Discord.Update(result.Apps, result.Hooks, cfg.Profile.Value);
+
+                foreach (string line in VirtualDesktop.Advice)
+                    once.Info("vd:" + line, line);
+                foreach (string line in Streaming.Advice)
+                    once.Info("obs:" + line, line);
+                foreach (string line in Discord.Advice)
+                    once.Info("discord:" + line, line);
+                foreach (string line in ReShade.Advice)
+                    once.Info("reshade:" + line, line);
+
+                if (guardChanged)
+                {
+                    log.Info(ReShade.GuardActive ? "ReShade guard active." : "ReShade guard inactive.");
+                    profileDirty = false;
+                    ResolveProfile();
+                    ApplyAll("ReShade guard changed");
+                }
+
+                if (cfg.AutoSelectProfile.Value)
+                {
+                    ProfileSuggestion? suggestion = CompanionApps.Suggest(result.Apps);
+                    string key = suggestion.HasValue ? suggestion.Value.Profile + "/" + suggestion.Value.VirtualDesktopPreset : "none";
+                    if (key != lastSuggestion)
+                    {
+                        lastSuggestion = key;
+                        if (suggestion.HasValue && (cfg.Profile.Value != suggestion.Value.Profile ||
+                            (suggestion.Value.Profile == ProfileKind.VirtualDesktop && cfg.VirtualDesktopVariant.Value != suggestion.Value.VirtualDesktopPreset)))
+                        {
+                            log.Info($"AutoSelectProfile: {suggestion.Value.Reason} -> {suggestion.Value.Profile}");
+                            cfg.VirtualDesktopVariant.Value = suggestion.Value.VirtualDesktopPreset;
+                            cfg.Profile.Value = suggestion.Value.Profile;
+                        }
+                    }
+                }
+            });
+        }
+
+        private static string SafeGraphicsApi()
+        {
+            try
+            {
+                return SystemInfo.graphicsDeviceType.ToString();
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            // Cameras and quality-dependent objects may be recreated; re-apply (only differing values are written).
+            if (!Suspended && cfg.Enabled.Value)
+            {
+                Guard("Graphics settings", () => Graphics?.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
+                MarkDirty();
+            }
+        }
+
+        // ================================================================== dashboard & report
+
+        private bool DashboardShouldExist() => cfg.DashboardVisible.Value || alertVisibleUntil > 0f;
+
+        private void SetDashboard(bool visible)
+        {
+            try
+            {
+                if (visible && dashboard == null)
+                {
+                    dashboard = plugin.gameObject.AddComponent<DashboardOverlay>();
+                    nextDashboard = 0f;
+                }
+                else if (!visible && dashboard != null)
+                {
+                    UnityEngine.Object.Destroy(dashboard);
+                    dashboard = null;
+                }
+                if (dashboard != null)
+                {
+                    dashboard.ShowPanel = cfg.DashboardVisible.Value;
+                    dashboard.Corner = cfg.DashboardPosition.Value;
+                    dashboard.FontSize = cfg.DashboardFontSize.Value;
+                    dashboard.Alert = alertVisibleUntil > 0f ? LastAlertText : "";
+                    if (visible && cfg.DashboardVisible.Value)
+                        Streaming.Update(Apps, Hooks, cfg.Profile.Value, true);
+                    if (Streaming.GameCaptureHooked && cfg.DashboardVisible.Value)
+                        once.Warn("dash-obs", "The dashboard is drawn into the game window, which OBS game capture is recording.");
+                }
+            }
+            catch (Exception e)
+            {
+                Fail("Dashboard", e);
+            }
+        }
+
+        private void RefreshDashboard(float now)
+        {
+            if (IsFaulted("Dashboard"))
+                return;
+            try
+            {
+                dashboard.ShowPanel = cfg.DashboardVisible.Value;
+                dashboard.Corner = cfg.DashboardPosition.Value;
+                dashboard.FontSize = cfg.DashboardFontSize.Value;
+                if (cfg.DashboardVisible.Value)
+                    dashboard.Text = DashboardText.Build(this, cfg.DashboardCompact.Value);
+            }
+            catch (Exception e)
+            {
+                Fail("Dashboard", e);
+            }
+        }
+
+        public void WriteSystemReport()
+        {
+            Guard("System report", () =>
+            {
+                Plugins = PluginInventory.Snapshot();
+                string text = SystemReport.Build(this);
+                string path = Path.Combine(OutputDirectory, "system-report.txt");
+                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(OutputDirectory);
+                        File.WriteAllText(path, text);
+                        log.Info("System report written to " + path);
+                    }
+                    catch (Exception e)
+                    {
+                        log.Warn("Could not write system report: " + e.Message);
+                    }
+                });
+            });
+        }
+
+        // ================================================================== accessors for UI / report
+
+        public PluginConfig Config => cfg;
+
+        public bool AdaptiveActive => cfg.AdaptiveEnabled.Value && cfg.Enabled.Value && !Suspended;
+
+        // ================================================================== status & fault isolation
+
+        private void UpdateStatus()
+        {
+            bool on = cfg.Enabled.Value && !Suspended;
+            Status.Set("Modules", "Game stutter fixes", ModuleStateFor(cfg.GameStutterFixes.Value && on, "Game patches", GamePatches?.DeferredToPotassium == true));
+            Status.Set("Modules", "Visual update throttles", ModuleStateFor(cfg.VisualThrottles.Value && on, "Game patches", GamePatches?.DeferredToPotassium == true));
+            Status.Set("Modules", "Distant cosmetic culling", ModuleStateFor(cfg.CosmeticCulling.Value && on, "Game patches", GamePatches?.DeferredToPotassium == true));
+            Status.Set("Modules", "Graphics settings", ModuleStateFor(cfg.GraphicsSettings.Value && on, "Graphics settings", false));
+            Status.Set("Modules", "Frame pacing settings", ModuleStateFor(cfg.FramePacingSettings.Value && on, "Graphics settings", false));
+            Status.Set("Modules", "Adaptive quality", ModuleStateFor(cfg.AdaptiveEnabled.Value && on, "Adaptive", false));
+            Status.Set("Modules", "Diagnostics", ModuleStateFor(cfg.Diagnostics.Value, "Memory monitor", false));
+            Status.Set("Modules", "Compatibility scanner", ModuleStateFor(cfg.CompatibilityScanner.Value, "Compatibility scanner", false));
+            Status.Set("Modules", "Companion app detection", cfg.CompanionAppDetection.Value ? ModuleState.Active : ModuleState.Disabled);
+            Status.Set("Modules", "Graphics hook detection", cfg.GraphicsHookDetection.Value ? ModuleState.Active : ModuleState.Disabled);
+        }
+
+        private ModuleState ModuleStateFor(bool enabled, string faultKey, bool deferred)
+        {
+            if (IsFaulted(faultKey))
+                return ModuleState.Faulted;
+            if (deferred)
+                return ModuleState.Deferred;
+            return enabled ? ModuleState.Active : ModuleState.Disabled;
+        }
+
+        private bool IsFaulted(string module) => faultedModules.Contains(module);
+
+        private void Guard(string module, Action action)
+        {
+            if (IsFaulted(module))
+                return;
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                Fail(module, e);
+            }
+        }
+
+        private void Fail(string module, Exception e)
+        {
+            moduleFailures.TryGetValue(module, out int count);
+            moduleFailures[module] = ++count;
+            if (count >= 3)
+            {
+                faultedModules.Add(module);
+                log.Error($"{module} failed {count} times and is disabled for this session. Last error: {e}");
+                UpdateStatus();
+            }
+            else
+            {
+                log.Warn($"{module} error ({count}/3): {e.GetType().Name}: {e.Message}");
+            }
+        }
+    }
+}
