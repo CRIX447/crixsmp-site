@@ -49,17 +49,62 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 | Desktop window black or different view | `DesktopMirror` set to `None`/another mode. Set it to `Unchanged`. |
 | Colours/brightness changed | `CameraHdr = Off` (MaximumPerformance). Set it to `Unchanged`. |
 | ReShade depth effects broken or flickering | Use the `ReShadeCompatible` profile, and keep `[Compatibility] ReShadeGuard = Auto` (or `On`). Avoid adaptive render-scale changes. |
-| MSAA setting has no effect | Some VR runtimes only apply MSAA when the XR session starts. Restart the game. The dashboard shows the eye-texture MSAA actually in use. |
+| MSAA setting has no effect | Some VR runtimes only apply MSAA when the XR session starts. Restart the game. The dashboard shows the eye-texture MSAA actually in use. `MsaaSamples` is a cap: CRIX never raises MSAA. |
 | Cosmetic effects update less smoothly | Visual throttles (voice-reactive, proximity, texture transitions). Raise the rates or set them to `0` (unthrottled). |
 | Distant players' cosmetics disappear | Distant cosmetic culling. Raise `CosmeticMaximumDistance`/`CosmeticMaximumCount` or set `ReduceDistantCosmetics = false`. |
+
+## "It does nothing" / FPS did not go up
+
+1. Find the `CRIX status:` line in `BepInEx/LogOutput.log` (about 5 s after start). It lists every engine setting CRIX
+   changed (old -> new) and how many game patches are active. If CRIX changes nothing, a `CRIX is loaded but nothing
+   is being changed right now: <reason>` warning follows it. The same summary is at the top of `system-report.txt`.
+2. **VR caps the frame rate** at your headset's refresh rate. If the game already holds 90 FPS at 90 Hz, the number
+   cannot go higher. Look at frame times instead: `Frame ... p99` and `over budget %` on the dashboard (F8), or run a
+   benchmark (F6) with and without CRIX.
+3. **Updated from 1.0.0?** 1.1.0 upgrades preset values you never edited and turns adaptive quality on
+   (`[Adaptive] Mode = On`). The log says `Upgraded N profile value(s)...`. Values you edited are kept, so an old
+   edited profile may still be mild; `[Actions] ResetConfigToDefaults = true` returns everything to the 1.1.0 defaults.
+4. In `system-report.txt`, check `Render pipeline` and `Render scale lever`. Under URP the lever must be
+   `URP asset renderScale`. If the check says `eye textures report X, expected Y`, something else (the game, the VR
+   runtime, or another mod such as a client with its own graphics menu) is setting the render scale.
+5. **Busy lobbies are usually CPU-bound.** Lowering resolution does not help there; adaptive mode detects this and
+   reduces distant cosmetic detail and cosmetic update rates instead (`CPU-bound` on the dashboard).
+6. Other mods can cost more than CRIX can save. In particular, clients with extra cameras (spectator/shoulder
+   cameras, minimaps, tablets) render the scene again. The `Cameras:` line in `system-report.txt` lists them with
+   their pixel load relative to one VR eye.
+
+## Auto streaming mode
+
+| Symptom | Cause / fix |
+|---|---|
+| Dashboard says `OBS WebSocket not connected` | OBS's WebSocket server is off. OBS: Tools → WebSocket Server Settings → Enable WebSocket server (port 4455). |
+| `OBS WebSocket requires a password` / `rejected the password` | Copy the password from OBS (Show Connect Info) into `[Streaming] ObsWebSocketPassword`, then Ctrl+F5. CRIX retries only every 5 minutes after a password problem. |
+| Profile is always `DiscordCall` | Discord is running. Discord's call state cannot be read without injecting into Discord. Set `[Streaming] DiscordProfile = Balanced` or `Trigger = WhenRecordingOrLive`. |
+| Profile switches while OBS is open but idle | Without the WebSocket, CRIX treats "OBS running" as streaming. Enable the WebSocket, or set `Trigger = WhenRecordingOrLive`. |
+| Do not want any automatic switching | `[Streaming] AutoStreamingMode = false`. |
+
+## Sakuraa Client / GTFX
+
+- CRIX detects Sakuraa and lists it in the log and system report. It never changes Sakuraa, GTFX or Sakuraa's cameras.
+- GTFX effects (clouds, rain, grass and similar) are only adjustable in Sakuraa's own GTFX presets. Pick a lighter one while streaming.
+- Sakuraa's spectator camera renders the game a second time to the desktop window. A smaller game window, or a lower
+  quality setting for that camera in Sakuraa, saves GPU time.
+- Use the official client. Rebuilt "recovered" copies shared on GitHub were reported to contain a hidden extra
+  library; CRIX warns when it sees a GUID used by such copies.
+
+## Spotify
+
+Spotify's desktop app uses GPU hardware acceleration by default. If you notice stutter while it plays, turn off
+hardware acceleration in Spotify's settings (restart Spotify afterwards). While Spotify runs, CRIX keeps 5% more GPU
+headroom in adaptive mode. It never touches Spotify.
 
 ## Performance did not improve
 
 - CRIX can only reduce **game-side** work. If the bottleneck is the Virtual Desktop/Link encoder, Wi-Fi, OBS
   encoding, or another program using the GPU, game-side changes will help little. See
   [docs/VIRTUAL_DESKTOP_GUIDE.md](docs/VIRTUAL_DESKTOP_GUIDE.md) and [docs/OBS_DISCORD_RESHADE_GUIDE.md](docs/OBS_DISCORD_RESHADE_GUIDE.md).
-- If the dashboard shows `CPU-bound`, lowering resolution will not help; shadows/LOD/pixel lights and the stutter
-  fixes are the relevant levers.
+- If the dashboard shows `CPU-bound`, lowering resolution will not help; distant cosmetics, cosmetic update rates,
+  shadows/LOD/lights and the stutter fixes are the relevant levers.
 - Measure before and after with the benchmark recorder ([docs/BENCHMARKING.md](docs/BENCHMARKING.md)). Judging by
   feel alone is unreliable.
 

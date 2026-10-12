@@ -129,6 +129,13 @@ namespace CRIXOptimizer.Configuration
         Off,
     }
 
+    public enum AdaptiveMode
+    {
+        /// <summary>Adapt quality to hold the target frame rate (default).</summary>
+        On,
+        Off,
+    }
+
     public enum DashboardCorner
     {
         TopLeft,

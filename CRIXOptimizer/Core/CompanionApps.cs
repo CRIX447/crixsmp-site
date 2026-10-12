@@ -19,6 +19,7 @@ namespace CRIXOptimizer.Core
         SteamVR = 1 << 4,
         MetaQuestLink = 1 << 5,
         Alvr = 1 << 6,
+        Spotify = 1 << 7,
     }
 
     [Flags]
@@ -66,6 +67,7 @@ namespace CRIXOptimizer.Core
                 { "OculusClient", CompanionApp.MetaQuestLink },
                 { "ALVR Dashboard", CompanionApp.Alvr },
                 { "alvr_dashboard", CompanionApp.Alvr },
+                { "Spotify", CompanionApp.Spotify },
             };
 
         // Module (DLL) names loaded into the game process by well-known overlays/capture tools.
@@ -139,6 +141,7 @@ namespace CRIXOptimizer.Core
             AppendFlag(sb, apps, CompanionApp.SteamVR, "SteamVR");
             AppendFlag(sb, apps, CompanionApp.MetaQuestLink, "Meta Quest Link");
             AppendFlag(sb, apps, CompanionApp.Alvr, "ALVR");
+            AppendFlag(sb, apps, CompanionApp.Spotify, "Spotify");
             return sb.ToString();
         }
 

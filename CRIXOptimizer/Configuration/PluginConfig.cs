@@ -30,7 +30,8 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<bool> GraphicsHookDetection;
 
         // [Adaptive]
-        public readonly ConfigEntry<bool> AdaptiveEnabled;
+        public readonly ConfigEntry<AdaptiveMode> AdaptiveModeSetting;
+        public bool AdaptiveEnabled => AdaptiveModeSetting.Value == AdaptiveMode.On;
         public readonly ConfigEntry<float> AdaptiveTargetFps;
         public readonly ConfigEntry<float> AdaptiveSensitivity;
         public readonly ConfigEntry<int> AdaptiveMinLevel;
@@ -43,6 +44,16 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<float> AdaptiveUpSustainSeconds;
         public readonly ConfigEntry<bool> AdaptiveManualOverride;
         public readonly ConfigEntry<int> AdaptiveManualLevel;
+
+        // [Streaming]
+        public readonly ConfigEntry<bool> AutoStreamingMode;
+        public readonly ConfigEntry<Core.StreamingTrigger> StreamingTriggerSetting;
+        public readonly ConfigEntry<ProfileKind> ObsProfile;
+        public readonly ConfigEntry<ProfileKind> DiscordProfile;
+        public readonly ConfigEntry<float> StreamingHoldSeconds;
+        public readonly ConfigEntry<bool> ObsWebSocket;
+        public readonly ConfigEntry<int> ObsWebSocketPort;
+        public readonly ConfigEntry<string> ObsWebSocketPassword;
 
         // [Dashboard]
         public readonly ConfigEntry<bool> DashboardVisible;
@@ -126,8 +137,9 @@ namespace CRIXOptimizer.Configuration
             GraphicsHookDetection = file.Bind("Modules", "GraphicsHookDetection", true,
                 "Detect ReShade and overlay/capture hooks (OBS game capture, Discord, Steam, RTSS) by looking at the game folder and the game's own loaded DLLs.");
 
-            AdaptiveEnabled = file.Bind("Adaptive", "Enabled", false,
-                "Adaptive quality: lowers (and later restores) shadow distance, LOD bias, pixel lights and render scale to hold the target frame rate. Never touches gameplay, physics or networking.");
+            AdaptiveModeSetting = file.Bind("Adaptive", "Mode", AdaptiveMode.On,
+                "Adaptive quality: when the frame rate drops below target, CRIX lowers (and later restores) distant cosmetic detail, cosmetic update rates, shadow distance, LOD bias, pixel lights and render scale. " +
+                "It does nothing while the game holds its target. Lowering resolution is undone automatically if it does not help (CPU-bound). Never touches gameplay, physics or networking. (Replaces the 1.0.0 'Enabled' key.)");
             AdaptiveTargetFps = file.Bind("Adaptive", "TargetFps", 0f,
                 new ConfigDescription("Target frame rate. 0 = headset refresh rate reported by the VR runtime (desktop: monitor refresh).", new AcceptableValueRange<float>(0f, 360f)));
             AdaptiveSensitivity = file.Bind("Adaptive", "Sensitivity", 0.5f,
@@ -152,6 +164,24 @@ namespace CRIXOptimizer.Configuration
                 "Hold the quality level at ManualLevel instead of adapting.");
             AdaptiveManualLevel = file.Bind("Adaptive", "ManualLevel", 0,
                 new ConfigDescription("Level used when ManualOverride is true.", new AcceptableValueRange<int>(-10, 3)));
+
+            AutoStreamingMode = file.Bind("Streaming", "AutoStreamingMode", true,
+                "While you record or stream (OBS/Streamlabs) or use Discord, automatically switch to the matching streaming profile and switch back afterwards. " +
+                "Only switches away from Balanced, OBSStreaming or DiscordCall (VirtualDesktop switches to its Streaming preset); stronger profiles you picked stay as they are.");
+            StreamingTriggerSetting = file.Bind("Streaming", "Trigger", Core.StreamingTrigger.Auto,
+                "Auto: OBS's real live/recording state when the OBS WebSocket is connected, otherwise while OBS runs; Discord while it runs. " +
+                "WhenAppRunning: whenever OBS/Discord run (OBS renders its preview even when idle). WhenRecordingOrLive: only while OBS is live/recording (needs the OBS WebSocket) or capturing the game.");
+            ObsProfile = file.Bind("Streaming", "ObsProfile", ProfileKind.OBSStreaming, "Profile used while OBS/Streamlabs is active.");
+            DiscordProfile = file.Bind("Streaming", "DiscordProfile", ProfileKind.DiscordCall, "Profile used while Discord is active (and OBS is not).");
+            StreamingHoldSeconds = file.Bind("Streaming", "HoldSeconds", 20f,
+                new ConfigDescription("Keep the streaming profile this long after the last streaming signal, so a short reconnect does not flip profiles.", new AcceptableValueRange<float>(0f, 600f)));
+            ObsWebSocket = file.Bind("Streaming", "ObsWebSocket", true,
+                "Read whether OBS is live or recording through OBS's built-in WebSocket server (OBS 28+, Tools > WebSocket Server Settings > Enable WebSocket server). " +
+                "Read-only: CRIX only asks for the streaming/recording state and can never start, stop or change anything in OBS. Connects to 127.0.0.1 only.");
+            ObsWebSocketPort = file.Bind("Streaming", "ObsWebSocketPort", 4455,
+                new ConfigDescription("Port of the OBS WebSocket server (OBS default 4455).", new AcceptableValueRange<int>(1, 65535)));
+            ObsWebSocketPassword = file.Bind("Streaming", "ObsWebSocketPassword", "",
+                "Password from OBS (Tools > WebSocket Server Settings > Show Connect Info). Leave empty if authentication is off in OBS. Stored in plain text in this file.");
 
             DashboardVisible = file.Bind("Dashboard", "Visible", false,
                 "Show the performance dashboard on the desktop window (not in the headset). Off by default: drawing it costs a little CPU, and OBS window/game capture will record it.");

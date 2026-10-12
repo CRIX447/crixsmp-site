@@ -28,7 +28,8 @@
    does not apply its own copies of those patches (no double patching). Keeping **only one** of the two is
    recommended; remove `Potassium.dll` if you want CRIX's versions.
 5. **Start the game.** In `Gorilla Tag/BepInEx/LogOutput.log` you should see
-   `CRIX OPTIMIZER 1.0.0 loaded. Profile: Balanced. Patches active: ...`.
+   `CRIX OPTIMIZER 1.1.0 loaded. Profile: Balanced. Patches active: ...`, and about 5 s later a
+   `CRIX status: ...` line that lists exactly what CRIX is changing (see "Check that it is working" below).
 
 Nothing else is installed or modified: no game files, no registry, no other programs.
 
@@ -49,10 +50,10 @@ Set `[General] Profile` in `com.crix.crixoptimizer.cfg`, or press **F9** in game
 
 | Profile | Use it for |
 |---|---|
-| `Balanced` | General play. Potassium's stutter fixes plus a mild shadow-distance cap. |
+| `Balanced` | General play. Potassium's stutter fixes, capped shadows/lights, VR occlusion mesh, smoother loading. Keeps the game's resolution. |
 | `MaximumPerformance` | Weak GPU or very demanding setups. Lower render scale, shadows, LOD, effects. Visibly softer. |
 | `VirtualDesktop` | Wireless PC VR via Virtual Desktop. Choose the variant with `[General] VirtualDesktopPreset`: `Balanced`, `Performance`, `Quality`, `Streaming`. |
-| `OBSStreaming` | Recording/streaming. Steadier frame pacing; never changes what the desktop window (OBS's capture) shows. |
+| `OBSStreaming` | Recording/streaming. Leaves GPU/CPU time for OBS's capture and encoder; never changes what the desktop window (OBS's capture) shows. |
 | `DiscordCall` | Voice/video calls and screen sharing alongside the game. |
 | `ReShadeCompatible` | ReShade users. No resolution/MSAA/HDR/mirror changes that would disturb depth-based effects. |
 | `MultiMod` | Many other mods installed. Only low-risk patches, no engine graphics changes. |
@@ -63,7 +64,53 @@ plugin installed you can also edit everything in game. Edits made directly to th
 **Ctrl+F5** (reload) or a restart.
 
 `[General] AutoSelectProfile = true` lets CRIX pick a profile from running apps (Virtual Desktop → VirtualDesktop,
-OBS → OBSStreaming, Discord → DiscordCall). It is off by default.
+OBS → OBSStreaming, Discord → DiscordCall). It is off by default. For streaming, the auto streaming mode below is the
+better choice: it switches back when you stop and does not overwrite your chosen profile.
+
+## Auto streaming mode (OBS, Streamlabs, Discord)
+
+On by default (`[Streaming] AutoStreamingMode`). While you record or stream, CRIX runs the `OBSStreaming` profile
+(or `DiscordCall` for Discord) and returns to your own profile 20 s after it ends (`HoldSeconds`). The dashboard and
+log show `auto: OBS live` (or similar) while it is active. It only replaces `Balanced`, `OBSStreaming` and
+`DiscordCall`; `VirtualDesktop` switches to its Streaming variant; `MaximumPerformance`, `ReShadeCompatible`,
+`MultiMod` and `Custom` are kept as you chose them.
+
+**OBS Studio (28 or newer): turn on its WebSocket server so CRIX knows when you are actually live or recording.**
+
+1. In OBS: **Tools → WebSocket Server Settings**. Tick **Enable WebSocket server**. Leave the port at **4455**.
+2. If **Enable Authentication** is ticked (the default), click **Show Connect Info**, copy the **Server Password**,
+   and paste it into `com.crix.crixoptimizer.cfg`:
+   ```
+   [Streaming]
+   ObsWebSocketPassword = paste-the-password-here
+   ```
+   (The password is stored in plain text in that file. CRIX never writes it to the log.)
+3. Restart the game or press **Ctrl+F5**. The log shows `Connected to OBS ... (read-only)`, and the dashboard's
+   `Streaming:` line shows `OBS idle`, `OBS recording` or `OBS live`.
+
+CRIX connects to `127.0.0.1` only and only asks OBS for its streaming/recording state. It cannot start, stop or
+change anything in OBS. Without the WebSocket, CRIX treats "OBS is running" as streaming (OBS renders its preview
+even when idle). If the password is wrong, the log says so and CRIX only retries every 5 minutes.
+
+**Streamlabs Desktop:** nothing to set up. While Streamlabs runs, CRIX reads its live/recording state from
+Streamlabs' local API (127.0.0.1:28194), read-only.
+
+**Discord:** Discord's call / Go Live state cannot be read without injecting into Discord, which CRIX never does.
+While Discord runs, CRIX uses `DiscordCall`. If you keep Discord open all the time and do not want that, set
+`[Streaming] DiscordProfile = Balanced` or `[Streaming] Trigger = WhenRecordingOrLive`.
+
+## Check that it is working
+
+Open `Gorilla Tag/BepInEx/LogOutput.log` after ~10 s in game and look for:
+
+- `CRIX status: Profile Balanced. N game patch(es) active. N engine setting(s) changed: ...`. This lists each engine
+  setting with its old and new value. Under URP you should see entries such as `Shadow distance (URP asset): ...`.
+- `CRIX is loaded but nothing is being changed right now: <reason>`. This is a warning that tells you why.
+- `Adaptive quality: level -1 ...` lines when the frame rate drops and CRIX steps in.
+
+VR frame rates are capped at the headset's refresh rate (72/80/90/120 Hz). If the game already holds that rate,
+the FPS number will not go up. Improvements show as fewer drops in busy lobbies, lower and steadier frame times
+(`Frame ... p99` on the dashboard) and more headroom. Use the benchmark recorder (F6) to compare profiles.
 
 ## Diagnostics and dashboard
 

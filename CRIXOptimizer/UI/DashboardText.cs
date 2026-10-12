@@ -30,7 +30,11 @@ namespace CRIXOptimizer.UI
             if (rt.Suspended || !rt.Config.Enabled.Value)
                 sb.Append("<color=#ff7070>SUSPENDED - original settings</color>");
             else
+            {
                 sb.Append("Profile: <b>").Append(rt.ActiveSection).Append("</b>");
+                if (rt.AutoProfileReason.Length > 0)
+                    sb.Append(" <color=#70d0ff>(auto: ").Append(rt.AutoProfileReason).Append(")</color>");
+            }
             if (rt.AdaptiveActive)
                 sb.Append("  Adaptive L").Append(rt.Adaptive.Level).Append(rt.Adaptive.Frozen ? " (frozen)" : "").Append(rt.Adaptive.ManualLevel.HasValue ? " (manual)" : "");
             sb.Append('\n');
@@ -83,6 +87,17 @@ namespace CRIXOptimizer.UI
             sb.Append("Skipped updates (total): voice ").Append(UpdateThrottlePatches.VoiceSkipped).Append(" proximity ").Append(UpdateThrottlePatches.ProximitySkipped)
               .Append(" tex ").Append(UpdateThrottlePatches.TextureTransitionSkipped).Append("  intervals ")
               .Append(Live.VoiceVisualInterval).Append('/').Append(Live.ProximityInterval).Append('/').Append(Live.TextureTransitionInterval).Append('\n');
+            sb.Append("Changes: ").Append(rt.ChangedSettingsCount).Append(" engine settings, ").Append(rt.ActivePatchCount).Append(" game patches").Append('\n');
+            sb.Append("Streaming: ").Append(StreamingLine(rt)).Append('\n');
+            if (rt.Cameras.ExtraCameras > 0 || rt.Sakuraa.Detected)
+            {
+                sb.Append("Extra cameras ").Append(rt.Cameras.ExtraCameras).Append(" (desktop ").Append(rt.Cameras.ScreenCameras).Append(')');
+                if (rt.Cameras.ExtraPixelLoad > 0)
+                    sb.Append(", extra pixels ").Append(F0(rt.Cameras.ExtraPixelLoad * 100)).Append("% of one eye [D]");
+                if (rt.Sakuraa.Detected)
+                    sb.Append("   Sakuraa detected (GTFX: tune in Sakuraa)");
+                sb.Append('\n');
+            }
             sb.Append("Apps: ").Append(CompanionApps.Describe(rt.Apps)).Append("   Hooks: ").Append(CompanionApps.Describe(rt.Hooks)).Append('\n');
 
             if (rt.Benchmark.State != Diagnostics.BenchmarkRecorder.Phase.Idle)
@@ -110,6 +125,31 @@ namespace CRIXOptimizer.UI
               .Append(keys.KeyToggleDashboard.Value).Append(" hide  ").Append(keys.KeyCycleProfile.Value).Append(" profile  ")
               .Append(keys.KeyRestoreEverything.Value).Append(" restore  ").Append(keys.KeyBenchmark.Value).Append(" benchmark</size>");
             return sb.ToString();
+        }
+
+        internal static string StreamingLine(OptimizerRuntime rt)
+        {
+            if (!rt.Config.AutoStreamingMode.Value)
+                return "auto mode off";
+            string obs;
+            Streaming.ObsStatus status = rt.Obs?.Status;
+            if (rt.Obs == null)
+                obs = "OBS WebSocket off";
+            else if (status == null || !status.Connected)
+                obs = status != null && status.AuthenticationRequired ? "OBS WebSocket needs password" : status != null && status.AuthenticationFailed ? "OBS password rejected" : "OBS WebSocket not connected";
+            else
+                obs = status.Streaming && status.Recording ? "OBS live+recording" : status.Streaming ? "OBS live" : status.Recording ? "OBS recording" : "OBS idle";
+            if (rt.Streamlabs != null)
+            {
+                Streaming.ObsStatus sl = rt.Streamlabs.Status;
+                obs += !sl.Connected ? " | Streamlabs API not connected"
+                    : sl.Streaming && sl.Recording ? " | Streamlabs live+recording"
+                    : sl.Streaming ? " | Streamlabs live"
+                    : sl.Recording ? " | Streamlabs recording"
+                    : " | Streamlabs idle";
+            }
+            string active = rt.Capture.Active == CaptureKind.None ? "no streaming load" : rt.Capture.Reason;
+            return active + " | " + obs;
         }
 
         private static string F0(double v) => double.IsNaN(v) ? "n/a" : v.ToString("0", Inv);

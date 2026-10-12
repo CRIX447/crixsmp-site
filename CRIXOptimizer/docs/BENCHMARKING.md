@@ -43,17 +43,22 @@ python3 tools/compare_benchmarks.py "<Gorilla Tag>/BepInEx/CRIXOptimizer/benchma
 | 1 | Baseline: no Potassium, no CRIX | Move both DLLs out of `BepInEx/plugins`. CRIX's recorder is unavailable, so use an external tool (see below). | Use the external tool for all eight runs too, so every run is measured the same way. |
 | 2 | Original Potassium 1.0.0 | Only `Potassium.dll` installed | External tool |
 | 3 | CRIX loaded, all optimisations off | CRIX installed, `[General] Enabled = false` | Measures CRIX's own diagnostic overhead. Recorder labels it `Disabled`. |
-| 4 | CRIX Balanced | `Profile = Balanced` | |
+| 4 | CRIX Balanced | `Profile = Balanced`, `[Adaptive] Mode = Off` | Fixed profile only, so runs are comparable |
 | 5 | CRIX Virtual Desktop | `Profile = VirtualDesktop` (state the preset) | Over Virtual Desktop |
 | 6 | CRIX OBS Streaming | `Profile = OBSStreaming` | With OBS recording |
 | 7 | CRIX Discord Call | `Profile = DiscordCall` | With a Discord call (and screen share if you use it) |
-| 8 | CRIX adaptive | Your profile + `[Adaptive] Enabled = true` | Recorder labels it `<profile>_adaptive` |
+| 8 | CRIX adaptive | Your profile + `[Adaptive] Mode = On` (the 1.1 default) | Recorder labels it `<profile>_adaptive` |
 
 For configurations 1-2, and to get GPU utilisation for all of them, use an external tool **for every run**, so all
 eight are measured identically: for example PresentMon / Intel PresentMon (frame times plus GPU busy), fpsVR (SteamVR),
 Virtual Desktop's performance overlay, or Windows Task Manager (GPU engine graphs: *3D*, *Video Encode*).
 
 ## Keeping runs comparable
+
+- **Adaptive mode is on by default since 1.1.0** and **auto streaming mode** switches profiles while OBS/Streamlabs is
+  live or recording, or Discord runs. For configurations 4-7 set `[Adaptive] Mode = Off`, and set
+  `[Streaming] AutoStreamingMode = false` so the profile you are measuring stays active. The recorder's summary
+  names the profile that was actually running.
 
 - **Same everything except the variable:** game version, headset, refresh rate, Virtual Desktop/Link settings, OBS
   scene/encoder, Discord state, Windows power plan, GPU driver, other running apps, BepInEx plugins (other than the

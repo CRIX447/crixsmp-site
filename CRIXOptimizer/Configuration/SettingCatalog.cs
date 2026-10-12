@@ -27,16 +27,16 @@ namespace CRIXOptimizer.Configuration
         public static readonly Dictionary<string, Info> Fields = new Dictionary<string, Info>(StringComparer.Ordinal)
         {
             // Rendering
-            { nameof(OptimizationSettings.RenderScale), R("[GPU] VR eye-texture resolution scale (0 = leave the game/runtime value; 0.5-2.0 = set). Recreates eye textures when changed (brief hitch).", 0, 2) },
+            { nameof(OptimizationSettings.RenderScale), R("[GPU] VR eye-texture resolution scale (0 = leave the game/runtime value; 0.5-2.0 = set). Under URP it is set through the URP asset's render scale, which URP ignores within 0.05 of 1.0. Recreates eye textures when changed (brief hitch).", 0, 2) },
             { nameof(OptimizationSettings.ShadowQuality), D("[GPU] Upper limit for shadow quality (built-in pipeline). HardOnly removes soft-shadow filtering, Disable turns realtime shadows off.") },
             { nameof(OptimizationSettings.ShadowDistanceLimit), R("[GPU] Maximum realtime shadow distance in metres; kept if the game already uses less. -1 = unchanged.", -1, 1000) },
             { nameof(OptimizationSettings.ShadowResolution), D("[GPU] Upper limit for shadow-map resolution.") },
-            { nameof(OptimizationSettings.ShadowCascadesLimit), R("[GPU] Maximum shadow cascades (1, 2 or 4). -1 = unchanged.", -1, 4) },
-            { nameof(OptimizationSettings.MsaaSamples), R("[GPU] MSAA samples (0, 2, 4, 8). -1 = unchanged. Applied once; some VR runtimes only pick it up after a restart - the dashboard shows the eye-texture MSAA actually in use.", -1, 8) },
+            { nameof(OptimizationSettings.ShadowCascadesLimit), R("[GPU] Maximum shadow cascades (1, 2 or 4; built-in pipeline or URP asset). Kept if the game already uses fewer. -1 = unchanged.", -1, 4) },
+            { nameof(OptimizationSettings.MsaaSamples), R("[GPU] MSAA samples (0, 2, 4, 8). -1 = unchanged. Under URP this is a cap on the URP asset (never raised). Some VR runtimes only pick it up after a restart - the dashboard shows the eye-texture MSAA actually in use.", -1, 8) },
             { nameof(OptimizationSettings.AnisotropicFiltering), D("[GPU] Anisotropic texture filtering mode.") },
             { nameof(OptimizationSettings.LodBiasLimit), R("[GPU] Maximum LOD bias (lower = simpler meshes sooner). -1 = unchanged.", -1, 10) },
             { nameof(OptimizationSettings.MinimumMaxLodLevel), R("[GPU] Skip the N most detailed LOD levels (0-7). -1 = unchanged.", -1, 7) },
-            { nameof(OptimizationSettings.PixelLightLimit), R("[GPU] Maximum per-pixel lights (built-in forward rendering). -1 = unchanged.", -1, 16) },
+            { nameof(OptimizationSettings.PixelLightLimit), R("[GPU] Maximum per-pixel lights (built-in pipeline) or additional lights per object (URP asset). Kept if the game already uses fewer. -1 = unchanged.", -1, 16) },
             { nameof(OptimizationSettings.TextureMipLimit), R("[GPU/VRAM] Minimum texture mip limit: 0 full, 1 half, 2 quarter resolution. Frees VRAM; re-uploads every texture when changed. -1 = unchanged.", -1, 3) },
             { nameof(OptimizationSettings.RealtimeReflectionProbes), D("[GPU] Realtime reflection probe updates (Off saves GPU time; baked reflections remain).") },
             { nameof(OptimizationSettings.SoftParticles), D("[GPU] Soft particles (Off avoids depth-texture sampling for particles).") },
@@ -73,6 +73,7 @@ namespace CRIXOptimizer.Configuration
             { nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), D("[Adaptive] Allow adaptive mode to change render scale while this profile is active.") },
             { nameof(OptimizationSettings.AdaptiveMayChangeShadows), D("[Adaptive] Allow adaptive mode to change shadow distance and pixel lights.") },
             { nameof(OptimizationSettings.AdaptiveMayChangeLod), D("[Adaptive] Allow adaptive mode to change LOD bias.") },
+            { nameof(OptimizationSettings.AdaptiveMayChangeCosmetics), D("[Adaptive] Allow adaptive mode to reduce distant remote-player cosmetic detail and cosmetic update rates (CPU savings in busy lobbies).") },
             { nameof(OptimizationSettings.AdaptiveGpuHeadroomPercent), R("[Adaptive] Share of the frame budget to keep free on the GPU (for video encoders/compositor). Only used when the VR runtime reports GPU time.", 0, 40) },
         };
 

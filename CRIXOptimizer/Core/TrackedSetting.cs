@@ -30,6 +30,8 @@ namespace CRIXOptimizer.Core
     {
         string Name { get; }
         SettingState State { get; }
+        /// <summary>True when CRIX manages the setting and its value differs from the game's original.</summary>
+        bool ChangesValue { get; }
         string Describe();
         /// <summary>Returns true when the live value no longer matches what CRIX applied.</summary>
         bool CheckDrift();
@@ -101,6 +103,8 @@ namespace CRIXOptimizer.Core
         /// The value CRIX would restore to (captured original), or the current live value if CRIX has not changed it.
         /// Use this as the "game baseline" when computing limits such as min(baseline, cap).
         /// </summary>
+        public bool ChangesValue => State == SettingState.Applied && hasOriginal && hasApplied && !comparer.Equals(original, applied);
+
         public bool TryGetBaseline(out T value)
         {
             if (hasOriginal)

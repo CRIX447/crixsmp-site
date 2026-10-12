@@ -31,6 +31,7 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Generated (UTC): ").Append(DateTime.UtcNow.ToString("u", Inv)).Append('\n');
             sb.Append("Unofficial mod - not endorsed by Another Axiom. Values marked n/a are not available from supported APIs.\n\n");
 
+            sb.Append("== What CRIX is doing ==\n").Append(rt.ChangesSummary()).Append("\n\n");
             sb.Append("== Environment ==\n").Append(EnvironmentBlock(rt)).Append('\n');
 
             sb.Append("== Detection ==\n");
@@ -43,10 +44,17 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Discord: ").Append(rt.Discord.Describe()).Append('\n');
             sb.Append("ReShade: ").Append(rt.ReShade.Describe()).Append('\n');
             sb.Append("Potassium installed: ").Append(rt.PotassiumInstalled ? "yes" : "no").Append('\n');
+            sb.Append("Sakuraa Client: ").Append(rt.Sakuraa.Detected ? rt.Sakuraa.Detail : "not detected").Append('\n');
+            sb.Append("Cameras: ").Append(rt.Cameras.Describe()).Append('\n');
+            sb.Append("Streaming (auto mode): ").Append(UI.DashboardText.StreamingLine(rt)).Append('\n');
+            sb.Append("Base profile: ").Append(rt.BaseSection).Append(", running profile: ").Append(rt.ActiveSection).Append('\n');
             AppendLines(sb, "Advice", rt.VirtualDesktop.Advice);
             AppendLines(sb, "Advice", rt.Streaming.Advice);
             AppendLines(sb, "Advice", rt.Discord.Advice);
             AppendLines(sb, "Advice", rt.ReShade.Advice);
+            AppendLines(sb, "Advice", rt.Sakuraa.Advice);
+            if ((rt.Apps & CompanionApp.Spotify) != 0)
+                sb.Append("Advice: ").Append(OptimizerRuntime.SpotifyAdvice).Append('\n');
             sb.Append('\n');
 
             sb.Append("== Performance (live window) ==\n");
@@ -81,6 +89,10 @@ namespace CRIXOptimizer.Diagnostics
             if (rt.Graphics != null)
             {
                 sb.Append("Render pipeline: ").Append(GPU.RenderPipelineInfo.Describe(rt.Graphics.Pipeline)).Append(" (").Append(rt.Graphics.PipelineAssetType).Append(")\n");
+                sb.Append("Render scale lever: ").Append(rt.Graphics.UsesUrpAsset ? "URP asset renderScale" : "XRSettings.eyeTextureResolutionScale")
+                  .Append(" (check: ").Append(rt.Graphics.RenderScaleCheck).Append(")\n");
+                foreach (string note in rt.Graphics.Notes)
+                    sb.Append("Note: ").Append(note).Append('\n');
                 sb.Append("Texture limit API: ").Append(rt.Graphics.TextureLimitApi).Append('\n');
                 sb.Append("Incremental GC: ").Append(rt.Graphics.IncrementalGcAvailable ? "yes" : "no").Append('\n');
             }

@@ -7,7 +7,7 @@
     <RootNamespace>CRIXOptimizer</RootNamespace>
     <LangVersion>10</LangVersion>
     <Nullable>disable</Nullable>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>CRIX OPTIMIZER</Product>
     <Description>Unofficial BepInEx performance mod for Gorilla Tag PCVR (derived from Potassium 1.0.0).</Description>
     <Copyright>Copyright (C) 2026 CRIX OPTIMIZER contributors; portions Copyright (C) 2026 Potassium contributors. GPL-3.0-or-later.</Copyright>

@@ -2,8 +2,9 @@
 
 **An unofficial, experimental BepInEx performance mod for Gorilla Tag on PC VR (Steam / Meta PC).**
 It is derived from [Potassium 1.0.0](https://github.com/niko-tar-gz/Potassium) (GPL-3.0) and extends it with
-engine-level graphics profiles, an adaptive quality engine, frame-time diagnostics, benchmarking, safe settings
-management and compatibility tooling for Virtual Desktop, OBS, Discord, ReShade and multi-mod setups.
+engine-level graphics profiles, an adaptive quality engine, automatic streaming/recording mode, frame-time
+diagnostics, benchmarking, safe settings management and compatibility tooling for Virtual Desktop, OBS, Streamlabs,
+Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
 
 > **Not affiliated with or endorsed by Another Axiom (Gorilla Tag's developer).** Unofficial mods can break after
 > any game update, and using mods may be restricted by the game's current rules, especially in public lobbies.
@@ -18,6 +19,22 @@ management and compatibility tooling for Virtual Desktop, OBS, Discord, ReShade 
 | Tested inside Gorilla Tag | **No.** The development environment had no Gorilla Tag install, GPU or headset. Loading in the real game, VR-runtime behaviour and every performance effect are **untested**. |
 | Benchmarks | **None yet.** No performance numbers are claimed. The mod ships a benchmark recorder and a reproducible protocol ([docs/BENCHMARKING.md](docs/BENCHMARKING.md)) so results can be measured honestly on real hardware. |
 
+## New in 1.1.0
+
+- **It now changes things on URP.** Gorilla Tag PC appears to use Unity's Universal Render Pipeline, which ignored most
+  1.0.0 graphics settings. Render scale, MSAA, shadow distance/cascades, additional lights and soft shadows now go
+  through the URP asset (details in [CHANGELOG.md](CHANGELOG.md)).
+- **Adaptive quality is on by default** and also reduces CPU load in busy lobbies (distant cosmetics, cosmetic update
+  rates). It undoes resolution drops that do not help.
+- **Stronger presets.** Existing profile files are upgraded, and any value you edited yourself is kept.
+- **Auto streaming mode:** OBS (read-only WebSocket), Streamlabs and Discord switch to a streaming profile
+  automatically and back afterwards. Setup: [INSTALLATION.md](INSTALLATION.md#auto-streaming-mode-obs-streamlabs-discord).
+- **Spotify, Sakuraa Client/GTFX and extra-camera awareness** (detection and advice only; other programs and mods are never changed).
+- The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing.
+
+VR frame rates are capped at the headset refresh rate, so if the game already holds it the FPS number cannot rise;
+gains show as fewer drops and steadier frame times. Measure with the benchmark recorder (F6).
+
 The request this project came from asked for "100× better" than Potassium. That is not a measurable goal and no such
 claim is made. What CRIX does provide is listed below, with what each part can and cannot do.
 
@@ -28,18 +45,20 @@ claim is made. What CRIX does provide is listed below, with what each part can a
 | **Game stutter fixes** (from Potassium) | Spreads room-join scoreboard creation and scoreboard refreshes over frames; creates the remote-rig pool over several frames; defers Shared Blocks start-up until you enter that zone; skips redundant entity scans in inactive zones; handles the forced GC on room leave (keep / skip / incremental); skips forced unused-asset sweeps; speeds up the custom-map sanitizer. | on |
 | **Visual update throttles** (from Potassium, reworked) | Voice-reactive cosmetics, cosmetic proximity checks and texture transitions update at a set rate (30/s by default). CRIX staggers instances across frames, so the remaining work is spread evenly instead of arriving in spikes. | on |
 | **Distant cosmetic culling** (from Potassium) | Tightens the game's own remote-player cosmetic culling distances/counts. Local rendering only. | on |
-| **Graphics settings** (new) | Per-profile engine settings through documented Unity APIs: VR render scale, shadow quality/distance/resolution/cascades, LOD bias, pixel lights, reflection probes, soft particles, particle raycast budget, skin weights, camera HDR, XR occlusion mesh, desktop mirror mode, MSAA and texture mip limit (both off by default). Most values are **limits**, never more expensive than the game's own value. | on (mild in Balanced) |
+| **Graphics settings** (new) | Per-profile engine settings through documented Unity APIs: VR render scale, shadow quality/distance/resolution/cascades, LOD bias, pixel lights, reflection probes, soft particles, particle raycast budget, skin weights, camera HDR, XR occlusion mesh, desktop mirror mode, MSAA cap (performance presets only) and texture mip limit (off by default). Under URP, render scale, MSAA, shadow distance/cascades, additional lights and soft shadows are set on the URP asset. Most values are **limits**, never more expensive than the game's own value. | on |
 | **Frame pacing** (new) | Async upload time slice, background loading priority, incremental GC time slice: fewer hitches while maps and cosmetics load. | on (per profile) |
-| **Adaptive quality** (new) | Holds a target frame rate (headset refresh rate by default) by stepping shadow distance, LOD bias, pixel lights and render scale down, then back up, with hysteresis, cooldown and back-off. Uses runtime-reported GPU time when available to tell GPU-bound from CPU-bound. | **off** |
+| **Adaptive quality** (new) | Holds a target frame rate (headset refresh rate by default) by stepping distant cosmetic detail, cosmetic update rates, shadow distance, LOD bias, lights and render scale down, then back up, with hysteresis, cooldown and back-off. Tells GPU-bound from CPU-bound using runtime-reported GPU time, or by checking whether a resolution drop actually helped. Does nothing while the target is held. | on |
+| **Auto streaming mode** (1.1) | Switches to OBSStreaming / DiscordCall while you record or stream and back afterwards. OBS state is read through OBS's WebSocket (read-only, localhost), Streamlabs through its local API (read-only); Discord by process. | on |
 | **Diagnostics** (new) | FPS, average FPS, 1% low, frame-time σ/p99/max, frames over budget, GC rate, GC-coincident hitches, managed memory and growth trend, Unity graphics-memory estimate, XR runtime GPU/compositor time and dropped frames when the runtime reports them, CRIX's own overhead. | on (no UI) |
 | **Dashboard** (new) | Desktop-window overlay (not in the headset) showing the above, each value labelled measured / derived / runtime-reported / n/a. | **off** |
 | **Benchmark recorder** (new) | Hotkey-triggered capture → CSV plus summary (avg, two 1% low definitions, 0.1% low, σ, over-budget %, hitches, GCs, process CPU %). | on demand |
 | **Compatibility** (new) | Lists loaded BepInEx plugins; reports Harmony patch overlaps with other mods; detects settings changed by other mods and stops managing them; steps aside if Potassium is also installed; each patch fails on its own without stopping the others. | on |
-| **Environment detection** (new) | Read-only detection of Virtual Desktop, OBS/Streamlabs, Discord, SteamVR, Quest Link (process names) and ReShade / OBS game-capture / Discord / Steam / RTSS hooks (game folder and the game's own loaded DLLs). Optional auto profile selection. | detection on, auto-select **off** |
+| **Environment detection** (new) | Read-only detection of Virtual Desktop, OBS/Streamlabs, Discord, Spotify, SteamVR, Quest Link (process names) and ReShade / OBS game-capture / Discord / Steam / RTSS hooks (game folder and the game's own loaded DLLs). Sakuraa Client detection and a camera inventory (extra cameras such as spectator cams and their pixel load). Optional auto profile selection. | detection on, auto-select **off** |
 
 CRIX **never** changes gameplay, physics, player movement, networking or multiplayer behaviour, never writes the
 game's saved settings (PlayerPrefs), and never reads, injects into, modifies, re-prioritises or terminates other
-programs (Virtual Desktop, OBS, Discord, ReShade, SteamVR, other mods).
+programs (Virtual Desktop, OBS, Streamlabs, Discord, Spotify, ReShade, SteamVR, Sakuraa, other mods). The OBS and
+Streamlabs connections are read-only status queries on 127.0.0.1.
 
 ## Profiles
 
@@ -96,8 +115,14 @@ Switching profile applies immediately, with no restart. The full table of built-
 - **MSAA changes** may need a game restart to reach the VR eye textures on some runtimes. The dashboard shows the
   MSAA actually in use.
 - **Desktop mirror mode** uses Unity's XR mirror API. Some runtimes or game cameras may ignore it.
-- **Built-in-pipeline settings** (shadow quality/resolution/cascades, MSAA, pixel lights, soft particles) are skipped
-  automatically if the game uses URP/HDRP.
+- **Built-in-pipeline settings** (shadow quality/resolution, pixel lights, soft particles) are skipped automatically
+  if the game uses URP/HDRP; the URP asset's own properties are used where it has public setters. URP ignores render
+  scales within 0.05 of 1.0, so very small render-scale changes do nothing (the system report shows the check).
+- **GTFX (Sakuraa Client's shaders) cannot be optimised by CRIX.** It is closed, injected by Sakuraa's launcher, and
+  its settings belong to Sakuraa. Use GTFX's lighter presets in Sakuraa while streaming. CRIX reduces the game's own
+  load around it and reports extra cameras (e.g. a spectator camera) and their pixel load.
+- **Discord's call/Go Live state is not readable** without injecting into Discord, so "Discord running" is the signal.
+- **The OBS WebSocket password** is stored in plain text in the BepInEx config (it is never logged).
 - **The dashboard is drawn into the game window**, so OBS window/game capture will record it. Keep it off while live.
 - **Hotkeys** need keyboard focus on the game window.
 - Throttled visual updates are cosmetic, but they do run less often (same trade-off as Potassium).

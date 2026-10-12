@@ -64,12 +64,16 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
-        public void NoPresetUsesFullSanitizerReplacementOrMsaaChanges()
+        public void NoPresetUsesFullSanitizerReplacementAndMsaaIsOnlyCappedInPerformancePresets()
         {
             foreach (KeyValuePair<string, OptimizationSettings> pair in ProfilePresets.All())
             {
                 Assert.True(pair.Value.MapSanitizer != SanitizerMode.FullReplacement, pair.Key + " must not bypass the game's sanitizer by default");
-                Assert.Equal(-1, pair.Value.MsaaSamples, pair.Key + " leaves MSAA alone by default");
+                bool performance = pair.Key == "MaximumPerformance" || pair.Key == "VirtualDesktop.Performance";
+                if (performance)
+                    Assert.Equal(2, pair.Value.MsaaSamples, pair.Key + " caps MSAA at 2x");
+                else
+                    Assert.Equal(-1, pair.Value.MsaaSamples, pair.Key + " leaves MSAA alone by default");
                 Assert.Equal(-1, pair.Value.TextureMipLimit, pair.Key + " leaves texture resolution alone by default");
             }
         }
@@ -198,17 +202,102 @@ namespace CRIXOptimizer.Tests
 
             string text = File.ReadAllText(profilesPath);
             int section = text.IndexOf("[OBSStreaming]", StringComparison.Ordinal);
-            int key = text.IndexOf("ShadowDistanceLimit = 40", section, StringComparison.Ordinal);
+            int key = text.IndexOf("ShadowDistanceLimit = 30", section, StringComparison.Ordinal);
             Assert.True(key > section, "expected default line in OBSStreaming");
-            text = text.Substring(0, key) + "ShadowDistanceLimit = 12.5" + text.Substring(key + "ShadowDistanceLimit = 40".Length);
+            text = text.Substring(0, key) + "ShadowDistanceLimit = 12.5" + text.Substring(key + "ShadowDistanceLimit = 30".Length);
             File.WriteAllText(profilesPath, text);
 
             profilesFile.Reload();
             Assert.Equal(12.5f, store.Resolve("OBSStreaming").ShadowDistanceLimit);
-            Assert.Equal(60f, store.Resolve("Balanced").ShadowDistanceLimit, "other sections untouched");
+            Assert.Equal(50f, store.Resolve("Balanced").ShadowDistanceLimit, "other sections untouched");
 
             store.ResetAllToDefaults();
-            Assert.Equal(40f, store.Resolve("OBSStreaming").ShadowDistanceLimit);
+            Assert.Equal(30f, store.Resolve("OBSStreaming").ShadowDistanceLimit);
+        }
+
+        private static string WriteFixture(string dir, string name)
+        {
+            string path = Path.Combine(dir, name);
+            using (Stream s = typeof(ConfigFileTests).Assembly.GetManifestResourceStream("profiles-1.0.0.cfg"))
+            using (FileStream f = File.Create(path))
+                s.CopyTo(f);
+            return path;
+        }
+
+        [Test]
+        public void FrozenV1PresetsMatchTheShipped100ProfilesFile()
+        {
+            string dir = TempDir();
+            var file = new ConfigFile(WriteFixture(dir, "profiles.cfg"), false);
+            int compared = 0;
+            foreach (string section in ProfilePresets.SectionNames)
+            {
+                OptimizationSettings v1 = ProfilePresetsV1.ForSection(section);
+                foreach (FieldInfo f in SettingCatalog.ProfileFields())
+                {
+                    if (f.Name == nameof(OptimizationSettings.AdaptiveMayChangeCosmetics))
+                        continue; // added in 1.1.0
+                    object stored = typeof(ConfigFile).GetMethods()
+                        .First(m => m.Name == nameof(ConfigFile.Bind) && m.IsGenericMethodDefinition && m.GetParameters().Length == 4 && m.GetParameters()[3].ParameterType == typeof(ConfigDescription))
+                        .MakeGenericMethod(f.FieldType)
+                        .Invoke(file, new object[] { section, f.Name, f.GetValue(new OptimizationSettings()), null });
+                    object value = stored.GetType().GetProperty("Value").GetValue(stored);
+                    Assert.Equal(f.GetValue(v1), value, $"{section}.{f.Name}");
+                    compared++;
+                }
+            }
+            Assert.True(compared > 300, "compared " + compared);
+        }
+
+        [Test]
+        public void UpgradeFrom100KeepsUserEditsAndAppliesNewDefaults()
+        {
+            string dir = TempDir();
+            string path = WriteFixture(dir, "profiles.cfg");
+            // The user had edited one Balanced value and one OBSStreaming value in 1.0.0.
+            string text = File.ReadAllText(path);
+            text = ReplaceInSection(text, "[Balanced]", "ShadowDistanceLimit = 60", "ShadowDistanceLimit = 45");
+            text = ReplaceInSection(text, "[OBSStreaming]", "PixelLightLimit = 2", "PixelLightLimit = 3");
+            File.WriteAllText(path, text);
+
+            var main = new ConfigFile(Path.Combine(dir, "main.cfg"), true);
+            var store = new ProfileStore(new ConfigFile(path, true), main);
+
+            Assert.Equal(0, store.MigratedFromRevision, "1.0.0 files have no revision");
+            Assert.True(store.MigratedEntries > 10, "upgraded entries: " + store.MigratedEntries);
+            OptimizationSettings balanced = store.Resolve("Balanced");
+            Assert.Equal(45f, balanced.ShadowDistanceLimit, "user edit kept");
+            Assert.Equal(2, balanced.ShadowCascadesLimit, "new default applied");
+            Assert.True(balanced.EnsureOcclusionMesh, "new default applied");
+            OptimizationSettings obs = store.Resolve("OBSStreaming");
+            Assert.Equal(3, obs.PixelLightLimit, "user edit kept");
+            Assert.Equal(30f, obs.ShadowDistanceLimit, "unchanged 1.0.0 default upgraded");
+            Assert.Equal(20f, obs.AdaptiveGpuHeadroomPercent);
+            Assert.Equal(-1f, store.Resolve("MultiMod").ShadowDistanceLimit, "unchanged presets stay");
+            Assert.True(File.ReadAllText(path).Contains("PresetRevision = " + ProfileStore.CurrentPresetRevision), "revision saved");
+
+            // A second start migrates nothing and keeps everything.
+            var again = new ProfileStore(new ConfigFile(path, true), new ConfigFile(Path.Combine(dir, "main.cfg"), true));
+            Assert.Equal(0, again.MigratedEntries);
+            Assert.Equal(45f, again.Resolve("Balanced").ShadowDistanceLimit);
+            Assert.Equal(30f, again.Resolve("OBSStreaming").ShadowDistanceLimit);
+        }
+
+        [Test]
+        public void FreshInstallNeedsNoMigration()
+        {
+            string dir = TempDir();
+            var store = new ProfileStore(new ConfigFile(Path.Combine(dir, "profiles.cfg"), true), new ConfigFile(Path.Combine(dir, "main.cfg"), true));
+            Assert.Equal(0, store.MigratedEntries);
+            Assert.Equal(50f, store.Resolve("Balanced").ShadowDistanceLimit);
+        }
+
+        private static string ReplaceInSection(string text, string section, string oldLine, string newLine)
+        {
+            int start = text.IndexOf(section, StringComparison.Ordinal);
+            int key = text.IndexOf("\n" + oldLine, start, StringComparison.Ordinal) + 1;
+            Assert.True(start >= 0 && key > start, $"{oldLine} not found in {section}");
+            return text.Substring(0, key) + newLine + text.Substring(key + oldLine.Length);
         }
 
         [Test]
@@ -236,14 +325,16 @@ namespace CRIXOptimizer.Tests
             var cfg = new PluginConfig(file);
             Assert.True(cfg.Enabled.Value);
             Assert.Equal(ProfileKind.Balanced, cfg.Profile.Value);
-            Assert.False(cfg.AdaptiveEnabled.Value, "adaptive is opt-in");
+            Assert.True(cfg.AdaptiveEnabled, "adaptive is on by default since 1.1.0");
+            Assert.True(cfg.AutoStreamingMode.Value, "auto streaming mode is on by default");
+            Assert.Equal(4455, cfg.ObsWebSocketPort.Value);
             Assert.False(cfg.DashboardVisible.Value, "dashboard is off by default");
             Assert.False(cfg.AutoSelectProfile.Value);
             Assert.Equal(PotassiumCoexistence.DeferToPotassium, cfg.WhenPotassiumInstalled.Value);
             Assert.Equal(ExternalChangePolicy.Respect, cfg.ExternalChanges.Value);
             Assert.Equal(UnityEngine.KeyCode.F8, cfg.KeyToggleDashboard.Value.MainKey);
             string text = File.ReadAllText(Path.Combine(dir, "main.cfg"));
-            foreach (string section in new[] { "[General]", "[Modules]", "[Adaptive]", "[Dashboard]", "[Diagnostics]", "[Benchmark]", "[Memory]", "[Compatibility]", "[Hotkeys]", "[Actions]" })
+            foreach (string section in new[] { "[General]", "[Modules]", "[Adaptive]", "[Dashboard]", "[Diagnostics]", "[Benchmark]", "[Memory]", "[Compatibility]", "[Hotkeys]", "[Actions]", "[Streaming]" })
                 Assert.True(text.Contains(section), "missing " + section);
         }
 

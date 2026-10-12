@@ -81,6 +81,7 @@ namespace CRIXOptimizer.Configuration
         public bool AdaptiveMayChangeRenderScale = true;
         public bool AdaptiveMayChangeShadows = true;
         public bool AdaptiveMayChangeLod = true;
+        public bool AdaptiveMayChangeCosmetics = true;
         /// <summary>Share of the frame budget the GPU should keep free when GPU timing is available (encoders, compositor).</summary>
         public float AdaptiveGpuHeadroomPercent;
 

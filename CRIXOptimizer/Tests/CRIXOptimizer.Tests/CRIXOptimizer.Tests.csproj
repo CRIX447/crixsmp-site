@@ -15,6 +15,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Fixtures/profiles-1.0.0.cfg" LogicalName="profiles-1.0.0.cfg" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../CRIXOptimizer.csproj" />
     <ProjectReference Include="../FakeGame/FakeGame.csproj" />
   </ItemGroup>

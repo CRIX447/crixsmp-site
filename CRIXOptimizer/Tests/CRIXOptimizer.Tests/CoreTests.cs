@@ -269,6 +269,21 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void ChangesValueOnlyWhenTheValueDiffers()
+        {
+            var box = new Box<int> { Value = 2 };
+            var s = new TrackedSetting<int>("cascades", () => box.Value, v => box.Value = v);
+            Assert.False(s.ChangesValue, "untouched");
+            s.Apply(2);
+            Assert.Equal(SettingState.Applied, s.State);
+            Assert.False(s.ChangesValue, "applying the game's own value is not a change");
+            s.Apply(1);
+            Assert.True(s.ChangesValue);
+            s.Release();
+            Assert.False(s.ChangesValue);
+        }
+
+        [Test]
         public void ReleaseSkipsWhenChangedAfterLastCheck()
         {
             var box = new Box<int> { Value = 4 };

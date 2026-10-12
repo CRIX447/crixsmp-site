@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 using CRIXOptimizer.Adaptive;
@@ -60,6 +61,8 @@ namespace CRIXOptimizer.Optimization
         public readonly StreamingSupport Streaming = new StreamingSupport();
         public readonly DiscordSupport Discord = new DiscordSupport();
         public readonly ReShadeSupport ReShade = new ReShadeSupport();
+        public readonly SakuraaSupport Sakuraa = new SakuraaSupport();
+        public readonly CameraInventory Cameras = new CameraInventory();
 
         public GraphicsSettingsModule Graphics { get; private set; }
         public PatchSet Patches { get; private set; }
@@ -81,6 +84,12 @@ namespace CRIXOptimizer.Optimization
         public string StartupTimeUtc { get; } = DateTime.UtcNow.ToString("u");
         public string LastAlertText { get; private set; } = "";
         public CompanionApp Apps => Scanner.Latest?.Apps ?? CompanionApp.None;
+        public readonly CaptureStateMachine Capture = new CaptureStateMachine();
+        public ObsWebSocketClient Obs { get; private set; }
+        public StreamlabsStatusClient Streamlabs { get; private set; }
+        /// <summary>The profile the user selected (ActiveSection can differ while auto streaming mode is active).</summary>
+        public string BaseSection { get; private set; } = "Balanced";
+        public string AutoProfileReason { get; private set; } = "";
         public GraphicsHook Hooks => Scanner.Latest?.Hooks ?? GraphicsHook.None;
 
         private DashboardOverlay dashboard;
@@ -91,6 +100,8 @@ namespace CRIXOptimizer.Optimization
         private bool hotkeysBroken;
         private bool shutDown;
         private string lastSuggestion;
+        private string obsClientKey;
+        private bool spotifyRunning;
         private int environmentScans;
         private float alertVisibleUntil;
         private float lastDeferredUnload = -1e9f;
@@ -99,7 +110,9 @@ namespace CRIXOptimizer.Optimization
         // adaptive accumulation (per frame)
         private double adaptiveFrameSum;
         private int adaptiveFrameCount;
-        private bool lastCpuBound;
+        private double adaptiveEmaMs;
+        private float cpuSuspectedUntil = -1f;
+        private readonly ResolutionProbe resolutionProbe = new ResolutionProbe();
 
         // timers
         private float nextQuarter, nextHalf, nextSecond, nextDrift, nextFive, nextDashboard, nextScan;
@@ -158,6 +171,8 @@ namespace CRIXOptimizer.Optimization
                 GamePatches = new GamePatchCatalog(Patches, Types, log);
             });
 
+            if (profiles.MigratedEntries > 0)
+                log.Info($"Upgraded {profiles.MigratedEntries} profile value(s) to the {ModInfo.Version} defaults. Values you had changed yourself were kept.");
             ResolveProfile();
             // With the master switch off nothing is patched now; patches are applied when CRIX is enabled.
             Guard("Game patches", () => GamePatches?.Initialize(ActiveSettings, Groups(), PotassiumInstalled, cfg.WhenPotassiumInstalled.Value, cfg.Enabled.Value));
@@ -172,6 +187,7 @@ namespace CRIXOptimizer.Optimization
             if (cfg.DashboardVisible.Value)
                 SetDashboard(true);
             ScheduleEnvironmentScan(Time.unscaledTime);
+            EnsureObsClient();
             UpdateStatus();
 
             log.Info($"{ModInfo.Name} {ModInfo.Version} loaded. Profile: {ActiveSection}. " +
@@ -200,6 +216,8 @@ namespace CRIXOptimizer.Optimization
             Guard("Game patches", () => GamePatches?.Shutdown());
             RestoreEverything("shutdown");
             Guard("Memory monitor", MemoryStats.Dispose);
+            StopObsClient();
+            StopStreamlabsClient();
             SetDashboard(false);
             GcPolicyPatches.IncrementalCollector = null;
             PatchGuard.OnFault = null;
@@ -217,7 +235,7 @@ namespace CRIXOptimizer.Optimization
 
             Frames.Sample(dt);
 
-            bool wantGpu = Benchmark.WantsGpuSamples || (cfg.AdaptiveEnabled.Value && !Suspended) || dashboard != null;
+            bool wantGpu = Benchmark.WantsGpuSamples || (cfg.AdaptiveEnabled && !Suspended) || dashboard != null;
             if (wantGpu && !IsFaulted("GPU timing"))
             {
                 try { Gpu.Sample(); } catch (Exception e) { Fail("GPU timing", e); }
@@ -291,9 +309,15 @@ namespace CRIXOptimizer.Optimization
                 nextFive = now + 5f;
                 Guard("XR info", () => Xr.Refresh(now));
                 if (Graphics != null && !Suspended && cfg.Enabled.Value)
+                {
                     Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
+                    Guard("Graphics settings", Graphics.VerifyRenderScale);
+                }
                 if (cfg.Diagnostics.Value)
+                {
                     TickMemory(now);
+                    RefreshCameras();
+                }
             }
 
             if (!lateApplied && now >= lateApplyAt)
@@ -302,6 +326,7 @@ namespace CRIXOptimizer.Optimization
                 lateApplied = true;
                 Guard("XR info", () => Xr.Refresh(now, true));
                 ApplyAll("XR initialised");
+                LogChangesSummary();
             }
 
             if (!compatScanned && now >= compatScanAt)
@@ -342,9 +367,11 @@ namespace CRIXOptimizer.Optimization
 
             if (GamePatches != null)
             {
-                try { GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, ActiveSettings, Groups(), Suspended || !cfg.Enabled.Value); }
+                try { GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, EffectiveSettings, Groups(), Suspended || !cfg.Enabled.Value); }
                 catch (Exception e) { Fail("Game patches", e); }
             }
+
+            UpdateCaptureState(now);
 
             if (cfg.Diagnostics.Value && cfg.AlertsEnabled.Value)
                 UpdateAlerts(now);
@@ -373,7 +400,8 @@ namespace CRIXOptimizer.Optimization
 
         private void ResolveProfile(bool logNotes = true)
         {
-            ActiveSection = ProfilePresets.SectionFor(cfg.Profile.Value, cfg.VirtualDesktopVariant.Value);
+            ResolveEffectiveProfile(out ProfileKind kind, out VirtualDesktopPreset vdPreset);
+            ActiveSection = ProfilePresets.SectionFor(kind, vdPreset);
             OptimizationSettings settings;
             try
             {
@@ -387,6 +415,11 @@ namespace CRIXOptimizer.Optimization
 
             SettingsNotes.Clear();
             SettingsNotes.AddRange(settings.Validate());
+            if (spotifyRunning && settings.AdaptiveGpuHeadroomPercent < 35f)
+            {
+                // Spotify's desktop app renders with the GPU by default; keep a little more headroom while it runs.
+                settings.AdaptiveGpuHeadroomPercent += 5f;
+            }
             if (ReShade.GuardActive)
                 SettingsNotes.AddRange(ReShadeGuard.Apply(settings));
             if (logNotes)
@@ -412,6 +445,7 @@ namespace CRIXOptimizer.Optimization
             Ladder.AllowRenderScale = settings.AdaptiveMayChangeRenderScale;
             Ladder.AllowShadows = settings.AdaptiveMayChangeShadows;
             Ladder.AllowLod = settings.AdaptiveMayChangeLod;
+            Ladder.AllowCosmetics = settings.AdaptiveMayChangeCosmetics;
 
             Frames.SetWindowSeconds(cfg.AverageWindowSeconds.Value);
             Alerts.ThresholdFraction = cfg.AlertThresholdPercent.Value / 100.0;
@@ -425,6 +459,7 @@ namespace CRIXOptimizer.Optimization
         {
             bool active = cfg.Enabled.Value && !Suspended;
             log.Debug($"Applying profile {ActiveSection} ({reason}); active={active}");
+            RecomputeEffective();
 
             if (GamePatches != null && !IsFaulted("Game patches"))
             {
@@ -432,8 +467,8 @@ namespace CRIXOptimizer.Optimization
                 {
                     if (active)
                         GamePatches.Ensure(ActiveSettings, Groups());
-                    GamePatches.UpdateLive(ActiveSettings, Groups(), !active);
-                    GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, ActiveSettings, Groups(), !active);
+                    GamePatches.UpdateLive(EffectiveSettings, Groups(), !active);
+                    GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, EffectiveSettings, Groups(), !active);
                 }
                 catch (Exception e)
                 {
@@ -445,8 +480,8 @@ namespace CRIXOptimizer.Optimization
             {
                 try
                 {
-                    int level = active && cfg.AdaptiveEnabled.Value ? Adaptive.Level : 0;
-                    Graphics.Apply(active ? ActiveSettings : null, active && cfg.GraphicsSettings.Value, active && cfg.FramePacingSettings.Value, level, Ladder, lastCpuBound);
+                    int level = active && cfg.AdaptiveEnabled ? Adaptive.Level : 0;
+                    Graphics.Apply(active ? ActiveSettings : null, active && cfg.GraphicsSettings.Value, active && cfg.FramePacingSettings.Value, level, Ladder, CpuBoundSuspected);
                 }
                 catch (Exception e)
                 {
@@ -556,14 +591,21 @@ namespace CRIXOptimizer.Optimization
                 return;
             }
 
+            string previousSection = ActiveSection;
             ResolveProfile(logNotes: rearm);
             if (rearm)
                 Ledger.RearmAll(); // the user chose a profile: apply it even to settings changed externally before
-            if (!cfg.AdaptiveEnabled.Value)
+            if (!cfg.AdaptiveEnabled)
                 Adaptive.Reset();
             ApplyAll(rearm ? "profile changed" : "config changed");
             if (rearm)
                 log.Info($"Profile applied: {ActiveSection}");
+            else if (previousSection != ActiveSection)
+                log.Info(AutoProfileReason.Length > 0
+                    ? $"Auto streaming mode: {AutoProfileReason} -> profile {ActiveSection} (your profile {BaseSection} returns when it ends)."
+                    : $"Auto streaming mode ended -> back to profile {ActiveSection}.");
+            EnsureObsClient();
+            EnsureStreamlabsClient();
         }
 
         private void RunAction(string key)
@@ -678,7 +720,7 @@ namespace CRIXOptimizer.Optimization
             {
                 Label = cfg.BenchmarkLabel.Value,
                 Profile = cfg.Enabled.Value && !Suspended ? ActiveSection : "Disabled",
-                Adaptive = cfg.AdaptiveEnabled.Value && cfg.Enabled.Value && !Suspended,
+                Adaptive = cfg.AdaptiveEnabled && cfg.Enabled.Value && !Suspended,
                 BudgetMs = 1000.0 / TargetFps,
                 Environment = SystemReport.EnvironmentBlock(this),
                 Settings = SystemReport.SettingsBlock(this),
@@ -692,11 +734,29 @@ namespace CRIXOptimizer.Optimization
             double frameMs = adaptiveFrameCount > 0 ? adaptiveFrameSum / adaptiveFrameCount : 0;
             adaptiveFrameSum = 0;
             adaptiveFrameCount = 0;
+            if (frameMs > 0)
+                adaptiveEmaMs = adaptiveEmaMs <= 0 ? frameMs : adaptiveEmaMs * 0.7 + frameMs * 0.3;
 
-            if (!cfg.AdaptiveEnabled.Value || Suspended || !cfg.Enabled.Value || Graphics == null || IsFaulted("Adaptive"))
+            if (!AdaptiveActive || Graphics == null || IsFaulted("Adaptive"))
+            {
+                resolutionProbe.Cancel();
                 return;
+            }
             try
             {
+                if (resolutionProbe.Sample(now, frameMs) == ProbeResult.Ineffective)
+                {
+                    cpuSuspectedUntil = now + 180f;
+                    log.Info($"Adaptive quality: lowering resolution did not make frames faster ({resolutionProbe.LastImprovement * 100:0.#}% change). " +
+                             "The bottleneck looks CPU-side (busy lobby, cosmetics), so resolution is restored and CPU-side reductions are used instead (rechecked in 3 min).");
+                    ApplyAdaptiveLevel();
+                    return;
+                }
+
+                bool cpuBefore = CpuBoundSuspected;
+                if (cpuSuspectedUntil > 0f && now >= cpuSuspectedUntil)
+                    cpuSuspectedUntil = -1f;
+
                 AdaptiveDecision decision = Adaptive.Evaluate(new AdaptiveSample
                 {
                     Now = now,
@@ -704,19 +764,53 @@ namespace CRIXOptimizer.Optimization
                     TargetMs = 1000.0 / TargetFps,
                     GpuMs = Gpu.HasGpuTime ? Gpu.AverageGpuMs : double.NaN,
                 });
-                bool boundChanged = Adaptive.LastJudgedCpuBound != lastCpuBound;
-                lastCpuBound = Adaptive.LastJudgedCpuBound;
-                if (decision.Changed || (boundChanged && Adaptive.Level < 0))
+                bool cpuNow = CpuBoundSuspected;
+                if (!decision.Changed && !(cpuNow != cpuBefore && Adaptive.Level < 0))
+                    return;
+
+                bool hadScale = Graphics.AppliedLevers.HasRenderScale;
+                float scaleBefore = Graphics.AppliedLevers.RenderScale;
+                ApplyAdaptiveLevel();
+
+                if (decision.Changed)
                 {
-                    Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, Adaptive.Level, Ladder, lastCpuBound);
-                    if (decision.Changed)
-                        log.Info($"Adaptive quality: level {Adaptive.Level} ({decision.Reason}); frame {frameMs:0.0} ms vs target {1000.0 / TargetFps:0.0} ms" +
-                                 (Gpu.HasGpuTime ? $", GPU {Gpu.AverageGpuMs:0.0} ms" : "") + (lastCpuBound ? " (CPU-bound: render scale kept)" : ""));
+                    bool loweredResolution = hadScale && Graphics.AppliedLevers.HasRenderScale && Graphics.AppliedLevers.RenderScale < scaleBefore - 0.001f;
+                    if (decision.Reason == AdaptiveReason.SteppedDown && loweredResolution && !Gpu.HasGpuTime)
+                        resolutionProbe.Begin(now, adaptiveEmaMs);
+                    else
+                        resolutionProbe.Cancel();
+                    log.Info($"Adaptive quality: level {Adaptive.Level} ({decision.Reason}); frame {frameMs:0.0} ms vs target {1000.0 / TargetFps:0.0} ms" +
+                             (Gpu.HasGpuTime ? $", GPU {Gpu.AverageGpuMs:0.0} ms" : "") + (cpuNow ? " (CPU-bound: resolution kept)" : ""));
                 }
             }
             catch (Exception e)
             {
                 Fail("Adaptive", e);
+            }
+        }
+
+        /// <summary>Profile plus adaptive CPU-side levers (cosmetic detail, update rates). What game patches run with.</summary>
+        public OptimizationSettings EffectiveSettings { get; private set; }
+
+        public bool CpuBoundSuspected => Adaptive.LastJudgedCpuBound || (cpuSuspectedUntil > 0f && Time.unscaledTime < cpuSuspectedUntil);
+
+        private void RecomputeEffective()
+        {
+            int level = AdaptiveActive ? Adaptive.Level : 0;
+            EffectiveSettings = level < 0 && ActiveSettings != null
+                ? QualityLadder.ApplyCpuLevers(ActiveSettings, QualityLadder.Compute(default, level, Ladder, CpuBoundSuspected))
+                : ActiveSettings;
+        }
+
+        /// <summary>Applies the current adaptive level to graphics and game patches.</summary>
+        private void ApplyAdaptiveLevel()
+        {
+            RecomputeEffective();
+            Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, AdaptiveActive ? Adaptive.Level : 0, Ladder, CpuBoundSuspected);
+            if (GamePatches != null && !IsFaulted("Game patches"))
+            {
+                GamePatches.UpdateLive(EffectiveSettings, Groups(), false);
+                GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, EffectiveSettings, Groups(), false);
             }
         }
 
@@ -822,6 +916,36 @@ namespace CRIXOptimizer.Optimization
                 }
                 log.Info($"Compatibility scan: {Plugins.Count} BepInEx plugin(s) loaded, {Footprint.PatchedMethods} method(s) patched by Harmony, {Footprint.Overlaps.Count} overlap(s) with CRIX.");
             });
+            RefreshSakuraa();
+        }
+
+        /// <summary>Sakuraa Client is injected by its own launcher, possibly after CRIX starts, so this re-runs with each environment scan.</summary>
+        private void RefreshSakuraa()
+        {
+            Guard("Sakuraa detection", () =>
+            {
+                bool before = Sakuraa.Detected;
+                Sakuraa.Refresh(Plugins, Footprint);
+                if (Sakuraa.Detected && !before)
+                    log.Info("Sakuraa Client detected: " + Sakuraa.Detail + ". CRIX does not change Sakuraa or GTFX.");
+                foreach (string line in Sakuraa.Advice)
+                    once.Info("sakuraa:" + line, line);
+            });
+        }
+
+        /// <summary>Lists active cameras (every 5 s while diagnostics are on). Read-only.</summary>
+        private void RefreshCameras()
+        {
+            Guard("Camera inventory", () =>
+            {
+                Cameras.Refresh(Xr.IsVrActive ? Xr.EyeTextureWidth : 0, Xr.IsVrActive ? Xr.EyeTextureHeight : 0);
+                CameraInventory.Entry big = Cameras.LargestScreenCamera;
+                if (big != null && big.PixelLoad >= 0.5 && Capture.Active != CaptureKind.None)
+                    once.Info("cam:" + big.Name,
+                        $"While streaming, camera '{big.Name}' also renders the scene to the desktop window at {big.Width}x{big.Height} " +
+                        $"(about {big.PixelLoad * 100:0}% of one VR eye's pixels, derived). If it is a spectator/shoulder camera (Sakuraa or another mod), " +
+                        "lowering the game window size or that camera's quality in its own settings saves GPU time. CRIX does not change other mods' cameras.");
+            });
         }
 
         private void ScheduleEnvironmentScan(float now)
@@ -847,6 +971,19 @@ namespace CRIXOptimizer.Optimization
                 VirtualDesktop.Update(result.Apps, Xr.OpenXRRuntimeName, Xr.DeviceName, cfg.Profile.Value);
                 Streaming.Update(result.Apps, result.Hooks, cfg.Profile.Value, cfg.DashboardVisible.Value);
                 Discord.Update(result.Apps, result.Hooks, cfg.Profile.Value);
+
+                EnsureStreamlabsClient();
+                if (compatScanned)
+                    RefreshSakuraa();
+
+                bool spotify = (result.Apps & CompanionApp.Spotify) != 0;
+                if (spotify != spotifyRunning)
+                {
+                    spotifyRunning = spotify;
+                    MarkDirty(); // adjusts GPU headroom for adaptive mode
+                    if (spotify)
+                        once.Info("spotify", SpotifyAdvice);
+                }
 
                 foreach (string line in VirtualDesktop.Advice)
                     once.Info("vd:" + line, line);
@@ -904,6 +1041,189 @@ namespace CRIXOptimizer.Optimization
                 Guard("Graphics settings", () => Graphics?.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
                 MarkDirty();
             }
+        }
+
+        // ================================================================== what is being optimised
+
+        public int ChangedSettingsCount => Ledger.Settings.Count(x => x.ChangesValue);
+        public int ActivePatchCount => Patches?.Records.Count(r => r.State == ModuleState.Active) ?? 0;
+
+        /// <summary>One readable summary of everything CRIX is doing right now (log, report, dashboard).</summary>
+        public string ChangesSummary()
+        {
+            var sb = new System.Text.StringBuilder(512);
+            if (!cfg.Enabled.Value || Suspended)
+                return "CRIX is suspended: the game runs with its own settings.";
+            sb.Append("Profile ").Append(ActiveSection);
+            if (AutoProfileReason.Length > 0)
+                sb.Append(" (auto: ").Append(AutoProfileReason).Append(")");
+            sb.Append(". ").Append(ActivePatchCount).Append(" game patch(es) active");
+            if (GamePatches?.DeferredToPotassium == true)
+                sb.Append(" (stutter fixes handled by Potassium)");
+            sb.Append(". ").Append(ChangedSettingsCount).Append(" engine setting(s) changed");
+            var changed = new List<string>();
+            foreach (ITrackedSetting s in Ledger.Settings)
+                if (s.ChangesValue)
+                    changed.Add(s.Describe());
+            if (changed.Count > 0)
+                sb.Append(": ").Append(string.Join("; ", changed.ToArray()));
+            sb.Append(". Adaptive quality ").Append(AdaptiveActive ? $"on (level {Adaptive.Level}, target {TargetFps:0} FPS)" : "off").Append('.');
+            return sb.ToString();
+        }
+
+        private void LogChangesSummary()
+        {
+            log.Info("CRIX status: " + ChangesSummary());
+            if (cfg.Enabled.Value && !Suspended && ActivePatchCount == 0 && ChangedSettingsCount == 0)
+            {
+                string why = Types == null || Types.IsEmpty ? "the game's code was not found (game update or unsupported build)"
+                    : GamePatches?.DeferredToPotassium == true ? "Potassium is installed and handles the stutter fixes"
+                    : !Xr.IsVrActive ? "no VR headset is active yet"
+                    : "every value in this profile already matches the game";
+                log.Warn("CRIX is loaded but nothing is being changed right now: " + why +
+                         ". Adaptive quality still steps in if the frame rate drops. See BepInEx/CRIXOptimizer/system-report.txt.");
+            }
+        }
+
+        // ================================================================== streaming / recording awareness
+
+        /// <summary>
+        /// The profile to run: the user's choice, or a streaming profile while auto streaming mode detects OBS or
+        /// Discord. Stronger profiles the user picked on purpose (MaximumPerformance, ReShadeCompatible, MultiMod,
+        /// Custom) are never replaced; VirtualDesktop switches to its Streaming preset.
+        /// </summary>
+        private void ResolveEffectiveProfile(out ProfileKind kind, out VirtualDesktopPreset vdPreset)
+        {
+            kind = cfg.Profile.Value;
+            vdPreset = cfg.VirtualDesktopVariant.Value;
+            BaseSection = ProfilePresets.SectionFor(kind, vdPreset);
+            AutoProfileReason = "";
+            if (!cfg.AutoStreamingMode.Value || Capture.Active == CaptureKind.None)
+                return;
+
+            if (kind == ProfileKind.VirtualDesktop)
+            {
+                if (vdPreset != VirtualDesktopPreset.Streaming)
+                {
+                    vdPreset = VirtualDesktopPreset.Streaming;
+                    AutoProfileReason = Capture.Reason;
+                }
+                return;
+            }
+            if (kind == ProfileKind.Balanced || kind == ProfileKind.OBSStreaming || kind == ProfileKind.DiscordCall)
+            {
+                ProfileKind target = Capture.Active == CaptureKind.Obs ? cfg.ObsProfile.Value : cfg.DiscordProfile.Value;
+                if (target == ProfileKind.VirtualDesktop)
+                    vdPreset = VirtualDesktopPreset.Streaming;
+                if (target != kind)
+                {
+                    kind = target;
+                    AutoProfileReason = Capture.Reason;
+                }
+            }
+        }
+
+        internal const string SpotifyAdvice =
+            "Spotify is running. Its desktop app is a Chromium-based app that uses GPU hardware acceleration by default; " +
+            "if you notice stutter, try turning that off in Spotify's settings (needs a Spotify restart). CRIX keeps a little extra GPU headroom while it runs and never touches Spotify.";
+
+        private void UpdateCaptureState(float now)
+        {
+            if (!cfg.AutoStreamingMode.Value)
+            {
+                if (Capture.Active != CaptureKind.None)
+                {
+                    Capture.Reset();
+                    MarkDirty();
+                }
+                return;
+            }
+            try
+            {
+                ObsStatus obs = Obs?.Status ?? ObsStatus.Disconnected;
+                ObsStatus slobs = Streamlabs?.Status ?? ObsStatus.Disconnected;
+                Capture.Trigger = cfg.StreamingTriggerSetting.Value;
+                Capture.HoldSeconds = cfg.StreamingHoldSeconds.Value;
+                bool changed = Capture.Update(now, new CaptureSignals
+                {
+                    Apps = Apps,
+                    Hooks = Hooks,
+                    ObsWebSocketConnected = obs.Connected || slobs.Connected,
+                    ObsStreaming = obs.Streaming || slobs.Streaming,
+                    ObsRecording = obs.Recording || slobs.Recording,
+                });
+                if (changed)
+                    MarkDirty();
+            }
+            catch (Exception e)
+            {
+                Fail("Streaming detection", e);
+            }
+        }
+
+        private void EnsureObsClient()
+        {
+            bool wanted = cfg.ObsWebSocket.Value && cfg.AutoStreamingMode.Value && !IsFaulted("OBS WebSocket");
+            string key = wanted ? cfg.ObsWebSocketPort.Value + "|" + cfg.ObsWebSocketPassword.Value : null;
+            if (key == obsClientKey)
+                return;
+            StopObsClient();
+            obsClientKey = key;
+            if (key == null)
+                return;
+            try
+            {
+                Obs = new ObsWebSocketClient(cfg.ObsWebSocketPort.Value, cfg.ObsWebSocketPassword.Value, log);
+                Obs.Start();
+            }
+            catch (Exception e)
+            {
+                Obs = null;
+                Fail("OBS WebSocket", e);
+            }
+        }
+
+        /// <summary>Streamlabs Desktop's local API needs no setup, so it is read whenever Streamlabs is running.</summary>
+        private void EnsureStreamlabsClient()
+        {
+            bool wanted = cfg.AutoStreamingMode.Value && (Apps & CompanionApp.StreamlabsDesktop) != 0 && !IsFaulted("Streamlabs API");
+            if (wanted == (Streamlabs != null))
+                return;
+            if (!wanted)
+            {
+                StopStreamlabsClient();
+                return;
+            }
+            try
+            {
+                Streamlabs = new StreamlabsStatusClient(log);
+                Streamlabs.Start();
+            }
+            catch (Exception e)
+            {
+                Streamlabs = null;
+                Fail("Streamlabs API", e);
+            }
+        }
+
+        private void StopStreamlabsClient()
+        {
+            StreamlabsStatusClient client = Streamlabs;
+            Streamlabs = null;
+            if (client == null)
+                return;
+            try { client.Stop(); } catch (Exception e) { log.Debug("Stopping Streamlabs client: " + e.Message); }
+        }
+
+        private void StopObsClient()
+        {
+            ObsWebSocketClient client = Obs;
+            Obs = null;
+            obsClientKey = null;
+            if (client == null)
+                return;
+            // Never block the game thread waiting for the background thread; it exits on its own.
+            try { client.Stop(); } catch (Exception e) { log.Debug("Stopping OBS client: " + e.Message); }
         }
 
         // ================================================================== dashboard & report
@@ -987,7 +1307,7 @@ namespace CRIXOptimizer.Optimization
 
         public PluginConfig Config => cfg;
 
-        public bool AdaptiveActive => cfg.AdaptiveEnabled.Value && cfg.Enabled.Value && !Suspended;
+        public bool AdaptiveActive => cfg.AdaptiveEnabled && cfg.Enabled.Value && !Suspended;
 
         // ================================================================== status & fault isolation
 
@@ -999,7 +1319,7 @@ namespace CRIXOptimizer.Optimization
             Status.Set("Modules", "Distant cosmetic culling", ModuleStateFor(cfg.CosmeticCulling.Value && on, "Game patches", GamePatches?.DeferredToPotassium == true));
             Status.Set("Modules", "Graphics settings", ModuleStateFor(cfg.GraphicsSettings.Value && on, "Graphics settings", false));
             Status.Set("Modules", "Frame pacing settings", ModuleStateFor(cfg.FramePacingSettings.Value && on, "Graphics settings", false));
-            Status.Set("Modules", "Adaptive quality", ModuleStateFor(cfg.AdaptiveEnabled.Value && on, "Adaptive", false));
+            Status.Set("Modules", "Adaptive quality", ModuleStateFor(cfg.AdaptiveEnabled && on, "Adaptive", false));
             Status.Set("Modules", "Diagnostics", ModuleStateFor(cfg.Diagnostics.Value, "Memory monitor", false));
             Status.Set("Modules", "Compatibility scanner", ModuleStateFor(cfg.CompatibilityScanner.Value, "Compatibility scanner", false));
             Status.Set("Modules", "Companion app detection", cfg.CompanionAppDetection.Value ? ModuleState.Active : ModuleState.Disabled);

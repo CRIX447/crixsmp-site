@@ -31,7 +31,12 @@ namespace CRIXOptimizer.Configuration
 
         private readonly Dictionary<string, List<Binding>> sections = new Dictionary<string, List<Binding>>(StringComparer.Ordinal);
 
+        /// <summary>Revision of the built-in preset values. 1 = CRIX 1.0.0, 2 = CRIX 1.1.0.</summary>
+        public const int CurrentPresetRevision = 2;
+
         public ConfigFile ProfilesFile { get; }
+        public int MigratedEntries { get; private set; }
+        public int MigratedFromRevision { get; private set; } = CurrentPresetRevision;
 
         public ProfileStore(ConfigFile profilesFile, ConfigFile mainFile)
         {
@@ -46,6 +51,7 @@ namespace CRIXOptimizer.Configuration
                 foreach (string section in ProfilePresets.SectionNames)
                     sections[section] = BindSection(profilesFile, section, ProfilePresets.ForSection(section));
                 sections["Custom"] = BindSection(mainFile, "Custom", ProfilePresets.ForSection("Custom"));
+                Migrate(profilesFile);
             }
             finally
             {
@@ -54,6 +60,40 @@ namespace CRIXOptimizer.Configuration
             }
             profilesFile.Save();
             mainFile.Save();
+        }
+
+        /// <summary>
+        /// Upgrades preset values the user never changed. BepInEx keeps values already stored in a config file,
+        /// so without this an existing 1.0.0 install would never receive improved defaults. Only entries that
+        /// still equal the old default are updated; anything the user edited is left exactly as it is.
+        /// </summary>
+        private void Migrate(ConfigFile profilesFile)
+        {
+            ConfigEntry<int> revision = profilesFile.Bind("Meta", "PresetRevision", 0,
+                new ConfigDescription("Managed by CRIX: version of the built-in preset values this file was last upgraded to. Do not edit."));
+            int from = revision.Value;
+            MigratedFromRevision = from;
+            if (from >= CurrentPresetRevision)
+                return;
+
+            int changed = 0;
+            foreach (KeyValuePair<string, List<Binding>> section in sections)
+            {
+                string presetSection = section.Key == "Custom" ? "Custom" : section.Key;
+                OptimizationSettings oldDefaults = ProfilePresetsV1.ForSection(presetSection);
+                OptimizationSettings newDefaults = ProfilePresets.ForSection(presetSection);
+                foreach (Binding binding in section.Value)
+                {
+                    object oldValue = binding.Field.GetValue(oldDefaults);
+                    object newValue = binding.Field.GetValue(newDefaults);
+                    if (Equals(oldValue, newValue) || !Equals(binding.Entry.BoxedValue, oldValue))
+                        continue;
+                    binding.Entry.BoxedValue = newValue;
+                    changed++;
+                }
+            }
+            MigratedEntries = changed;
+            revision.Value = CurrentPresetRevision;
         }
 
         public OptimizationSettings Resolve(string section)

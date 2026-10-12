@@ -65,10 +65,20 @@ namespace CRIXOptimizer.Configuration
         public static OptimizationSettings For(ProfileKind profile, VirtualDesktopPreset vdPreset = VirtualDesktopPreset.Balanced) =>
             ForSection(SectionFor(profile, vdPreset));
 
-        /// <summary>General use: the Potassium-derived stutter fixes plus a mild shadow-distance cap.</summary>
+        /// <summary>
+        /// General use: the Potassium-derived stutter fixes, capped realtime shadows and lights, the VR occlusion
+        /// mesh (skips pixels the lenses never show) and smoother asset loading. Keeps the game's resolution;
+        /// adaptive quality lowers more only when the frame rate drops.
+        /// </summary>
         public static OptimizationSettings Balanced() => new OptimizationSettings
         {
-            ShadowDistanceLimit = 60f,
+            ShadowDistanceLimit = 50f,
+            ShadowCascadesLimit = 2,
+            PixelLightLimit = 2,
+            RealtimeReflectionProbes = TriState.Off,
+            EnsureOcclusionMesh = true,
+            AsyncUploadTimeSliceMs = 1,
+            BackgroundLoading = LoadingPriority.BelowNormal,
         };
 
         /// <summary>Prioritises lower rendering workload over visuals. Noticeably softer image.</summary>
@@ -79,6 +89,7 @@ namespace CRIXOptimizer.Configuration
             ShadowDistanceLimit = 25f,
             ShadowResolution = ShadowResolutionLimit.Medium,
             ShadowCascadesLimit = 1,
+            MsaaSamples = 2,
             LodBiasLimit = 0.7f,
             PixelLightLimit = 1,
             RealtimeReflectionProbes = TriState.Off,
@@ -103,6 +114,7 @@ namespace CRIXOptimizer.Configuration
         public static OptimizationSettings VirtualDesktopBalanced() => new OptimizationSettings
         {
             ShadowDistanceLimit = 40f,
+            ShadowCascadesLimit = 2,
             PixelLightLimit = 2,
             RealtimeReflectionProbes = TriState.Off,
             EnsureOcclusionMesh = true,
@@ -118,6 +130,8 @@ namespace CRIXOptimizer.Configuration
             ShadowQuality = ShadowQualityLimit.HardOnly,
             ShadowDistanceLimit = 25f,
             ShadowResolution = ShadowResolutionLimit.Medium,
+            ShadowCascadesLimit = 1,
+            MsaaSamples = 2,
             LodBiasLimit = 0.75f,
             PixelLightLimit = 1,
             RealtimeReflectionProbes = TriState.Off,
@@ -146,33 +160,49 @@ namespace CRIXOptimizer.Configuration
         /// <summary>Virtual Desktop while also recording/streaming: leaves the desktop mirror alone so capture is unaffected.</summary>
         public static OptimizationSettings VirtualDesktopStreaming() => new OptimizationSettings
         {
-            ShadowDistanceLimit = 35f,
-            PixelLightLimit = 2,
+            ShadowDistanceLimit = 30f,
+            ShadowCascadesLimit = 2,
+            PixelLightLimit = 1,
             RealtimeReflectionProbes = TriState.Off,
             EnsureOcclusionMesh = true,
             DesktopMirror = DesktopMirrorMode.Unchanged,
             AsyncUploadTimeSliceMs = 1,
             BackgroundLoading = LoadingPriority.BelowNormal,
-            AdaptiveGpuHeadroomPercent = 15f,
+            TextureTransitionRate = 24f,
+            VoiceVisualRate = 24f,
+            ProximityRate = 24f,
+            AdaptiveGpuHeadroomPercent = 20f,
         };
 
-        /// <summary>Recording/broadcasting: steadier frame pacing; never changes what the desktop window shows.</summary>
+        /// <summary>
+        /// Recording/broadcasting (OBS, Streamlabs): leaves GPU and CPU time for capture and encoding. Keeps the
+        /// game's resolution and never changes what the desktop window shows; adaptive quality reacts sooner.
+        /// </summary>
         public static OptimizationSettings ObsStreaming() => new OptimizationSettings
         {
-            ShadowDistanceLimit = 40f,
-            PixelLightLimit = 2,
+            ShadowDistanceLimit = 30f,
+            ShadowCascadesLimit = 2,
+            PixelLightLimit = 1,
             RealtimeReflectionProbes = TriState.Off,
+            SoftParticles = TriState.Off,
+            ParticleRaycastBudgetLimit = 128,
             EnsureOcclusionMesh = true,
             DesktopMirror = DesktopMirrorMode.Unchanged,
             AsyncUploadTimeSliceMs = 1,
             BackgroundLoading = LoadingPriority.BelowNormal,
-            AdaptiveGpuHeadroomPercent = 10f,
+            TextureTransitionRate = 24f,
+            VoiceVisualRate = 24f,
+            ProximityRate = 24f,
+            CosmeticFullDetailDistance = 4f,
+            CosmeticMaximumDistance = 7f,
+            AdaptiveGpuHeadroomPercent = 20f,
         };
 
         /// <summary>Voice/video calls and screen sharing: modest game-side reductions.</summary>
         public static OptimizationSettings DiscordCall() => new OptimizationSettings
         {
-            ShadowDistanceLimit = 40f,
+            ShadowDistanceLimit = 35f,
+            ShadowCascadesLimit = 2,
             PixelLightLimit = 2,
             RealtimeReflectionProbes = TriState.Off,
             SoftParticles = TriState.Off,
@@ -182,7 +212,7 @@ namespace CRIXOptimizer.Configuration
             TextureTransitionRate = 24f,
             VoiceVisualRate = 24f,
             ProximityRate = 24f,
-            AdaptiveGpuHeadroomPercent = 5f,
+            AdaptiveGpuHeadroomPercent = 10f,
         };
 
         /// <summary>
@@ -192,6 +222,7 @@ namespace CRIXOptimizer.Configuration
         public static OptimizationSettings ReShadeCompatible() => new OptimizationSettings
         {
             ShadowDistanceLimit = 50f,
+            ShadowCascadesLimit = 2,
             PixelLightLimit = 2,
             RealtimeReflectionProbes = TriState.Off,
             AsyncUploadTimeSliceMs = 1,

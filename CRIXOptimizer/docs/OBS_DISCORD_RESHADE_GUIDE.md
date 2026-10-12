@@ -1,16 +1,32 @@
-# OBS, Discord and ReShade guide
+# OBS, Streamlabs, Discord, Spotify, Sakuraa and ReShade guide
 
-CRIX only changes Gorilla Tag. It **never** reads or changes OBS, Discord or ReShade settings, never injects into
-them, never changes process priorities and never terminates anything. The only interaction is read-only detection:
-whether their process runs, and whether their DLL is loaded into the game process.
+CRIX only changes Gorilla Tag. It **never** changes OBS, Streamlabs, Discord, Spotify, Sakuraa or ReShade settings,
+never injects into them, never changes process priorities and never terminates anything. Its interaction with them
+is read-only: whether their process runs, whether their DLL is loaded into the game process, and (1.1) OBS's and
+Streamlabs' live/recording state through their own local APIs on 127.0.0.1.
+
+## Auto streaming mode (1.1)
+
+With `[Streaming] AutoStreamingMode = true` (default), CRIX switches to `OBSStreaming` while OBS/Streamlabs is live or
+recording and to `DiscordCall` while Discord runs, then back to your profile 20 s after the signal ends. Your own
+`[General] Profile` setting is not changed. Setup of the OBS WebSocket (needed to know when OBS is actually live):
+[INSTALLATION.md](../INSTALLATION.md#auto-streaming-mode-obs-streamlabs-discord).
+
+| Signal | How CRIX reads it | What it can see |
+|---|---|---|
+| OBS Studio 28+ | obs-websocket v5 on 127.0.0.1:4455 (your password), requests `GetStreamStatus`/`GetRecordStatus` and listens to their state events | live / recording / idle |
+| OBS without WebSocket | process `obs64`/`obs32` | running only |
+| Streamlabs Desktop | its local JSON-RPC API on 127.0.0.1:28194, `StreamingService.getModel` every 5 s | live / recording / idle |
+| Discord | process name, or Discord's overlay DLL in the game | running only (calls/Go Live are not readable without injection) |
 
 ---
 
 ## OBS Studio / Streamlabs (`OBSStreaming` profile)
 
-**What CRIX does:** reduces game-side GPU work (shadow distance ≤ 40 m, ≤ 2 pixel lights, no realtime reflections),
-smooths frame pacing during loads (1 ms upload slice, lower background-loading priority) and applies Potassium's
-stutter fixes. It does **not** change the desktop mirror, so the image OBS captures stays the same. It warns if the
+**What CRIX does:** reduces game-side GPU and CPU work (shadow distance ≤ 30 m, ≤ 2 shadow cascades, ≤ 1
+additional/pixel light, no realtime reflections, soft particles off, cosmetic visual updates at 24/s, distant
+cosmetics culled a little sooner), keeps 20% GPU headroom for adaptive mode, smooths frame pacing during loads (1 ms
+upload slice, lower background-loading priority) and applies Potassium's stutter fixes. It does **not** change the desktop mirror, so the image OBS captures stays the same. It warns if the
 dashboard is visible while OBS's game-capture hook is loaded (the dashboard would appear on stream).
 
 **What CRIX cannot do:** fix encoder overload, upload bandwidth, dropped network frames, capture-card problems or OBS
@@ -32,7 +48,7 @@ administrator (OBS documents that this gives its rendering higher GPU priority).
 
 1. Profile `OBSStreaming` (or `VirtualDesktop` + preset `Streaming` when you also play over Virtual Desktop).
 2. Dashboard **off** while live (F8). Alerts still go to the log.
-3. Optional: `[Adaptive] Enabled = true` with `[Adaptive] MinimumQualityLevel = -4` to absorb heavy scenes.
+3. Adaptive quality is on by default (`[Adaptive] Mode = On`); `[Adaptive] MinimumQualityLevel = -4` lets it go further in heavy scenes.
 4. Record a benchmark (F6) with OBS idle and with OBS recording, and compare (see [BENCHMARKING.md](BENCHMARKING.md)).
 
 ---
@@ -42,12 +58,39 @@ administrator (OBS documents that this gives its rendering higher GPU priority).
 Works the same whether or not Discord is installed. CRIX does not touch calls, audio, the microphone or Discord itself.
 
 **What CRIX does:** modest game-side reductions, so the GPU encoder used for video/screen share and the CPU used for
-voice processing have more room: shadow distance ≤ 40 m, ≤ 2 pixel lights, no realtime reflections, soft particles off,
-cosmetic visual updates at 24/s, smoother loading. If Discord's in-game overlay DLL is loaded into the game, CRIX
+voice processing have more room: shadow distance ≤ 35 m, ≤ 2 shadow cascades, ≤ 2 pixel/additional lights, no
+realtime reflections, soft particles off, cosmetic visual updates at 24/s, smoother loading, 10% GPU headroom. If Discord's in-game overlay DLL is loaded into the game, CRIX
 mentions it: overlays hook the game's graphics presentation and can add frame-time spikes.
 
 Discord-side options worth testing (all in Discord's own settings; names vary by version): hardware acceleration,
 the in-game overlay on/off, and screen-share resolution/frame rate.
+
+---
+
+## Spotify
+
+Detected by process name. Spotify's desktop app uses GPU hardware acceleration by default. If you see stutter while
+it plays, turn that off in Spotify's settings (restart Spotify). While Spotify runs, adaptive mode keeps 5% more GPU
+headroom. Nothing in Spotify is read or changed.
+
+---
+
+## Sakuraa Client and GTFX
+
+Sakuraa Client is a commercial Gorilla Tag client with camera/casting features. GTFX is its own closed shader/effects
+system, injected by Sakuraa's launcher. CRIX:
+
+- detects Sakuraa (its assemblies, plugin GUIDs and Harmony patches) and lists it in the log and system report;
+- lists every extra camera (spectator/shoulder camera, minimap, tablet, replay viewer) with its resolution and
+  derived pixel load relative to one VR eye, and points out a large desktop camera while you stream;
+- reduces the game's own load around Sakuraa as usual.
+
+CRIX does **not** change Sakuraa, GTFX or Sakuraa's cameras (that would be changing another mod's settings). To make
+GTFX cheaper, choose a lighter GTFX preset inside Sakuraa while streaming. Sakuraa sets Unity's
+`targetFrameRate`/`vSyncCount`; VR runtimes ignore those, and CRIX does not manage them.
+
+Use the official client. Rebuilt "recovered" copies of Sakuraa shared on GitHub were reported to bundle a hidden extra
+library; CRIX warns when it sees a plugin GUID used by such copies.
 
 ---
 

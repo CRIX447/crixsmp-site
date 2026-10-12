@@ -7,12 +7,17 @@ Plugin (BepInEx entry, thin)
      ├─ GamePatchCatalog ── Potassium-derived Harmony patches (CPU/, Memory/, GPU/CosmeticCulling)
      │     GameTypes (name index of Assembly-CSharp) + Accessors (compiled delegates) + PatchSet (per-patch, cleanup)
      │     patches read static Live.* flags  ◄── UpdateLive / UpdateThrottleIntervals
-     ├─ GraphicsSettingsModule ── engine settings via SettingsLedger (TrackedSetting<T> per value)
+     ├─ GraphicsSettingsModule ── engine settings via SettingsLedger (TrackedSetting<T> per value);
+     │     under URP: public properties of the active URP asset (render scale, MSAA, shadows, lights)
      ├─ AdaptiveController + QualityLadder ── level → lever values → GraphicsSettingsModule.Apply
+     │     + CPU levers (cosmetic detail, update rates) → EffectiveSettings → game patches
+     │     ResolutionProbe ── did lowering resolution help? if not: CPU-bound for 3 min
+     ├─ CaptureStateMachine ◄── ObsWebSocketClient / StreamlabsStatusClient (worker threads, read-only,
+     │     127.0.0.1) + process/hook detection ──► effective profile (auto streaming mode)
      ├─ FrameTimeMonitor (FrameStatistics), GpuTimingProbe (XRRuntimeInfo), MemoryMonitor (TrendAnalyzer)
      ├─ DegradationDetector (alerts), BenchmarkRecorder (BenchmarkMath, worker-thread writes)
      ├─ EnvironmentScanner (worker thread) ──► VirtualDesktop/Streaming/Discord/ReShade support (advice, guard)
-     ├─ PluginInventory, HarmonyFootprint (compatibility scan, once + on demand)
+     ├─ PluginInventory, HarmonyFootprint (compatibility scan, once + on demand), SakuraaSupport, CameraInventory
      └─ DashboardOverlay (exists only while visible) ◄── DashboardText (rebuilt 2×/s), SystemReport
 ```
 
@@ -43,5 +48,12 @@ Plugin (BepInEx entry, thin)
 `Awake` → bind configs → index game types → apply needed patches (lazily per group) → apply profile → start
 background environment scan. At +5 s the profile is re-applied, because XR is often initialised after plugins load.
 At +6 s the compatibility scan runs; at +20 s the system report is written.
+After the +5 s re-apply, a `CRIX status:` line summarises what is being changed. The OBS WebSocket client starts at
+load (if enabled), and the Streamlabs client starts when Streamlabs is detected. Both run on background threads and
+publish an immutable status snapshot that the main thread reads once per second.
+
 `OnDestroy` / `OnApplicationQuit` → release deferred work (Shared Blocks, scoreboards) → unpatch → restore every
 ledger setting (logging any that could not be restored) → dispose profiler recorders → remove the dashboard.
+
+Profile files carry `[Meta] PresetRevision`. On load, `ProfileStore` upgrades entries that still equal the previous
+release's default (frozen in `ProfilePresetsV1`) to the current default, and keeps every edited value.

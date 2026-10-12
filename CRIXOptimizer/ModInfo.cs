@@ -7,7 +7,7 @@ namespace CRIXOptimizer
     {
         public const string Guid = "com.crix.crixoptimizer";
         public const string Name = "CRIX OPTIMIZER";
-        public const string Version = "1.0.0";
+        public const string Version = "1.1.0";
         public const string HarmonyId = Guid;
         public const string GameProcess = "Gorilla Tag.exe";
 
