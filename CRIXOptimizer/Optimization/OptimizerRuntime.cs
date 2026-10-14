@@ -1348,21 +1348,27 @@ namespace CRIXOptimizer.Optimization
             bool vd = runtime.Contains("virtualdesktop") || runtime.Contains("vdxr") || VirtualDesktop.Detected != VirtualDesktopSupport.Path.NotDetected;
             bool link = !vd && (runtime.Contains("oculus") || runtime.Contains("meta") || (Apps & CompanionApp.MetaQuestLink) != 0);
             bool steamvr = runtime.Contains("openvr") || runtime.Contains("steamvr");
-            string where = vd ? "in Virtual Desktop (VR Graphics Quality and VR Frame Rate)"
-                : link ? "in the Meta Quest Link app (Devices > Graphics Preferences: Render resolution and Refresh rate) and in the Oculus Debug Tool (Pixel Density 0 = default)"
-                : steamvr ? "in SteamVR (Settings > Video: resolution and refresh rate)"
+            // Where each setting lives (menu names as the apps showed them when this was written).
+            string whereRate = vd ? "in Virtual Desktop (in the headset: Settings > Streaming > VR Frame Rate). Also check SSW there: " +
+                                    "'Always enabled' makes the game render at half the frame rate; use Automatic, or Disabled to see the real frame rate"
+                : link ? "in the Meta Quest Link app (Devices > your headset > Graphics Preferences > Refresh rate)"
+                : steamvr ? "in SteamVR (Settings > Video > refresh rate) and check that Motion Smoothing is not locking the game to half rate"
+                : "in your VR app (Virtual Desktop, Meta Quest Link or SteamVR)";
+            string whereResolution = vd ? "in Virtual Desktop (Settings > Streaming > VR Graphics Quality: High or lower)"
+                : link ? "in the Meta Quest Link app (Graphics Preferences > Render resolution: default) and in the Oculus Debug Tool (Pixel Density 0 = default)"
+                : steamvr ? "in SteamVR (Settings > Video > render resolution)"
                 : "in your VR app (Virtual Desktop, Meta Quest Link or SteamVR)";
 
             bool runtimeRate = Xr.RefreshRateSource == "XR display subsystem" || Xr.RefreshRateSource == "XRDevice";
             if (Xr.IsVrActive && runtimeRate && Xr.RefreshRate > 1f && Xr.RefreshRate < 70f)
-                SetupAdvice.Add($"The headset runs at {Xr.RefreshRate:0} Hz, so the game can never exceed {Xr.RefreshRate:0} FPS. Set 72, 80 or 90 Hz {where}.");
+                SetupAdvice.Add($"The VR runtime runs the game at {Xr.RefreshRate:0} Hz, so it can never exceed {Xr.RefreshRate:0} FPS. Set 72, 80 or 90 Hz {whereRate}.");
             else if (Xr.IsVrActive && runtimeRate && ActiveSection == "HighRefresh" && Xr.RefreshRate > 1f && Xr.RefreshRate < 110f)
-                SetupAdvice.Add($"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. " + RefreshRateAdvice);
+                SetupAdvice.Add($"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. Set 120 Hz {whereRate}.");
 
             double mp = Graphics?.EyeMegapixelsAtScale1 ?? 0;
             if (Xr.IsVrActive && mp > 12)
                 SetupAdvice.Add($"The VR runtime asks the game to render {mp:0} megapixels per eye at render scale 1.0 (a Quest 3 at default settings renders about {EyeResolution.Quest3DefaultMegapixels:0.0}). " +
-                                $"That is far more than the headset can show and the main reason for a low frame rate on most GPUs. Lower the resolution {where}. " +
+                                $"That is far more than the headset can show and the main reason for a low frame rate on most GPUs. Lower the resolution {whereResolution}. " +
                                 "Until then CRIX caps what the game renders (MaxEyeMegapixels in the profile).");
 
             if ((Hooks & GraphicsHook.NvidiaOverlay) != 0 && (vd || link))
@@ -1393,10 +1399,6 @@ namespace CRIXOptimizer.Optimization
             }
         }
 
-        internal const string RefreshRateAdvice =
-            "VR frame rates are capped at the headset refresh rate. For 120 FPS set 120 Hz in your VR runtime: Virtual Desktop (VR Frame Rate), " +
-            "Meta Quest Link/Air Link (Meta Quest Link app > Devices > Graphics Preferences > Refresh rate) or SteamVR (per-application video settings). " +
-            "120 Hz also makes Gorilla Tag run its physics 120 times a second, so it needs more CPU than 90 Hz.";
 
         // ================================================================== streaming / recording awareness
 

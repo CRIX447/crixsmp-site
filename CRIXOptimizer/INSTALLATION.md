@@ -85,7 +85,8 @@ No mod can promise a frame rate: it depends on the headset, the lobby, the map a
    rate, and when a frame is late the runtime's reprojection (Virtual Desktop's SSW, Meta's ASW, SteamVR's motion
    smoothing) locks the game to **half** the rate: 60 FPS at 120 Hz, 45 at 90 Hz. If you are stuck at or below
    60 FPS at 120 Hz, start at 90 Hz (or 72/80 Hz) and only go up once that is steady. Set it in your VR runtime:
-   Virtual Desktop → *VR Frame Rate* 120; Meta Quest Link / Air Link → Meta Quest Link app → *Devices* → *Graphics
+   Virtual Desktop → *Settings* → *Streaming* → *VR Frame Rate* 120 (and *SSW* not on *Always enabled*, which renders
+   the game at half the rate); Meta Quest Link / Air Link → Meta Quest Link app → *Devices* → *Graphics
    Preferences* → *Refresh rate* 120 Hz; SteamVR → *Settings* → *Video* → per-application or headset refresh rate.
    The dashboard (F8) shows the refresh rate the runtime reports, and the log warns if HighRefresh runs below 110 Hz.
 2. **At 120 Hz the CPU is usually the limit.** Each frame gets 8.3 ms instead of 11.1 ms, and Gorilla Tag sets its

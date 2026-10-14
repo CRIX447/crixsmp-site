@@ -82,21 +82,26 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
    default settings): no mod can make an RTX 4060 render that at 72-90 FPS. Lower the resolution / quality preset in
    the VR app; CRIX's `MaxEyeMegapixels` cap limits the damage until then.
 
-1. **Half-rate lock.** At 120 Hz, a game that misses frames is locked to 60 FPS by reprojection (Virtual Desktop SSW,
-   Meta ASW, SteamVR motion smoothing); at 90 Hz to 45. Set the headset to **90 Hz** (or 72/80) first. To see the
-   real frame rate while testing, turn reprojection off (Virtual Desktop: *Streaming* tab, *SSW* = Disabled; Quest
-   Link: Oculus Debug Tool, *Asynchronous Spacewarp* = Disabled; SteamVR: *Video*, *Motion Smoothing* off).
-2. **Is CRIX involved?** Press **F10** in game (CRIX restores everything and steps aside) and play a minute. If the
+1. **Check the rate the game is given.** `system-report.txt` shows `Headset refresh rate`. If it says 60 Hz, the game
+   cannot exceed 60 FPS whatever any mod does. With Virtual Desktop, open *Settings > Streaming* in the headset and
+   set *VR Frame Rate* to 90 (or 72/80); if *SSW* is *Always enabled*, the game renders at half the frame rate (60 at
+   120 Hz), so set SSW to *Automatic* (or *Disabled* while testing). With Quest Link: Meta Quest Link app > Devices >
+   Graphics Preferences > Refresh rate; Oculus Debug Tool > Asynchronous Spacewarp. SteamVR: Settings > Video
+   (refresh rate, Motion Smoothing).
+2. **Half-rate lock.** At 120 Hz, a game that misses frames is locked to 60 FPS by reprojection (Virtual Desktop SSW,
+   Meta ASW, SteamVR motion smoothing); at 90 Hz to 45. Set the headset to **90 Hz** (or 72/80) first and only go
+   to 120 once 90 is steady.
+3. **Is CRIX involved?** Press **F10** in game (CRIX restores everything and steps aside) and play a minute. If the
    spikes are the same, they do not come from CRIX. Press F10 again to resume.
-3. **The hitch log.** CRIX logs the first 15 frames over 70 ms in `BepInEx/LogOutput.log` (`Hitch: one frame took
+4. **The hitch log.** CRIX logs the first 15 frames over 70 ms in `BepInEx/LogOutput.log` (`Hitch: one frame took
    ... ms (reason)`), then a summary once a minute, and counts them all in `system-report.txt` (`Big hitches`). The reason says whether a garbage collection
    ran, a map was loading, or CRIX had just changed a setting.
-4. **Resolution changes are hitches.** Each render-scale change reallocates the VR eye textures. Adaptive mode lowers
+5. **Resolution changes are hitches.** Each render-scale change reallocates the VR eye textures. Adaptive mode lowers
    resolution at most once a minute, undoes it at once when it does not help, and does not change it at all in the
    HighRefresh and streaming profiles. `AdaptiveMayChangeRenderScale = false` in your profile turns it off anywhere.
-5. **Other mods.** Shader packs and client mods (e.g. Sakuraa's GTFX effects and its extra cameras) can cost more
+6. **Other mods.** Shader packs and client mods (e.g. Sakuraa's GTFX effects and its extra cameras) can cost more
    than CRIX saves; test once without them.
-6. **Virtual Desktop vs Link cable.** Virtual Desktop streams over Wi-Fi; a USB cable plugged into the headset only
+7. **Virtual Desktop vs Link cable.** Virtual Desktop streams over Wi-Fi; a USB cable plugged into the headset only
    charges it. Quest Link (cable) is a different runtime with its own settings. Do not run both at once. Check the
    Virtual Desktop performance overlay: if *Game FPS* is fine but the image stutters, the cause is the encoder or
    Wi-Fi, not the game.

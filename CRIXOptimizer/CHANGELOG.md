@@ -119,6 +119,9 @@ are claimed.
   streaming profiles. Measured once when the headset starts, while CRIX is not changing the scale.
 - **Setup advice** (log and system report): headset below 70 Hz (or below 110 Hz with HighRefresh), runtime eye size
   above 12 MP, NVIDIA overlay/Instant Replay hooked in while streaming to a headset, other optimiser mods installed.
+  Each line names the setting in the VR app in use (Virtual Desktop: VR Frame Rate, SSW, VR Graphics Quality; Meta
+  Quest Link app / Oculus Debug Tool; SteamVR). In the field report this cap raised the average from 41 to 57 FPS
+  at the same 60 Hz (1 % low 11.5 -> 24.4) - one user's measurement, not a benchmark.
 - **Respecting other mods:** only an explicit profile switch (or `ReapplyProfileNow`) takes back a setting the game or
   another mod changed; Ctrl+F5, editing profile values and F10 resume leave it alone.
 - Preset revision 3 upgrades files written by 1.1.0 preview builds (HighRefresh, OBSStreaming and
