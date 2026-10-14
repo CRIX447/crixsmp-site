@@ -773,6 +773,8 @@ namespace CRIXOptimizer.Tests
             "TechniqueSorting=SMAA@SMAA.fx,MXAO@qUINT_mxao.fx,CinematicDOF@CinematicDOF.fx,LumaSharpen@LumaSharpen.fx,DisplayDepth@DisplayDepth.fx\r\n" +
             "\r\n[qUINT_mxao.fx]\r\nMXAO_SAMPLE_RADIUS=2.5\r\n";
 
+        private const string CleanPreset = "Techniques=SMAA@SMAA.fx,Vibrance@Vibrance.fx\r\n";
+
         private static string TempGame()
         {
             string dir = Path.Combine(Path.GetTempPath(), "crix-reshade-" + Guid.NewGuid().ToString("N"));
@@ -780,54 +782,224 @@ namespace CRIXOptimizer.Tests
             return dir;
         }
 
+        private static void Write(string dir, string name, string text) => File.WriteAllText(Path.Combine(dir, name), text);
+
+        private static void Cleanup(string dir)
+        {
+            try { Directory.Delete(dir, true); } catch { }
+        }
+
         [Test]
         public void FlagsUsuallyExpensiveEffectsAndPerformanceMode()
         {
             string game = TempGame();
-            File.WriteAllText(Path.Combine(game, "ReShade.ini"), "[GENERAL]\r\nPerformanceMode=0\r\nPresetPath=.\\ReShadePreset.ini\r\n".Replace("\\", Path.DirectorySeparatorChar.ToString()));
-            File.WriteAllText(Path.Combine(game, "ReShadePreset.ini"), Preset);
-            var a = new ReShade.ReShadePresetAdvisor();
-            a.Analyze(game);
-            Assert.True(a.Found);
-            Assert.Equal(false, a.PerformanceMode);
-            Assert.Equal(5, a.Enabled.Count);
-            var heavy = a.Heavy.Select(t => t.Name).ToList();
-            Assert.True(heavy.Contains("MXAO") && heavy.Contains("CinematicDOF") && heavy.Contains("DisplayDepth"), string.Join(",", heavy));
-            Assert.False(heavy.Contains("SMAA") || heavy.Contains("LumaSharpen"), "cheap effects are not flagged");
-            Assert.True(a.Advice.Any(l => l.Contains("Performance Mode is off")));
-            Assert.True(a.Advice.Any(l => l.Contains("MXAO")));
+            try
+            {
+                // ReShade writes Windows paths with a backslash; the advisor handles both separators.
+                Write(game, "ReShade.ini", "[GENERAL]\r\nPerformanceMode=0\r\nPresetPath=.\\ReShadePreset.ini\r\n");
+                Write(game, "ReShadePreset.ini", Preset);
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game);
+                Assert.True(a.Found);
+                Assert.Equal("", a.Error);
+                Assert.Equal(1, a.Runtimes.Count, "no ReShadeVR.ini: desktop runtime only");
+                Assert.Equal(Path.Combine(game, "ReShadePreset.ini"), a.PresetPath);
+                Assert.Equal(ReShade.ReShadePresetAdvisor.FromPresetPath, a.Primary.PresetSource);
+                Assert.Equal(false, a.PerformanceMode);
+                Assert.Equal(5, a.Enabled.Count);
+                var heavy = a.Heavy.Select(t => t.Name).ToList();
+                Assert.True(heavy.Contains("MXAO") && heavy.Contains("CinematicDOF") && heavy.Contains("DisplayDepth"), string.Join(",", heavy));
+                Assert.False(heavy.Contains("SMAA") || heavy.Contains("LumaSharpen"), "cheap effects are not flagged");
+                Assert.True(a.Advice.Any(l => l.Contains("Performance Mode is off")));
+                Assert.True(a.Advice.Any(l => l.Contains("MXAO")));
+            }
+            finally
+            {
+                Cleanup(game);
+            }
         }
 
         [Test]
         public void LightPresetIsACopyWithoutHeavyEffects()
         {
             string game = TempGame();
-            File.WriteAllText(Path.Combine(game, "ReShade.ini"), "[GENERAL]\nPerformanceMode=1\nPresetPath=ReShadePreset.ini\n");
-            string presetPath = Path.Combine(game, "ReShadePreset.ini");
-            File.WriteAllText(presetPath, Preset);
-            var a = new ReShade.ReShadePresetAdvisor();
-            a.Analyze(game);
-            Assert.Equal(true, a.PerformanceMode);
-            string written = a.WriteLightPreset();
-            Assert.Equal(Path.Combine(game, "ReShadePreset.CRIX-light.ini"), written);
-            Assert.Equal(Preset, File.ReadAllText(presetPath), "the user's preset is unchanged");
-            string light = File.ReadAllText(written);
-            Assert.True(light.Contains("Techniques=SMAA@SMAA.fx,LumaSharpen@LumaSharpen.fx\r\n"), light);
-            Assert.True(light.Contains("MXAO_SAMPLE_RADIUS=2.5"), "effect settings kept");
-            Assert.True(light.Contains("TechniqueSorting=SMAA@SMAA.fx,MXAO"), "sorting line kept as is");
+            try
+            {
+                Write(game, "ReShade.ini", "[GENERAL]\nPerformanceMode=1\nPresetPath=ReShadePreset.ini\n");
+                string presetPath = Path.Combine(game, "ReShadePreset.ini");
+                File.WriteAllText(presetPath, Preset);
+                string iniBefore = File.ReadAllText(Path.Combine(game, "ReShade.ini"));
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game);
+                Assert.Equal(true, a.PerformanceMode);
+                var candidates = a.LightPresetCandidates();
+                Assert.Equal(1, candidates.Count);
+                string written = a.WriteLightPreset(candidates[0]);
+                Assert.Equal(Path.Combine(game, "ReShadePreset.CRIX-light.ini"), written);
+                Assert.Equal(Preset, File.ReadAllText(presetPath), "the user's preset is unchanged");
+                Assert.Equal(iniBefore, File.ReadAllText(Path.Combine(game, "ReShade.ini")), "ReShade.ini is unchanged");
+                string light = File.ReadAllText(written);
+                Assert.True(light.Contains("Techniques=SMAA@SMAA.fx,LumaSharpen@LumaSharpen.fx\r\n"), light);
+                Assert.True(light.Contains("MXAO_SAMPLE_RADIUS=2.5"), "effect settings kept");
+                Assert.True(light.Contains("TechniqueSorting=SMAA@SMAA.fx,MXAO"), "sorting line kept as is");
+                var copy = new ReShade.ReShadePresetAdvisor();
+                copy.AnalyzePresetText(light);
+                Assert.Equal(2, copy.Enabled.Count);
+                Assert.False(copy.Heavy.Any(), "no heavy effect left in the copy");
+            }
+            finally
+            {
+                Cleanup(game);
+            }
         }
 
         [Test]
         public void HandlesMissingFilesAndOldPresetFormat()
         {
-            var a = new ReShade.ReShadePresetAdvisor();
-            a.Analyze(TempGame());
-            Assert.False(a.Found, "no ReShade.ini");
-            a.AnalyzePresetText("Techniques=MXAO,Vibrance\n");
-            Assert.Equal(2, a.Enabled.Count);
-            Assert.Equal("MXAO", a.Enabled[0].Name);
-            Assert.True(a.Enabled[0].HeavyReason != null && a.Enabled[1].HeavyReason == null);
-            Assert.Throws<InvalidOperationException>(() => a.WriteLightPreset());
+            string game = TempGame();
+            try
+            {
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game);
+                Assert.False(a.Found, "no ReShade.ini");
+                a.AnalyzePresetText("Techniques=MXAO,Vibrance\n");
+                Assert.Equal(2, a.Enabled.Count);
+                Assert.Equal("MXAO", a.Enabled[0].Name);
+                Assert.True(a.Enabled[0].HeavyReason != null && a.Enabled[1].HeavyReason == null);
+                Assert.Throws<InvalidOperationException>(() => a.WriteLightPreset(a.Primary));
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
+        public void HeadsetConfigOverridesPerKeyAndIsPreferred()
+        {
+            string game = TempGame();
+            try
+            {
+                // ReShade 6: the headset runtime reads ReShadeVR.ini, each missing key falls back to ReShade.ini.
+                Write(game, "ReShade.ini", "[GENERAL]\nPerformanceMode=1\nPresetPath=.\\Clean.ini\n");
+                Write(game, "ReShadeVR.ini", "[GENERAL]\nPresetPath=.\\VR.ini\n");
+                Write(game, "Clean.ini", CleanPreset);
+                Write(game, "VR.ini", "Techniques=MXAO@qUINT_mxao.fx,RTGlobalIllumination@qUINT_rtgi.fx,SMAA@SMAA.fx\n");
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game);
+                Assert.Equal(2, a.Runtimes.Count);
+                Assert.True(a.Primary.IsVr, "the headset runtime is the primary one");
+                Assert.Equal(Path.Combine(game, "VR.ini"), a.PresetPath);
+                Assert.Equal(true, a.PerformanceMode, "PerformanceMode falls back to ReShade.ini");
+                Assert.Equal(2, a.Heavy.Count());
+                Assert.True(a.Advice.Any(l => l.Contains("headset") && l.Contains("MXAO") && l.Contains("for each eye")), string.Join(" | ", a.Advice));
+                var candidates = a.LightPresetCandidates();
+                Assert.Equal(1, candidates.Count, "only the headset preset has expensive effects");
+                Assert.Equal(Path.Combine(game, "VR.CRIX-light.ini"), a.WriteLightPreset(candidates[0]));
+
+                Write(game, "ReShadeVR.ini", "[GENERAL]\nPresetPath=.\\VR.ini\nPerformanceMode=0\n");
+                a.Analyze(game);
+                Assert.Equal(false, a.PerformanceMode, "the headset's own PerformanceMode wins");
+                Assert.Equal(true, a.Runtimes.First(r => !r.IsVr).PerformanceMode);
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
+        public void ResolvesThePresetLikeReShade()
+        {
+            string game = TempGame();
+            try
+            {
+                Write(game, "Heavy.ini", Preset);
+                Write(game, "Clean.ini", CleanPreset);
+                Write(game, "ReShadePreset.ini", CleanPreset);
+                Write(game, "NotAPreset.ini", "[Something]\nKey=1\n");
+                var a = new ReShade.ReShadePresetAdvisor();
+
+                Write(game, "ReShade.ini", "[GENERAL]\nStartupPresetPath=.\\Heavy.ini\nPresetPath=.\\Clean.ini\n");
+                a.Analyze(game);
+                Assert.Equal(Path.Combine(game, "Heavy.ini"), a.PresetPath, "a valid start-up preset wins");
+                Assert.Equal(ReShade.ReShadePresetAdvisor.FromStartupPreset, a.Primary.PresetSource);
+                Assert.True(a.Advice.Any(l => l.Contains("start-up preset")), "advice says to change the start-up preset too");
+
+                Write(game, "ReShade.ini", "[GENERAL]\nPerformanceMode=1\n");
+                a.Analyze(game);
+                Assert.Equal(Path.Combine(game, "ReShadePreset.ini"), a.PresetPath, "no PresetPath: ReShade's default");
+                Assert.Equal(ReShade.ReShadePresetAdvisor.FromDefault, a.Primary.PresetSource);
+
+                Write(game, "ReShade.ini", "[GENERAL]\nPresetPath=.\\NotAPreset.ini\n");
+                a.Analyze(game);
+                Assert.Equal(Path.Combine(game, "ReShadePreset.ini"), a.PresetPath, "a file without Techniques is not a preset");
+
+                Write(game, "ReShade.ini", "[GENERAL]\nPresetPath=.\\Clean.fx\n");
+                a.Analyze(game);
+                Assert.Equal(Path.Combine(game, "ReShadePreset.ini"), a.PresetPath, "only .ini/.txt presets");
+
+                Write(game, "ReShade.ini", "[GENERAL]\nStartupPresetPath=.\\Missing.txt\n");
+                a.Analyze(game);
+                Assert.Equal(Path.Combine(game, "Missing.txt"), a.PresetPath, "a preset that does not exist yet is valid (new preset)");
+                Assert.False(a.Primary.PresetExists);
+                Assert.Equal(0, a.LightPresetCandidates().Count);
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
+        public void EscapedCommasCommentsAndRepeatedKeys()
+        {
+            string game = TempGame();
+            try
+            {
+                // ReShade doubles commas inside a value; "/" starts a comment; a repeated key adds to its value.
+                Write(game, "ReShade.ini", "// written by ReShade\n[GENERAL]\nPresetPath=.\\Clean,, Sharp.ini\n");
+                Write(game, "Clean, Sharp.ini", "Techniques=X@Foo,, Bar.fx,MXAO@qUINT_mxao.fx\nTechniques=Vibrance@Vibrance.fx\n");
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game);
+                Assert.Equal(Path.Combine(game, "Clean, Sharp.ini"), a.PresetPath);
+                Assert.True(a.Primary.PresetExists);
+                Assert.Equal(3, a.Enabled.Count);
+                Assert.Equal("Foo, Bar.fx", a.Enabled[0].File);
+                Assert.Equal("Vibrance", a.Enabled[2].Name);
+                string light = ReShade.ReShadePresetAdvisor.MakeLightPresetText(File.ReadAllText(Path.Combine(game, "Clean, Sharp.ini")), out int removed);
+                Assert.Equal(1, removed);
+                Assert.True(light.StartsWith("Techniques=X@Foo,, Bar.fx\r\n"), light);
+
+                Assert.True(ReShade.ReShadePresetAdvisor.SplitElements("a,,,b").SequenceEqual(new[] { "a,", "b" }), "',,' then ',' splits like ReShade");
+                Assert.True(ReShade.ReShadePresetAdvisor.SplitElements("a,").SequenceEqual(new[] { "a", "" }), "trailing comma gives an empty element");
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
+        public void FollowsReShadeBasePathOverride()
+        {
+            string game = TempGame();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(game, "reshade-files"));
+                Write(game, "ReShade.ini", "[INSTALL]\nBasePath=.\\reshade-files\n");
+                Write(Path.Combine(game, "reshade-files"), "ReShade.ini", "[GENERAL]\nPresetPath=.\\P.ini\nPerformanceMode=0\n");
+                Write(Path.Combine(game, "reshade-files"), "P.ini", Preset);
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game);
+                Assert.Equal(Path.Combine(game, "reshade-files"), a.BasePath);
+                Assert.Equal(Path.Combine(game, "reshade-files", "P.ini"), a.PresetPath);
+                Assert.Equal(false, a.PerformanceMode);
+            }
+            finally
+            {
+                Cleanup(game);
+            }
         }
     }
 

@@ -10,18 +10,21 @@ namespace CRIXOptimizer.Tests
     public sealed class RenderRateScheduleTests
     {
         /// <summary>Simulates <paramref name="seconds"/> of frames; returns the render times.</summary>
-        private static System.Collections.Generic.List<double> Run(double fps, double rate, double seconds, int hash = 12345, Func<int, double> frameTime = null)
+        private static System.Collections.Generic.List<double> Run(double fps, double rate, double seconds, double phase = 0.37, Func<int, double> frameTime = null, double typicalFrameTime = 0)
         {
             var renders = new System.Collections.Generic.List<double>();
             double period = 1.0 / rate;
             double now = 100.0;
-            double due = RenderRateSchedule.InitialDue(now, period, hash);
+            var due = new[] { RenderRateSchedule.InitialDue(now, period, phase) };
+            var eligible = new[] { true };
+            var render = new bool[1];
+            // Like the limiter: the plan uses the typical (averaged) frame time, not the last frame's.
+            double typical = typicalFrameTime > 0 ? typicalFrameTime : 1.0 / fps;
             for (int frame = 0; now < 100.0 + seconds; frame++)
             {
-                double dt = frameTime != null ? frameTime(frame) : 1.0 / fps;
-                if (RenderRateSchedule.Due(ref due, now, period, dt))
+                if (RenderRateSchedule.Plan(due, eligible, render, 1, now, period, typical) == 1)
                     renders.Add(now);
-                now += dt;
+                now += frameTime != null ? frameTime(frame) : 1.0 / fps;
             }
             return renders;
         }
@@ -64,20 +67,67 @@ namespace CRIXOptimizer.Tests
         public void IrregularFramesAndHitchesNeverBurst()
         {
             var rng = new Random(7);
-            var r = Run(0, 30, 20, 99, f => f == 300 ? 1.5 : 0.005 + rng.NextDouble() * 0.012);
+            var r = Run(0, 30, 20, 0.5, f => f == 300 ? 1.5 : 0.005 + rng.NextDouble() * 0.012, typicalFrameTime: 0.011);
             Assert.True(r.Count <= 30 * 20 + 1, $"{r.Count} renders in 20 s");
             Assert.True(MaxInAnyWindow(r, 1.0) <= 31, "no catch-up burst after a 1.5 s hitch");
-            for (int i = 1; i < r.Count; i++)
-                Assert.True(r[i] - r[i - 1] > 0.02, $"renders {r[i - 1]:0.000} and {r[i]:0.000} too close");
+            Assert.True(MaxInAnyWindow(r, 1.0 / 30) <= 2, $"at most 2 renders within one period ({MaxInAnyWindow(r, 1.0 / 30)})");
+            int hitch = Enumerable.Range(1, r.Count - 1).First(i => r[i] - r[i - 1] > 1.0); // first render after the 1.5 s gap
+            Assert.True(r[hitch + 1] - r[hitch] > 0.02, $"after the hitch: one render, then a new period ({r[hitch + 1] - r[hitch]:0.000} s)");
         }
 
         [Test]
-        public void CamerasAreStaggered()
+        public void CamerasFoundTogetherRenderInDifferentFrames()
         {
-            double period = 1.0 / 30;
-            var phases = new[] { 1, 2, 77, 4096, 40000, -3 }.Select(h => RenderRateSchedule.InitialDue(0, period, h)).ToList();
-            Assert.True(phases.All(p => p >= 0 && p < period), "initial due time within one period");
-            Assert.True(phases.Distinct().Count() == phases.Count, "different cameras start at different times");
+            // Three cameras a mod creates together (found in the same scan), 90 fps, 30/s each, with a 0.2 s hitch
+            // and a stretch where the owner switched one camera off: never two renders in one frame.
+            const double rate = 30, fps = 90;
+            double period = 1.0 / rate, now = 50.0, dt = 1.0 / fps;
+            var due = new double[3];
+            var eligible = new bool[3];
+            var render = new bool[3];
+            for (int k = 0; k < 3; k++)
+                due[k] = RenderRateSchedule.InitialDue(now, period, RenderRateSchedule.PhaseFor(k));
+            var counts = new int[3];
+            double lastDt = dt;
+            for (int frame = 0; frame < 900; frame++)
+            {
+                for (int k = 0; k < 3; k++)
+                    eligible[k] = !(k == 1 && frame >= 400 && frame < 470); // owner switched camera 1 off for a while
+                int rendered = RenderRateSchedule.Plan(due, eligible, render, 3, now, period, dt); // typical frame time
+                for (int k = 0; k < 3; k++)
+                    if (render[k])
+                        counts[k]++;
+                Assert.False(render[1] && !eligible[1], "a camera its owner switched off is never planned");
+                Assert.True(rendered <= 1, $"frame {frame}: {rendered} cameras rendered together");
+                lastDt = frame == 300 ? 0.2 : dt;
+                now += lastDt;
+            }
+            Assert.True(counts[0] >= 280 && counts[0] <= 301, $"camera 0 rendered {counts[0]} times in ~10 s");
+            Assert.True(counts[2] >= 280 && counts[2] <= 301, $"camera 2 rendered {counts[2]} times in ~10 s");
+            Assert.True(counts[1] >= 260 && counts[1] <= 301, $"camera 1 rendered {counts[1]} times (off for 70 frames)");
+        }
+
+        [Test]
+        public void FrameBudget()
+        {
+            Assert.Equal(1, RenderRateSchedule.FrameBudget(3, 30, 1.0 / 90), "3 x 30/s at 90 fps: one per frame");
+            Assert.Equal(2, RenderRateSchedule.FrameBudget(4, 30, 1.0 / 90));
+            Assert.Equal(1, RenderRateSchedule.FrameBudget(1, 30, 1.0 / 120));
+            Assert.Equal(3, RenderRateSchedule.FrameBudget(3, 60, 1.0 / 45), "game slower than the rate: all cameras");
+            Assert.Equal(0, RenderRateSchedule.FrameBudget(0, 30, 1.0 / 90));
+            Assert.Equal(1, RenderRateSchedule.FrameBudget(5, 30, 0), "unknown frame time: one");
+        }
+
+        [Test]
+        public void PhasesSpreadAnyNumberOfCameras()
+        {
+            for (int n = 2; n <= 8; n++)
+            {
+                var p = Enumerable.Range(0, n).Select(RenderRateSchedule.PhaseFor).OrderBy(x => x).ToList();
+                double minGap = Enumerable.Range(0, n).Min(i => (i + 1 < n ? p[i + 1] : p[0] + 1) - p[i]);
+                Assert.True(p.All(x => x >= 0 && x < 1), "phase within one period");
+                Assert.True(minGap > 0.3 / n, $"{n} cameras: smallest gap {minGap:0.000} of a period");
+            }
         }
     }
 

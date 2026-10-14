@@ -108,13 +108,16 @@ GTFX cheaper, choose a lighter GTFX preset inside Sakuraa while streaming. Sakur
 Every camera that renders into a texture (a minimap, a tablet or in-game screen, Sakuraa's `MiniMapCam` and
 `DisplayCam`) draws the whole scene again, every frame, on top of the two VR eyes. Most of them do not need 120
 updates a second. `[Performance] ExtraCameraMaxFps` in `com.crix.crixoptimizer.cfg` (default `0` = off) limits them:
-with `30`, each one renders at most 30 times a second, staggered so they do not all render in the same frame; between
-updates its screen keeps the last image.
+with `30`, each one renders at most 30 times a second, and the limited cameras take turns so that only as many render
+in one frame as the limit needs (for example one per frame for three cameras at 30/s and 90 FPS); between updates its
+screen keeps the last image. A game running slower than the limit renders them every frame.
 
-- How: directly before Unity draws a frame (after every mod's Update and LateUpdate), CRIX switches off the limited
-  cameras that are not due, and switches exactly those back on as soon as the frame is drawn. Every script, including
-  the camera's own mod and its menus, always sees the camera on or off as its mod set it; a camera its mod switched off
-  stays off, and CRIX never turns a camera on that its mod turned off.
+- How: directly before Unity collects the cameras for a frame (after every mod's Update and LateUpdate), CRIX switches
+  off the limited cameras that are not due, and switches exactly those back on as soon as Unity has its list, before
+  any camera renders. Every script, including the camera's own mod, its menus and its rendering callbacks, sees the
+  camera on or off as its mod set it; a camera its mod switched off stays off. (Only code that runs in the short gap
+  between those two points, such as another mod's own step placed directly before Unity's rendering, could see the
+  camera switched off.)
 - Never touched: VR cameras, the camera that draws the desktop window, and cameras whose name contains an entry of
   `[Performance] ExtraCameraExclude` (default `mirror,lck,photo,reflection,portal`: the game's mirror, its LCK/LIV
   camera, photo booth, reflection and portal cameras). A camera that starts drawing to the screen is no longer limited.
@@ -173,14 +176,21 @@ active preset's enabled effects (read-only) and logs advice, also shown in the s
 
 - **Performance Mode off:** turn it on at the bottom of the *Home* tab of the ReShade overlay (Home key). Effects are
   then compiled with fixed settings, which is faster; turn it off again only to edit settings.
+- **Headset and desktop window:** ReShade 6 keeps the headset's settings in `ReShadeVR.ini` (anything it does not set
+  comes from `ReShade.ini`) and the desktop window's in `ReShade.ini`. CRIX reads both, resolves the active preset the
+  way ReShade does (start-up preset first, then the last used preset, then `ReShadePreset.ini`) and reports each one;
+  the headset's preset is the one that matters for VR frame rate.
 - **Usually expensive effects** are listed by kind: global illumination (RTGI and similar), ambient occlusion (MXAO,
   SSAO, HBAO, ...), screen-space reflections, depth of field/bokeh, motion blur, large-radius local contrast
   (Clarity), god rays/volumetric light, and the DisplayDepth debug view (only for setup). This is a name-based
   guess, not a measurement; the real cost depends on each effect's settings. Colour, sharpening, SMAA and similar
   effects are cheap and not listed.
-- **`[Actions] CreateLightReShadePreset = true`** writes a copy of the active preset, `<preset>.CRIX-light.ini` next to
-  it, with the listed effects switched off and every effect setting kept. Your preset and `ReShade.ini` are not
-  changed. Select the copy in the preset list at the top of the ReShade overlay; select your own preset to go back.
-  Running it again overwrites only the `.CRIX-light.ini` copy.
+- **`[Actions] CreateLightReShadePreset = true`** writes a copy of each active preset that has such effects (headset
+  and desktop), `<preset>.CRIX-light.ini` next to it, with the listed effects switched off and every effect setting
+  kept. Your presets, `ReShade.ini` and `ReShadeVR.ini` are not changed. Select the copy in the preset list at the top
+  of the ReShade overlay; select your own preset to go back. If your preset is set as ReShade's start-up preset, also
+  make the copy the start-up preset (overlay, Settings) or ReShade loads the old one at the next launch. Running it
+  again overwrites only the `.CRIX-light.ini` copy. If the copy cannot be written (for example it is read-only), the
+  log says why.
 
 Measure before and after with the benchmark recorder (F6) in the same lobby type.

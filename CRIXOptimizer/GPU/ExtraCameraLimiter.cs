@@ -19,9 +19,14 @@ namespace CRIXOptimizer.GPU
     /// How a render is skipped without taking the camera away from its owner: a player-loop step that runs after
     /// every script's Update/LateUpdate and directly before Unity collects the cameras to render
     /// (PostLateUpdate.FinishFrameRendering) switches off only the limited cameras that are on and not due this
-    /// frame; RenderPipelineManager.endContextRendering switches exactly those back on once the frame's cameras have
-    /// rendered (before OnGUI and before the next frame's scripts). Every script therefore sees Camera.enabled as
-    /// its owner set it, and an owner switching its camera off or on is always respected.
+    /// frame. Unity then builds the frame's camera list, and RenderPipelineManager.beginContextRendering (raised by
+    /// URP after that list is built; URP renders only the cameras in it) switches exactly those cameras back on, so
+    /// they still skip this frame. Every script callback during rendering (culling, begin/endCameraRendering,
+    /// OnRenderObject, OnGUI) and every Update/LateUpdate therefore sees Camera.enabled as its owner set it, and an
+    /// owner switching its camera off or on is respected. The only code that can see a limited camera switched off
+    /// is code that runs between the step and the start of rendering (e.g. another mod's player-loop step inserted
+    /// directly before FinishFrameRendering). endContextRendering and a step after FinishFrameRendering are
+    /// fallbacks in case the begin event does not come.
     ///
     /// Fail-open: if CRIX's own Update stops (plugin disabled, suspended, faulted), the step does nothing; if the
     /// render pipeline's end event is not seen, the cameras are switched back on at the next step and the limiter
@@ -43,27 +48,40 @@ namespace CRIXOptimizer.GPU
         private readonly List<Camera> skipped = new List<Camera>();
         private readonly PlayerLoopSystem.UpdateFunction beforeFrameRendering;
         private readonly PlayerLoopSystem.UpdateFunction afterFrameRendering;
+        private readonly Action<ScriptableRenderContext, List<Camera>> beginContextRendering;
         private readonly Action<ScriptableRenderContext, List<Camera>> endContextRendering;
         private Camera[] buffer = new Camera[16];
+        private double[] dues = new double[8];
+        private bool[] eligible = new bool[8];
+        private bool[] render = new bool[8];
         private string[] exclusions = new string[0];
         private bool installed;
         private bool active;
         private int activeFrame = -10;
+        private double typicalFrameTime;
         private int stepFrame = -10;
         private int missedEndEvents;
         private int reinstalls;
         private string stoppedReason;
         private bool uninstallPending;
+        private int discovered;
+        private string status = "off";
 
         public float MaxFps { get; private set; }
         public int ManagedCount => managed.Count;
-        public string Status { get; private set; } = "off";
+
+        /// <summary>Shown in the system report. "paused" while CRIX's update does not allow limiting (disabled,
+        /// suspended, faulted): cameras then render normally.</summary>
+        public string Status => MaxFps > 0f && stoppedReason == null && installed && !active
+            ? "paused (CRIX disabled, suspended or faulted; cameras render normally)"
+            : status;
 
         public ExtraCameraLimiter(ILogSink log)
         {
             this.log = log ?? NullLogSink.Instance;
             beforeFrameRendering = BeforeFrameRendering;
             afterFrameRendering = AfterFrameRendering;
+            beginContextRendering = OnBeginContextRendering;
             endContextRendering = OnEndContextRendering;
         }
 
@@ -82,28 +100,31 @@ namespace CRIXOptimizer.GPU
                 stoppedReason = null; // setting it again later tries again
                 reinstalls = 0;
                 missedEndEvents = 0;
-                Status = "off";
+                status = "off";
                 return;
             }
             if (stoppedReason != null)
             {
-                Status = "stopped: " + stoppedReason;
+                status = "stopped: " + stoppedReason;
                 return;
             }
             if (GraphicsSettings.currentRenderPipeline == null)
             {
-                Status = "unavailable: needs a scriptable render pipeline (URP)";
+                status = "unavailable: needs a scriptable render pipeline (URP)";
                 return;
             }
             Install();
-            UpdateStatus();
+            if (stoppedReason == null)
+                UpdateStatus();
         }
 
-        /// <summary>Per frame from CRIX's Update: whether limiting is allowed this frame (CRIX on, not suspended).</summary>
-        public void Tick(bool allowed)
+        /// <summary>Per frame from CRIX's Update: whether limiting is allowed this frame (CRIX on, not suspended), and
+        /// the current average frame rate (a single hitch frame must not let every camera render at once).</summary>
+        public void Tick(bool allowed, double averageFps)
         {
             active = allowed;
             activeFrame = Time.frameCount;
+            typicalFrameTime = averageFps > 1 ? 1.0 / averageFps : 0;
             if (uninstallPending)
             {
                 // A stop raised inside a player-loop step: the loop is changed here, never from inside the step.
@@ -122,7 +143,7 @@ namespace CRIXOptimizer.GPU
                 // The render pipeline may not be active yet when CRIX starts: try again here.
                 if (GraphicsSettings.currentRenderPipeline == null)
                 {
-                    Status = "unavailable: needs a scriptable render pipeline (URP)";
+                    status = "unavailable: needs a scriptable render pipeline (URP)";
                     return;
                 }
                 Install();
@@ -131,6 +152,8 @@ namespace CRIXOptimizer.GPU
             }
             managed.RemoveAll(m => !UnityObjects.IsAlive(m.Camera));
             CheckStepRuns();
+            if (stoppedReason != null || !installed)
+                return; // stopped or the re-install failed: do not refill the list or overwrite the status
             int count = Camera.allCamerasCount;
             if (buffer.Length < count)
                 buffer = new Camera[Math.Max(count, buffer.Length * 2)];
@@ -148,7 +171,9 @@ namespace CRIXOptimizer.GPU
                 string name = SafeName(cam);
                 if (IsExcluded(name))
                     continue;
-                managed.Add(new Managed { Camera = cam, Name = name, Due = RenderRateSchedule.InitialDue(now, 1.0 / MaxFps, cam.GetInstanceID()) });
+                // Phases by discovery order (golden-ratio spacing), so cameras a mod creates together are spread out.
+                double phase = RenderRateSchedule.PhaseFor(discovered++);
+                managed.Add(new Managed { Camera = cam, Name = name, Due = RenderRateSchedule.InitialDue(now, 1.0 / MaxFps, phase) });
                 log.Debug("Extra camera limited: " + name);
             }
             UpdateStatus();
@@ -162,7 +187,7 @@ namespace CRIXOptimizer.GPU
                 log.Debug($"Extra camera limit released ({reason}).");
             managed.Clear();
             if (MaxFps > 0f && stoppedReason == null)
-                Status = $"paused ({reason})";
+                status = $"paused ({reason})";
         }
 
         public void Dispose()
@@ -186,7 +211,7 @@ namespace CRIXOptimizer.GPU
                     return;
                 double now = Time.unscaledTimeAsDouble;
                 double period = 1.0 / MaxFps;
-                double frameTime = Time.unscaledDeltaTime;
+                double frameTime = typicalFrameTime > 0 ? typicalFrameTime : Time.unscaledDeltaTime;
                 for (int i = managed.Count - 1; i >= 0; i--)
                 {
                     Managed m = managed[i];
@@ -201,14 +226,29 @@ namespace CRIXOptimizer.GPU
                         // It draws to the screen now (e.g. a camera handed back after a takeover): not ours to limit.
                         managed.RemoveAt(i);
                         log.Info($"Extra camera '{m.Name}' no longer renders into a texture; CRIX stopped limiting it.");
-                        continue;
                     }
-                    if (!cam.enabled)
-                        continue; // switched off by its owner: nothing to do, and nothing to restore
-                    if (RenderRateSchedule.Due(ref m.Due, now, period, frameTime))
+                }
+                int count = managed.Count;
+                if (dues.Length < count)
+                {
+                    dues = new double[count * 2];
+                    eligible = new bool[count * 2];
+                    render = new bool[count * 2];
+                }
+                for (int i = 0; i < count; i++)
+                {
+                    dues[i] = managed[i].Due;
+                    eligible[i] = managed[i].Camera.enabled; // switched off by its owner: not ours to decide
+                }
+                RenderRateSchedule.Plan(dues, eligible, render, count, now, period, frameTime);
+                for (int i = 0; i < count; i++)
+                {
+                    Managed m = managed[i];
+                    m.Due = dues[i];
+                    if (!eligible[i] || render[i])
                         continue;
-                    cam.enabled = false;
-                    skipped.Add(cam);
+                    m.Camera.enabled = false;
+                    skipped.Add(m.Camera);
                 }
             }
             catch (Exception e)
@@ -218,7 +258,7 @@ namespace CRIXOptimizer.GPU
             }
         }
 
-        /// <summary>Directly after FinishFrameRendering: normally nothing left; if the render pipeline's end event did
+        /// <summary>Directly after FinishFrameRendering: normally nothing left; if the render pipeline's events did
         /// not come, hand the cameras back here and stop after three such frames.</summary>
         private void AfterFrameRendering()
         {
@@ -228,7 +268,24 @@ namespace CRIXOptimizer.GPU
                     return;
                 RestoreSkipped();
                 if (++missedEndEvents >= 3)
-                    Stop("the render pipeline's end-of-rendering event was not seen");
+                    Stop("the render pipeline's begin/end-of-rendering events were not seen");
+            }
+            catch (Exception e)
+            {
+                Stop("error: " + e.GetType().Name + ": " + e.Message);
+            }
+        }
+
+        /// <summary>The frame's camera list is built: switch the skipped cameras back on (they still skip this frame).</summary>
+        private void OnBeginContextRendering(ScriptableRenderContext context, List<Camera> cameras)
+        {
+            try
+            {
+                if (skipped.Count > 0)
+                {
+                    RestoreSkipped();
+                    missedEndEvents = 0;
+                }
             }
             catch (Exception e)
             {
@@ -289,6 +346,7 @@ namespace CRIXOptimizer.GPU
                 return;
             }
             PlayerLoop.SetPlayerLoop(root);
+            RenderPipelineManager.beginContextRendering += beginContextRendering;
             RenderPipelineManager.endContextRendering += endContextRendering;
             installed = true;
             stepFrame = Time.frameCount;
@@ -299,6 +357,7 @@ namespace CRIXOptimizer.GPU
             if (!installed)
                 return;
             installed = false;
+            RenderPipelineManager.beginContextRendering -= beginContextRendering;
             RenderPipelineManager.endContextRendering -= endContextRendering;
             RestoreSkipped();
             try
@@ -328,6 +387,7 @@ namespace CRIXOptimizer.GPU
             }
             log.Info("Extra camera limit: the player-loop step was removed (another mod replaced the loop); adding it again.");
             installed = false;
+            RenderPipelineManager.beginContextRendering -= beginContextRendering;
             RenderPipelineManager.endContextRendering -= endContextRendering;
             Install();
         }
@@ -339,14 +399,14 @@ namespace CRIXOptimizer.GPU
             if (stoppedReason == null)
                 log.Warn("Extra camera limit stopped: " + reason + ". Cameras render normally.");
             stoppedReason = reason;
-            Status = "stopped: " + reason;
+            status = "stopped: " + reason;
             managed.Clear();
             uninstallPending = installed;
         }
 
         private void UpdateStatus()
         {
-            Status = managed.Count == 0 ? $"on (at most {MaxFps:0}/s), no render-texture cameras found"
+            status = managed.Count == 0 ? $"on (at most {MaxFps:0}/s), no render-texture cameras found"
                 : $"on (at most {MaxFps:0}/s): " + string.Join(", ", managed.ConvertAll(m => m.Name).ToArray());
         }
 

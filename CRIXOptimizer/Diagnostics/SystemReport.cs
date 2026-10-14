@@ -48,11 +48,15 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Cameras: ").Append(rt.Cameras.Describe()).Append('\n');
             sb.Append("Game desktop camera (DesktopCamera setting): ").Append(rt.DesktopCamera?.Status ?? "n/a").Append('\n');
             sb.Append("Extra camera limit ([Performance] ExtraCameraMaxFps): ").Append(rt.ExtraCameras?.Status ?? "n/a").Append('\n');
-            if (rt.ReShadeAdvisor.Found)
+            if (rt.ReShadeAdvisor.Error.Length > 0)
+                sb.Append("ReShade configuration: could not be read (").Append(rt.ReShadeAdvisor.Error).Append(")\n");
+            foreach (ReShade.ReShadePresetAdvisor.RuntimeConfig r in rt.ReShadeAdvisor.Runtimes)
             {
-                sb.Append("ReShade preset: ").Append(rt.ReShadeAdvisor.PresetPath.Length > 0 ? rt.ReShadeAdvisor.PresetPath : "none")
-                  .Append(", performance mode ").Append(rt.ReShadeAdvisor.PerformanceMode == null ? "unknown" : rt.ReShadeAdvisor.PerformanceMode.Value ? "on" : "off")
-                  .Append(", effects: ").Append(rt.ReShadeAdvisor.Enabled.Count == 0 ? "none" : string.Join(", ", rt.ReShadeAdvisor.Enabled.ConvertAll(t => t.Name + (t.HeavyReason != null ? " (heavy)" : "")).ToArray()))
+                sb.Append("ReShade preset (").Append(r.Label).Append(", ").Append(r.ConfigFile).Append("): ").Append(r.PresetPath)
+                  .Append(r.PresetExists ? "" : " (does not exist)")
+                  .Append(r.PresetSource == ReShade.ReShadePresetAdvisor.FromStartupPreset ? " [start-up preset]" : r.PresetSource == ReShade.ReShadePresetAdvisor.FromDefault ? " [default]" : "")
+                  .Append(", performance mode ").Append(r.PerformanceMode == null ? "unknown" : r.PerformanceMode.Value ? "on" : "off")
+                  .Append(", effects: ").Append(r.Enabled.Count == 0 ? "none" : string.Join(", ", r.Enabled.ConvertAll(t => t.Name + (t.HeavyReason != null ? " (heavy)" : "")).ToArray()))
                   .Append('\n');
             }
             sb.Append("Headset refresh rate: ").Append(rt.Xr.RefreshRate > 1f ? rt.Xr.RefreshRate.ToString("0.#", Inv) + " Hz (" + rt.Xr.RefreshRateSource + ")" : "n/a")

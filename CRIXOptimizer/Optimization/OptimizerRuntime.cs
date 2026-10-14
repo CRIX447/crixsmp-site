@@ -301,7 +301,7 @@ namespace CRIXOptimizer.Optimization
             {
                 // Limiting only happens in frames where this call ran and allowed it, so a suspended, disabled or
                 // faulted CRIX never leaves a camera switched off.
-                try { ExtraCameras.Tick(!Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras")); } catch (Exception e) { Fail("Extra cameras", e); }
+                try { ExtraCameras.Tick(!Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"), Frames.CurrentFps); } catch (Exception e) { Fail("Extra cameras", e); }
             }
 
             PollHotkeys();
@@ -823,25 +823,53 @@ namespace CRIXOptimizer.Optimization
                     WriteSystemReport();
                     break;
                 case "CreateLightReShadePreset":
-                    Guard("ReShade advisor", () =>
-                    {
-                        ReShadeAdvisor.Analyze(Paths.GameRootPath);
-                        if (!ReShadeAdvisor.Found)
-                        {
-                            log.Warn("CreateLightReShadePreset: no ReShade.ini in the game folder, nothing written.");
-                            return;
-                        }
-                        try
-                        {
-                            string path = ReShadeAdvisor.WriteLightPreset();
-                            log.Info("Wrote a lighter ReShade preset: " + path + ". Your own preset was not changed. Select the new one in the ReShade overlay (Home key).");
-                        }
-                        catch (InvalidOperationException e)
-                        {
-                            log.Info("CreateLightReShadePreset: " + e.Message + "; nothing written.");
-                        }
-                    });
+                    Guard("ReShade advisor", CreateLightReShadePresets);
                     break;
+            }
+        }
+
+        /// <summary>[Actions] CreateLightReShadePreset: a lighter copy of each active ReShade preset (headset and
+        /// desktop), next to it. File-system errors are reported, never counted as a module fault.</summary>
+        private void CreateLightReShadePresets()
+        {
+            ReShadeAdvisor.Analyze(Paths.GameRootPath);
+            if (ReShadeAdvisor.Error.Length > 0)
+            {
+                log.Warn("CreateLightReShadePreset: could not read the ReShade configuration: " + ReShadeAdvisor.Error + "; nothing written.");
+                return;
+            }
+            if (!ReShadeAdvisor.Found)
+            {
+                log.Warn("CreateLightReShadePreset: no ReShade.ini or ReShadeVR.ini in the game folder, nothing written.");
+                return;
+            }
+            List<ReShadePresetAdvisor.RuntimeConfig> candidates = ReShadeAdvisor.LightPresetCandidates();
+            if (candidates.Count == 0)
+            {
+                bool anyPreset = ReShadeAdvisor.Runtimes.Exists(r => r.PresetExists);
+                log.Info("CreateLightReShadePreset: " + (anyPreset ? "the active preset has no usually expensive effects to remove" : "no active ReShade preset found") + "; nothing written.");
+                return;
+            }
+            foreach (ReShadePresetAdvisor.RuntimeConfig rt in candidates)
+            {
+                try
+                {
+                    string path = ReShadeAdvisor.WriteLightPreset(rt);
+                    log.Info($"Wrote a lighter ReShade preset for the {rt.Label} ({rt.ConfigFile}): {path}. Your own preset was not changed. " +
+                             "Select the new one in the ReShade overlay (Home key)" +
+                             (rt.PresetSource == ReShadePresetAdvisor.FromStartupPreset
+                                 ? "; your old preset is ReShade's start-up preset, so also make the copy the start-up preset (overlay, Settings) or clear it."
+                                 : "."));
+                }
+                catch (InvalidOperationException e)
+                {
+                    log.Info($"CreateLightReShadePreset ({rt.Label}): {e.Message}; nothing written.");
+                }
+                catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is System.Security.SecurityException
+                                          || e is ArgumentException || e is NotSupportedException)
+                {
+                    log.Warn($"CreateLightReShadePreset ({rt.Label}): could not write the light copy of {rt.PresetPath}: {e.Message}");
+                }
             }
         }
 

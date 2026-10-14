@@ -73,20 +73,26 @@ are claimed.
   `ExtraCameraMaxFps` is set.
 - **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
   render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
-  (time-based, staggered). Two player-loop steps around Unity's `FinishFrameRendering` switch off only the cameras
-  that are on and not due, and `RenderPipelineManager.endContextRendering` switches exactly those back on, so every
-  script (including the camera's own mod) always sees the camera as its mod set it. Never VR cameras or the
+  (time-based; earliest due first within a per-frame budget of cameras x rate x frame time, so cameras take turns
+  instead of rendering in the same frame; no catch-up burst after a hitch). A player-loop step before Unity's
+  `FinishFrameRendering` switches off only the cameras that are on and not due; `RenderPipelineManager.
+  beginContextRendering` (after Unity has built the frame's camera list) switches exactly those back on, so every
+  script and rendering callback sees the camera as its mod set it (`endContextRendering` and a step after
+  `FinishFrameRendering` are fallbacks). Never VR cameras or the
   desktop-window camera; names matching the exclusion list (default `mirror,lck,photo,reflection,portal`) are
   skipped, also when the list is changed later. Fail-open: nothing is limited in a frame in which CRIX's own update
   did not run and allow it (suspended, disabled, faulted, plugin disabled). Stops by itself if the render pipeline's
   end event is missing or another mod keeps replacing the player loop. Needs URP.
-- **ReShade preset advisor** (read-only). When ReShade is detected, reads `ReShade.ini` (`PerformanceMode`,
-  `PresetPath`) and the active preset's `Techniques` list, and logs (and reports) whether Performance Mode is off and
-  which enabled effects are usually expensive (global illumination, ambient occlusion, screen-space reflections,
-  depth of field, motion blur, Clarity, god rays/volumetrics, DisplayDepth), by name.
-- **`[Actions] CreateLightReShadePreset`**: writes `<preset>.CRIX-light.ini` next to the active preset with those
-  effects removed from its `Techniques` line (effect settings and `TechniqueSorting` kept). The user's preset and
-  `ReShade.ini` are never written.
+- **ReShade preset advisor** (read-only). When ReShade is detected, reads ReShade's configuration the way ReShade
+  itself does (checked against ReShade's source): `ReShade.ini` for the desktop window and `ReShadeVR.ini` for the
+  headset (ReShade 6, per-key fallback to `ReShade.ini`), `[INSTALL] BasePath`, the start-up preset before the last
+  used preset and the `ReShadePreset.ini` default, escaped commas (`,,`) and comment lines. Logs and reports, per
+  runtime, whether Performance Mode is off and which enabled effects are usually expensive (global illumination,
+  ambient occlusion, screen-space reflections, depth of field, motion blur, Clarity, god rays/volumetrics,
+  DisplayDepth), by name.
+- **`[Actions] CreateLightReShadePreset`**: writes `<preset>.CRIX-light.ini` next to each active preset that has such
+  effects, with them removed from its `Techniques` line (effect settings and `TechniqueSorting` kept). The user's
+  presets and ReShade's config files are never written. File errors are logged and never disable the action.
 - **Camera inventory.** Lists every active camera (VR, desktop window, render textures) with resolution and a
   derived pixel load relative to one VR eye (system report, dashboard), and points out a large desktop camera.
 - **URP asset report.** The game's URP asset values at start-up (render scale, MSAA, shadows, HDR, opaque/depth
