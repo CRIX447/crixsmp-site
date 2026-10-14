@@ -76,7 +76,10 @@ better choice: it switches back when you stop and does not overwrite your chosen
 
 No mod can promise a frame rate: it depends on the headset, the lobby, the map and the PC. What decides it:
 
-1. **The headset must run at 120 Hz.** VR games never run faster than the refresh rate. Set it in your VR runtime:
+1. **The headset must run at 120 Hz, and the PC must keep up with it.** VR games never run faster than the refresh
+   rate, and when a frame is late the runtime's reprojection (Virtual Desktop's SSW, Meta's ASW, SteamVR's motion
+   smoothing) locks the game to **half** the rate: 60 FPS at 120 Hz, 45 at 90 Hz. If you are stuck at or below
+   60 FPS at 120 Hz, start at 90 Hz (or 72/80 Hz) and only go up once that is steady. Set it in your VR runtime:
    Virtual Desktop → *VR Frame Rate* 120; Meta Quest Link / Air Link → Meta Quest Link app → *Devices* → *Graphics
    Preferences* → *Refresh rate* 120 Hz; SteamVR → *Settings* → *Video* → per-application or headset refresh rate.
    The dashboard (F8) shows the refresh rate the runtime reports, and the log warns if HighRefresh runs below 110 Hz.
@@ -84,14 +87,15 @@ No mod can promise a frame rate: it depends on the headset, the lobby, the map a
    physics step to the refresh rate, so all per-frame work (including physics) runs 120 instead of 90 times a
    second. Busy lobbies (many players and cosmetics) are the hardest case.
 3. **Use the `HighRefresh` profile** (`[General] Profile = HighRefresh`). It keeps the game's resolution (adaptive
-   mode lowers it only after checking that this helps) and cuts per-frame CPU work: distant remote-player cosmetics,
-   cosmetic update rates (20/s), LOD detail, two-bone skinning, particle collisions, smaller loading slices.
+   mode does not change it in this profile, because every resolution change is a short hitch) and cuts per-frame CPU
+   work: distant remote-player cosmetics, cosmetic update rates (20/s), LOD detail, two-bone skinning, particle
+   collisions, smaller loading slices.
 4. **`DesktopCamera = OffWhenNotStreaming`** (on in HighRefresh). On PC the game renders the whole scene a second
    time for the desktop window (its third-person camera). HighRefresh switches that camera off while you are not
    recording or streaming with OBS/Streamlabs, and the window shows your headset view instead. It turns back on
-   by itself when OBS/Streamlabs goes live or starts recording (with the OBS WebSocket set up, below; without it,
-   whenever OBS is running); the first second or so of a new recording can still show the headset view, so start
-   recording a moment before the part you want. It also stays on while the game's own LIV camera is out, and when
+   by itself when OBS/Streamlabs goes live, records, or runs its replay buffer or virtual camera (with the OBS
+   WebSocket set up, below; without it, whenever OBS is running). The first second or two of a new recording (up to
+   about 3 s with Streamlabs) can still show the headset view, so start recording a moment before the part you want. It also stays on while the game's own LIV camera is out, and when
    another mod uses it:
    **Sakuraa Client uses this camera as its spectator camera**, so with Sakuraa CRIX leaves it on unless you set
    `[Compatibility] DesktopCameraWhenModsUseIt = true` in `com.crix.crixoptimizer.cfg` (then Sakuraa's spectator

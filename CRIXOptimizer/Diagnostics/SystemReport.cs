@@ -69,6 +69,9 @@ namespace CRIXOptimizer.Diagnostics
               .Append(" / ").Append(s.P99Ms.ToString("0.0", Inv)).Append(" / ").Append(s.MaxMs.ToString("0.0", Inv)).Append('\n');
             sb.Append("GPU frame time: ").Append(rt.Gpu.HasGpuTime ? rt.Gpu.AverageGpuMs.ToString("0.00", Inv) + " ms (" + rt.Gpu.Source + ")" : rt.Gpu.Source).Append('\n');
             sb.Append("Hitches (>2x budget) / GC-coincident [M]: ").Append(rt.Frames.Hitches).Append(" / ").Append(rt.Frames.GcCoincidentHitches).Append('\n');
+            sb.Append("Big hitches (>70 ms) [M]: ").Append(rt.BigHitches).Append(" - during garbage collection ").Append(rt.BigHitchesGc)
+              .Append(", during scene loads ").Append(rt.BigHitchesSceneLoad).Append(", right after a CRIX settings change ").Append(rt.BigHitchesAfterCrixChange)
+              .Append(", other ").Append(rt.BigHitches - rt.BigHitchesGc - rt.BigHitchesSceneLoad - rt.BigHitchesAfterCrixChange).Append('\n');
             sb.Append("CRIX overhead [M]: ").Append(rt.OverheadMsPerFrame.ToString("0.000", Inv)).Append(" ms/frame\n");
             sb.Append("Managed heap [M]: ").Append(MemoryMonitor.FormatBytes(rt.MemoryStats.ManagedUsedBytes)).Append(", Unity allocated [R]: ")
               .Append(MemoryMonitor.FormatBytes(rt.MemoryStats.UnityAllocatedBytes)).Append(", Unity gfx estimate [R]: ")

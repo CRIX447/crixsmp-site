@@ -26,6 +26,12 @@ namespace CRIXOptimizer.Core
         Failed,
     }
 
+    /// <summary>Counts engine writes made through tracked settings (main thread), so hitches can be related to them.</summary>
+    public static class SettingWrites
+    {
+        public static long Count;
+    }
+
     public interface ITrackedSetting
     {
         string Name { get; }
@@ -150,7 +156,10 @@ namespace CRIXOptimizer.Core
             {
                 requested = value;
                 if (!comparer.Equals(current, value))
+                {
                     setter(value);
+                    SettingWrites.Count++;
+                }
                 applied = getter();
                 hasApplied = true;
                 State = SettingState.Applied;
@@ -205,7 +214,10 @@ namespace CRIXOptimizer.Core
                     return ReleaseOutcome.SkippedExternallyChanged;
                 }
                 if (!comparer.Equals(current, original))
+                {
                     setter(original);
+                    SettingWrites.Count++;
+                }
                 State = SettingState.Untouched;
                 // Forget the original: the next Apply captures a fresh one, so changes the game makes
                 // while CRIX is not managing the setting are respected.

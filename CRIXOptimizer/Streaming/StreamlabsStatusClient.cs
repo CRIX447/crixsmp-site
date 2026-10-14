@@ -39,7 +39,8 @@ namespace CRIXOptimizer.Streaming
         }
 
         public ObsStatus Status => status;
-        public int PollSeconds { get; set; } = 5;
+        /// <summary>Seconds between status polls (the request is a few bytes on localhost).</summary>
+        public int PollSeconds { get; set; } = 2;
 
         public void Start()
         {
@@ -87,7 +88,7 @@ namespace CRIXOptimizer.Streaming
                             if (line == null)
                                 throw new IOException("Streamlabs closed the connection");
                             Apply(line);
-                            if (!wasConnected)
+                            if (!wasConnected && status.Connected)
                             {
                                 wasConnected = true;
                                 log.Info("Connected to Streamlabs Desktop's local API (read-only: streaming/recording state).");
@@ -126,6 +127,7 @@ namespace CRIXOptimizer.Streaming
             }
             bool streaming = IsLive(MiniJson.Str(result, "streamingStatus"));
             bool recording = IsRecording(MiniJson.Str(result, "recordingStatus"));
+            bool replay = MiniJson.Str(result, "replayBufferStatus") == "running";
             // Dual output: the top-level fields hold whichever display updated last, so check each display too.
             Dictionary<string, object> displays = MiniJson.Obj(result, "status");
             if (displays != null)
@@ -135,6 +137,7 @@ namespace CRIXOptimizer.Streaming
                     var d = display.Value as Dictionary<string, object>;
                     streaming |= IsLive(MiniJson.Str(d, "streaming"));
                     recording |= IsRecording(MiniJson.Str(d, "recording"));
+                    replay |= MiniJson.Str(d, "replayBuffer") == "running";
                 }
             }
             ObsStatus before = status;
@@ -144,6 +147,7 @@ namespace CRIXOptimizer.Streaming
                 ObsVersion = "Streamlabs Desktop",
                 Streaming = streaming,
                 Recording = recording,
+                ReplayBuffer = replay,
             };
             status = after;
             if (before.Connected && before.Streaming != after.Streaming)

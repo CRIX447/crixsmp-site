@@ -95,14 +95,13 @@ namespace CRIXOptimizer.Tests
         public void StaleHooksIgnoredOnceTheirAppHasExited()
         {
             // OBS's capture DLL and Discord's overlay DLL stay loaded in the game after their app closes.
-            CaptureSignals obsGone = S(hooks: GraphicsHook.ObsGameCapture | GraphicsHook.DiscordOverlay);
-            obsGone.AppsKnown = true;
-            Assert.Equal(CaptureKind.None, CaptureStateMachine.Evaluate(StreamingTrigger.Auto, obsGone, out _));
-            Assert.Equal(CaptureKind.None, CaptureStateMachine.Evaluate(StreamingTrigger.WhenRecordingOrLive, obsGone, out _));
-            CaptureSignals obsRunning = S(CompanionApp.Obs, GraphicsHook.ObsGameCapture);
-            obsRunning.AppsKnown = true;
-            Assert.Equal(CaptureKind.Obs, CaptureStateMachine.Evaluate(StreamingTrigger.WhenRecordingOrLive, obsRunning, out _));
-            // Without process information the hook is still the best signal.
+            CaptureSignals gone = S(hooks: GraphicsHook.ObsGameCapture | GraphicsHook.DiscordOverlay);
+            gone.ObsHookStale = true;
+            gone.DiscordHookStale = true;
+            Assert.Equal(CaptureKind.None, CaptureStateMachine.Evaluate(StreamingTrigger.Auto, gone, out _));
+            Assert.Equal(CaptureKind.None, CaptureStateMachine.Evaluate(StreamingTrigger.WhenRecordingOrLive, gone, out _));
+            // An app never seen (e.g. OBS run as administrator is invisible to the game) keeps its hook counted.
+            Assert.Equal(CaptureKind.Obs, CaptureStateMachine.Evaluate(StreamingTrigger.WhenRecordingOrLive, S(hooks: GraphicsHook.ObsGameCapture), out _));
             Assert.Equal(CaptureKind.Obs, CaptureStateMachine.Evaluate(StreamingTrigger.Auto, S(hooks: GraphicsHook.ObsGameCapture), out _));
         }
 
@@ -223,6 +222,7 @@ namespace CRIXOptimizer.Tests
             public readonly List<string> RequestTypes = new List<string>();
             public volatile bool Streaming;
             public volatile bool Recording;
+            public volatile bool ReplayBuffer;
             public volatile bool IdentifiedOk;
             public volatile string ReceivedAuth;
             public int Port => ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -278,7 +278,8 @@ namespace CRIXOptimizer.Tests
                                 {
                                     string type = MiniJson.Str(d, "requestType");
                                     lock (RequestTypes) RequestTypes.Add(type);
-                                    bool active = type == "GetStreamStatus" ? Streaming : Recording;
+                                    bool active = type == "GetStreamStatus" ? Streaming : type == "GetRecordStatus" ? Recording
+                                        : type == "GetReplayBufferStatus" ? ReplayBuffer : false;
                                     Send(new Dictionary<string, object> { { "op", 7 }, { "d", new Dictionary<string, object> {
                                         { "requestType", type }, { "requestId", MiniJson.Str(d, "requestId") },
                                         { "requestStatus", new Dictionary<string, object> { { "result", true }, { "code", 100 } } },
@@ -412,7 +413,8 @@ namespace CRIXOptimizer.Tests
                 Assert.True(WaitFor(() => !client.Status.Recording), "recording stop applied");
 
                 lock (obs.RequestTypes)
-                    Assert.True(obs.RequestTypes.All(r => r == "GetStreamStatus" || r == "GetRecordStatus"), "only read-only requests: " + string.Join(",", obs.RequestTypes));
+                    Assert.True(obs.RequestTypes.All(r => r == "GetStreamStatus" || r == "GetRecordStatus" || r == "GetReplayBufferStatus" || r == "GetVirtualCamStatus"),
+                        "only read-only status requests: " + string.Join(",", obs.RequestTypes));
             }
         }
 
@@ -498,6 +500,21 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void ReplayBufferCountsAsCapture()
+        {
+            using (var obs = new FakeObs(null) { ReplayBuffer = true })
+            using (var client = new ObsWebSocketClient(obs.Port, "", new MemoryLogSink()))
+            {
+                client.Start();
+                Assert.True(WaitFor(() => client.Status.ReplayBuffer), "replay buffer state read");
+                Assert.False(client.Status.Streaming || client.Status.Recording);
+                var signals = new CaptureSignals { ObsWebSocketConnected = true, ObsOtherOutput = client.Status.OtherOutput };
+                Assert.Equal(CaptureKind.Obs, CaptureStateMachine.Evaluate(StreamingTrigger.Auto, signals, out string reason));
+                Assert.True(reason.Contains("replay buffer"), reason);
+            }
+        }
+
+        [Test]
         public void KickedStateStaysVisible()
         {
             using (var obs = new FakeObs(null))
@@ -573,6 +590,15 @@ namespace CRIXOptimizer.Tests
             Assert.True(c.Status.Connected);
             Assert.True(c.Status.Streaming, "vertical display is live");
             Assert.True(c.Status.Recording, "vertical display records");
+        }
+
+        [Test]
+        public void ReplayBufferIsReported()
+        {
+            var c = Client();
+            c.Apply("{\"result\":{\"streamingStatus\":\"offline\",\"recordingStatus\":\"offline\",\"replayBufferStatus\":\"running\"}}");
+            Assert.True(c.Status.ReplayBuffer && c.Status.OtherOutput);
+            Assert.False(c.Status.Streaming || c.Status.Recording);
         }
 
         [Test]
@@ -694,10 +720,10 @@ namespace CRIXOptimizer.Tests
             var module = new GPU.DesktopCameraModule(Utilities.GameTypes.FromLoadedAssemblies(), ledger, new MemoryLogSink());
             Assert.True(module.Available, "GorillaTagger.Instance / thirdPersonCamera found by name");
             GorillaTagger.Instance = null;
-            module.Apply(true, "test", false);
+            module.Apply(true, "test", false, 0f);
             Assert.True(module.Status.Contains("not found"), module.Status);
             Assert.Equal(0, ledger.Settings.Count, "nothing managed without a camera");
-            module.Apply(false, "test", false);
+            module.Apply(false, "test", false, 1f);
             Assert.True(module.Status.StartsWith("on"), module.Status);
         }
 
@@ -707,7 +733,7 @@ namespace CRIXOptimizer.Tests
             var types = Utilities.GameTypes.FromAssemblies(new[] { typeof(DesktopCameraTests).Assembly });
             var module = new GPU.DesktopCameraModule(types, new SettingsLedger(new MemoryLogSink()), new MemoryLogSink());
             Assert.False(module.Available);
-            module.Apply(true, "test", false);
+            module.Apply(true, "test", false, 0f);
             Assert.True(module.Status.StartsWith("unavailable"), module.Status);
         }
     }

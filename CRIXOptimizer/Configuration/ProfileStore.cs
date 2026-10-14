@@ -35,6 +35,8 @@ namespace CRIXOptimizer.Configuration
         public const int CurrentPresetRevision = 2;
 
         public ConfigFile ProfilesFile { get; }
+        private ConfigEntry<int> profilesRevision;
+        private ConfigEntry<int> mainRevision;
         public int MigratedEntries { get; private set; }
         public int MigratedFromRevision { get; private set; } = CurrentPresetRevision;
 
@@ -72,8 +74,8 @@ namespace CRIXOptimizer.Configuration
             // Each file carries its own marker: the built-in presets live in the profiles file, Custom in the
             // main config, and either file can be deleted or reset on its own.
             var description = new ConfigDescription("Managed by CRIX: version of the built-in preset values this file was last upgraded to. Do not edit.");
-            ConfigEntry<int> profilesRevision = profilesFile.Bind("Meta", "PresetRevision", 0, description);
-            ConfigEntry<int> mainRevision = mainFile.Bind("Meta", "PresetRevision", 0, description);
+            profilesRevision = profilesFile.Bind("Meta", "PresetRevision", 0, description);
+            mainRevision = mainFile.Bind("Meta", "PresetRevision", 0, description);
             MigratedFromRevision = profilesRevision.Value;
             bool migrateProfiles = profilesRevision.Value < CurrentPresetRevision;
             bool migrateCustom = mainRevision.Value < CurrentPresetRevision;
@@ -120,6 +122,17 @@ namespace CRIXOptimizer.Configuration
             foreach (List<Binding> bindings in sections.Values)
                 foreach (Binding binding in bindings)
                     binding.Entry.BoxedValue = binding.Entry.DefaultValue;
+            // The values are now the current defaults; a reset must not re-arm the 1.0.0 -> 1.1.0 upgrade.
+            MarkCurrentRevision();
+        }
+
+        /// <summary>Marks both files as holding current-revision preset values (after a reset to defaults).</summary>
+        public void MarkCurrentRevision()
+        {
+            if (profilesRevision != null)
+                profilesRevision.Value = CurrentPresetRevision;
+            if (mainRevision != null)
+                mainRevision.Value = CurrentPresetRevision;
         }
 
         private static List<Binding> BindSection(ConfigFile file, string section, OptimizationSettings defaults)

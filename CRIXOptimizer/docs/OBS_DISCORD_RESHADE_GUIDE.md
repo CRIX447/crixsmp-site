@@ -14,9 +14,9 @@ recording and to `DiscordCall` while Discord runs, then back to your profile 20 
 
 | Signal | How CRIX reads it | What it can see |
 |---|---|---|
-| OBS Studio 28+ | obs-websocket v5 on 127.0.0.1:4455 (your password), requests `GetStreamStatus`/`GetRecordStatus` and listens to their state events | live / recording / idle |
+| OBS Studio 28+ | obs-websocket v5 on 127.0.0.1:4455 (your password), requests `GetStreamStatus`/`GetRecordStatus`/`GetReplayBufferStatus`/`GetVirtualCamStatus` and listens to their state events | live / recording / replay buffer / virtual camera / idle |
 | OBS without WebSocket | process `obs64`/`obs32` | running only |
-| Streamlabs Desktop | its local JSON-RPC API on 127.0.0.1:28194, `StreamingService.getModel` every 5 s | live / recording / idle |
+| Streamlabs Desktop | its local JSON-RPC API on 127.0.0.1:28194, `StreamingService.getModel` every 2 s | live / recording / replay buffer / idle |
 | Discord | process name, or Discord's overlay DLL in the game | running only (calls/Go Live are not readable without injection) |
 
 ---

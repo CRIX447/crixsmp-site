@@ -104,6 +104,21 @@ namespace CRIXOptimizer.Optimization
         private string obsClientKey;
         private bool spotifyRunning;
         private bool obsWasRunning;
+        private bool obsSeen, discordSeen;
+        private int sakuraaChecks;
+
+        // big-hitch log (diagnostics for "lag spikes")
+        private const float BigHitchMs = 70f;
+        private float lastSceneLoadTime = -1e9f;
+        private float lastGraphicsApplyTime = -1e9f;
+        private int hitchesLogged, hitchesUnlogged;
+        private float nextHitchSummary;
+        public int BigHitches { get; private set; }
+        public int BigHitchesGc { get; private set; }
+        public int BigHitchesSceneLoad { get; private set; }
+        public int BigHitchesAfterCrixChange { get; private set; }
+        private float nextCameraInventory;
+        private bool vrWasActive;
         private int environmentScans;
         private float alertVisibleUntil;
         private float lastDeferredUnload = -1e9f;
@@ -115,6 +130,9 @@ namespace CRIXOptimizer.Optimization
         private double adaptiveEmaMs;
         private float cpuSuspectedUntil = -1f;
         private float cpuSuspectSeconds = 180f;
+        private float lastRenderScaleDrop = -1e9f;
+        /// <summary>Minimum seconds between two adaptive resolution drops (each one reallocates the eye textures).</summary>
+        private const float RenderScaleDropIntervalSeconds = 60f;
         private readonly ResolutionProbe resolutionProbe = new ResolutionProbe();
 
         // timers
@@ -240,6 +258,8 @@ namespace CRIXOptimizer.Optimization
             float now = Time.unscaledTime;
 
             Frames.Sample(dt);
+            if (dt * 1000f >= BigHitchMs && dt < 5f && cfg.Diagnostics.Value)
+                NoteBigHitch(dt * 1000f, now);
 
             bool wantGpu = Benchmark.WantsGpuSamples || (cfg.AdaptiveEnabled && !Suspended) || dashboard != null;
             if (wantGpu && !IsFaulted("GPU timing"))
@@ -280,6 +300,45 @@ namespace CRIXOptimizer.Optimization
             framesAccumulated++;
         }
 
+        /// <summary>
+        /// Logs what was going on during a very long frame, so "lag spikes" can be traced: a garbage collection,
+        /// a scene/map load, or a graphics change CRIX had just made (e.g. a resolution change, which reallocates
+        /// the VR eye textures). The first 15 are logged one by one, later ones as a summary once a minute.
+        /// </summary>
+        private void NoteBigHitch(float ms, float now)
+        {
+            BigHitches++;
+            string cause;
+            if (Frames.LastFrameCollected)
+            {
+                BigHitchesGc++;
+                cause = "a garbage collection ran in that frame";
+            }
+            else if (now - lastSceneLoadTime < 3f)
+            {
+                BigHitchesSceneLoad++;
+                cause = "a scene/map was loading";
+            }
+            else if (now - lastGraphicsApplyTime <= ms / 1000f + 0.2f)
+            {
+                BigHitchesAfterCrixChange++;
+                cause = "CRIX had just changed graphics settings";
+            }
+            else
+            {
+                cause = "no cause CRIX can see (game, other mods, VR runtime or PC)";
+            }
+            if (hitchesLogged < 15)
+            {
+                hitchesLogged++;
+                log.Info($"Hitch: one frame took {ms:0} ms ({cause}). Profile {ActiveSection}, adaptive level {Adaptive.Level}.");
+            }
+            else
+            {
+                hitchesUnlogged++;
+            }
+        }
+
         private void RunTimers(float now)
         {
             if (now >= nextQuarter)
@@ -314,6 +373,14 @@ namespace CRIXOptimizer.Optimization
             {
                 nextFive = now + 5f;
                 Guard("XR info", () => Xr.Refresh(now));
+                // XR can start late or reconnect (cable/Wi-Fi drop): re-apply so VR-only settings (render scale, mirror,
+                // occlusion mesh) reach the new session.
+                if (Xr.IsVrActive != vrWasActive)
+                {
+                    vrWasActive = Xr.IsVrActive;
+                    if (vrWasActive && lateApplied)
+                        MarkDirty();
+                }
                 CheckRefreshRate();
                 if (Graphics != null && !Suspended && cfg.Enabled.Value)
                 {
@@ -323,7 +390,12 @@ namespace CRIXOptimizer.Optimization
                 if (cfg.Diagnostics.Value)
                 {
                     TickMemory(now);
-                    RefreshCameras();
+                    // The camera list is for the dashboard and the report: every 5 s while the dashboard is open, else 30 s.
+                    if (dashboard != null || now >= nextCameraInventory)
+                    {
+                        nextCameraInventory = now + 30f;
+                        RefreshCameras();
+                    }
                 }
             }
 
@@ -379,6 +451,13 @@ namespace CRIXOptimizer.Optimization
             }
 
             UpdateCaptureState(now);
+            if (hitchesUnlogged > 0 && now >= nextHitchSummary)
+            {
+                log.Info($"Hitches: {hitchesUnlogged} more frame(s) over {BigHitchMs:0} ms in the last minute. Totals: {BigHitches} " +
+                         $"(garbage collection {BigHitchesGc}, scene loads {BigHitchesSceneLoad}, right after a CRIX change {BigHitchesAfterCrixChange}).");
+                hitchesUnlogged = 0;
+                nextHitchSummary = now + 60f;
+            }
             // Scene loads recreate cameras, XR may start late and the game's LIV camera can take the desktop camera
             // over at any time: re-check once a second (reads a few flags; finds the camera only when needed).
             ApplyDesktopCamera(cfg.Enabled.Value && !Suspended);
@@ -471,6 +550,7 @@ namespace CRIXOptimizer.Optimization
         private void ApplyAll(string reason)
         {
             bool active = cfg.Enabled.Value && !Suspended;
+            long writesBefore = SettingWrites.Count;
             log.Debug($"Applying profile {ActiveSection} ({reason}); active={active}");
             RecomputeEffective();
 
@@ -502,6 +582,8 @@ namespace CRIXOptimizer.Optimization
                 }
             }
             ApplyDesktopCamera(active);
+            if (SettingWrites.Count != writesBefore)
+                lastGraphicsApplyTime = Time.unscaledTime;
             UpdateStatus();
         }
 
@@ -529,8 +611,10 @@ namespace CRIXOptimizer.Optimization
             // Never without a headset: the desktop camera may then be the only view of the game.
             bool off = active && Xr.IsVrActive && DesktopCameraModeWantsOff(mode);
             string reason = !active ? "CRIX suspended" : mode == DesktopCameraMode.Unchanged ? "profile leaves it alone"
-                : !Xr.IsVrActive ? "no VR headset active" : ReShade.GuardActive ? "ReShade guard" : off ? (mode == DesktopCameraMode.Off ? "profile setting" : "not streaming") : "streaming/recording";
-            Guard("Desktop camera", () => DesktopCamera.Apply(off, reason, cfg.DesktopCameraWhenModsUseIt.Value));
+                : !Xr.IsVrActive ? "no VR headset active" : ReShade.GuardActive ? "ReShade guard"
+                : off ? (mode == DesktopCameraMode.Off ? "profile setting" : "not recording or streaming") : Capture.Reason;
+            float now = Time.unscaledTime;
+            Guard("Desktop camera", () => DesktopCamera.Apply(off, reason, cfg.DesktopCameraWhenModsUseIt.Value, now));
         }
 
         private void RestoreEverything(string reason)
@@ -539,7 +623,7 @@ namespace CRIXOptimizer.Optimization
             {
                 Live.Suspended = true;
                 Graphics?.Apply(null, false, false, 0, Ladder, false);
-                DesktopCamera?.Apply(false, "restored", false);
+                DesktopCamera?.Apply(false, "restored", false, Time.unscaledTime);
                 SettingsLedger.RestoreReport report = Ledger.RestoreAll();
                 if (report.Restored > 0 || report.SkippedExternal > 0 || report.Failed > 0)
                     log.Info($"Restore ({reason}): {report.Restored} setting(s) restored, {report.SkippedExternal} left alone (changed externally), {report.Failed} failed.");
@@ -789,11 +873,15 @@ namespace CRIXOptimizer.Optimization
             try
             {
                 ProbeResult probe = resolutionProbe.Sample(now, frameMs);
-                if (probe == ProbeResult.Ineffective)
+                if (probe == ProbeResult.Ineffective || probe == ProbeResult.Inconclusive)
                 {
+                    // Either way the lower resolution bought nothing measurable: undo it rather than keep a blurrier
+                    // image (and avoid further drops, each of which is a hitch).
                     cpuSuspectedUntil = now + cpuSuspectSeconds;
-                    log.Info($"Adaptive quality: lowering resolution did not make frames faster ({resolutionProbe.LastImprovement * 100:0.#}% change). " +
-                             $"The bottleneck looks CPU-side (busy lobby, cosmetics), so resolution is restored and CPU-side reductions are used instead (rechecked in {cpuSuspectSeconds / 60f:0} min).");
+                    log.Info(probe == ProbeResult.Inconclusive
+                        ? $"Adaptive quality: frames stayed locked at half the refresh rate (reprojection) after lowering resolution. Resolution is restored and CPU-side reductions are used instead (rechecked in {cpuSuspectSeconds / 60f:0} min)."
+                        : $"Adaptive quality: lowering resolution did not make frames faster ({resolutionProbe.LastImprovement * 100:0.#}% change). " +
+                          $"The bottleneck looks CPU-side (busy lobby, cosmetics), so resolution is restored and CPU-side reductions are used instead (rechecked in {cpuSuspectSeconds / 60f:0} min).");
                     // Each failed recheck costs two eye-texture reallocations, so recheck less often each time.
                     cpuSuspectSeconds = Mathf.Min(1800f, cpuSuspectSeconds * 2f);
                     ApplyAdaptiveLevel();
@@ -825,8 +913,10 @@ namespace CRIXOptimizer.Optimization
 
                 // Any resolution drop (a step down, or the CPU-bound verdict ending) is checked by the probe.
                 bool loweredResolution = hadScale && GraphicsUsable && Graphics.AppliedLevers.HasRenderScale && Graphics.AppliedLevers.RenderScale < scaleBefore - 0.001f;
+                if (loweredResolution)
+                    lastRenderScaleDrop = now;
                 if (loweredResolution && !Gpu.HasGpuTime)
-                    resolutionProbe.Begin(now, adaptiveEmaMs, 1000.0 / TargetFps);
+                    resolutionProbe.Begin(now, adaptiveEmaMs, Xr.RefreshRate > 1f ? 1000.0 / Xr.RefreshRate : 1000.0 / TargetFps);
                 else if (decision.Changed)
                     resolutionProbe.Cancel();
                 if (decision.Changed)
@@ -863,12 +953,14 @@ namespace CRIXOptimizer.Optimization
         /// <summary>Applies the current adaptive level to graphics and game patches.</summary>
         private void ApplyAdaptiveLevel()
         {
+            long writesBefore = SettingWrites.Count;
             RecomputeEffective();
             if (GraphicsUsable)
             {
                 try
                 {
-                    Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, AdaptiveActive ? Adaptive.Level : 0, Ladder, CpuBoundSuspected);
+                    bool hold = Time.unscaledTime - lastRenderScaleDrop < RenderScaleDropIntervalSeconds;
+                    Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, AdaptiveActive ? Adaptive.Level : 0, Ladder, CpuBoundSuspected, hold);
                 }
                 catch (Exception e)
                 {
@@ -880,6 +972,8 @@ namespace CRIXOptimizer.Optimization
                 GamePatches.UpdateLive(EffectiveSettings, Groups(), false);
                 GamePatches.UpdateThrottleIntervals(Frames.CurrentFps, EffectiveSettings, Groups(), false);
             }
+            if (SettingWrites.Count != writesBefore)
+                lastGraphicsApplyTime = Time.unscaledTime;
         }
 
         private void UpdateAlerts(float now)
@@ -997,6 +1091,7 @@ namespace CRIXOptimizer.Optimization
         /// <summary>Sakuraa Client is injected by its own launcher, possibly after CRIX starts, so this re-runs with each environment scan.</summary>
         private void RefreshSakuraa()
         {
+            sakuraaChecks++;
             Guard("Sakuraa detection", () =>
             {
                 bool before = Sakuraa.Detected;
@@ -1052,7 +1147,9 @@ namespace CRIXOptimizer.Optimization
                 if (obsRunning && !obsWasRunning)
                     Obs?.Nudge(); // OBS was just started: connect now instead of waiting out the retry delay
                 obsWasRunning = obsRunning;
-                if (compatScanned)
+                // Sakuraa is injected by its own launcher, sometimes after CRIX starts: re-check a few times only
+                // (listing assemblies runs on the game thread).
+                if (compatScanned && !Sakuraa.Detected && sakuraaChecks < 5)
                     RefreshSakuraa();
 
                 bool spotify = (result.Apps & CompanionApp.Spotify) != 0;
@@ -1114,6 +1211,7 @@ namespace CRIXOptimizer.Optimization
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            lastSceneLoadTime = Time.unscaledTime;
             // Cameras and quality-dependent objects may be recreated; re-apply (only differing values are written).
             if (!Suspended && cfg.Enabled.Value)
             {
@@ -1175,7 +1273,9 @@ namespace CRIXOptimizer.Optimization
         /// <summary>Points out when the HighRefresh profile runs on a headset set below 120 Hz (once per rate).</summary>
         private void CheckRefreshRate()
         {
-            if (ActiveSection != "HighRefresh" || !Xr.IsVrActive || Xr.RefreshRate <= 1f || Xr.RefreshRate >= 110f)
+            // Only a rate the VR runtime itself reported (not the desktop monitor fallback).
+            bool fromRuntime = Xr.RefreshRateSource == "XR display subsystem" || Xr.RefreshRateSource == "XRDevice";
+            if (ActiveSection != "HighRefresh" || !Xr.IsVrActive || !fromRuntime || Xr.RefreshRate <= 1f || Xr.RefreshRate >= 110f)
                 return;
             once.Info("hz:" + Mathf.RoundToInt(Xr.RefreshRate),
                 $"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. " + RefreshRateAdvice);
@@ -1231,6 +1331,12 @@ namespace CRIXOptimizer.Optimization
             {
                 ObsStatus obs = Obs?.Status ?? ObsStatus.Disconnected;
                 ObsStatus slobs = Streamlabs?.Status ?? ObsStatus.Disconnected;
+                bool appsKnown = cfg.CompanionAppDetection.Value && Scanner.Latest != null && Scanner.Latest.ProcessesScanned;
+                if (appsKnown)
+                {
+                    obsSeen |= (Apps & (CompanionApp.Obs | CompanionApp.StreamlabsDesktop)) != 0;
+                    discordSeen |= (Apps & CompanionApp.Discord) != 0;
+                }
                 Capture.Trigger = cfg.StreamingTriggerSetting.Value;
                 Capture.HoldSeconds = cfg.StreamingHoldSeconds.Value;
                 bool changed = Capture.Update(now, new CaptureSignals
@@ -1240,7 +1346,9 @@ namespace CRIXOptimizer.Optimization
                     ObsWebSocketConnected = obs.Connected || slobs.Connected,
                     ObsStreaming = obs.Streaming || slobs.Streaming,
                     ObsRecording = obs.Recording || slobs.Recording,
-                    AppsKnown = cfg.CompanionAppDetection.Value && Scanner.Latest != null && Scanner.Latest.ProcessesScanned,
+                    ObsOtherOutput = obs.OtherOutput || slobs.OtherOutput,
+                    ObsHookStale = appsKnown && obsSeen && (Apps & (CompanionApp.Obs | CompanionApp.StreamlabsDesktop)) == 0,
+                    DiscordHookStale = appsKnown && discordSeen && (Apps & CompanionApp.Discord) == 0,
                 });
                 if (changed)
                     MarkDirty();

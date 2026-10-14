@@ -141,6 +141,8 @@ namespace CRIXOptimizer.Configuration
             CosmeticMaximumCount = 8,
             AdaptiveGpuHeadroomPercent = 10f,
             DesktopCamera = DesktopCameraMode.OffWhenNotStreaming,
+            // At 120 Hz the CPU is the usual limit, and every resolution change is a hitch (eye-texture reallocation).
+            AdaptiveMayChangeRenderScale = false,
         };
 
         /// <summary>Wireless PCVR via Virtual Desktop, balanced: leaves GPU time for the video encoder and keeps loads smooth.</summary>

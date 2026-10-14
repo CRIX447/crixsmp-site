@@ -20,6 +20,9 @@ namespace CRIXOptimizer.Streaming
         public bool Connected;
         public bool Streaming;
         public bool Recording;
+        /// <summary>Replay buffer or virtual camera running: OBS is capturing the game without recording or streaming.</summary>
+        public bool ReplayBuffer;
+        public bool VirtualCam;
         public bool AuthenticationRequired;
         public bool AuthenticationFailed;
         /// <summary>The user disconnected CRIX from OBS's WebSocket settings (close code 4011); CRIX does not reconnect.</summary>
@@ -28,6 +31,7 @@ namespace CRIXOptimizer.Streaming
         public string LastError = "";
 
         public bool LiveOrRecording => Connected && (Streaming || Recording);
+        public bool OtherOutput => ReplayBuffer || VirtualCam;
 
         public ObsStatus With(Action<ObsStatus> change)
         {
@@ -40,7 +44,8 @@ namespace CRIXOptimizer.Streaming
     /// <summary>
     /// Read-only obs-websocket v5 client (built into OBS Studio 28+). It connects to 127.0.0.1 only,
     /// identifies (with the user's password if OBS requires one), subscribes to output events and asks
-    /// whether OBS is streaming or recording. It never sends any other request: CRIX cannot start, stop or
+    /// whether OBS is streaming, recording, or running its replay buffer or virtual camera (GetStreamStatus,
+    /// GetRecordStatus, GetReplayBufferStatus, GetVirtualCamStatus). It never sends any other request: CRIX cannot start, stop or
     /// change anything in OBS. Runs on its own background thread; the game thread only reads <see cref="Status"/>.
     ///
     /// The WebSocket framing (RFC 6455) is implemented here on a plain TcpClient so it behaves the same on
@@ -51,6 +56,8 @@ namespace CRIXOptimizer.Streaming
         // The only request types this client is allowed to send.
         public const string GetStreamStatus = "GetStreamStatus";
         public const string GetRecordStatus = "GetRecordStatus";
+        public const string GetReplayBufferStatus = "GetReplayBufferStatus";
+        public const string GetVirtualCamStatus = "GetVirtualCamStatus";
         private const int EventSubscriptionOutputs = 1 << 6;
         private const string WebSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -65,6 +72,7 @@ namespace CRIXOptimizer.Streaming
         /// <summary>Returned by ReadMessage after a control frame (ping/pong) so the caller can go back to polling.</summary>
         private static readonly Dictionary<string, object> ControlFrame = new Dictionary<string, object>();
         private MemoryStream partialMessage;
+        private bool authWarningLogged;
         private volatile ObsStatus status = ObsStatus.Disconnected;
         private volatile bool stopping;
 
@@ -211,8 +219,10 @@ namespace CRIXOptimizer.Streaming
                     if (password.Length == 0)
                     {
                         status = status.With(s => { s.AuthenticationRequired = true; s.LastError = "OBS requires a password"; });
-                        log.Warn("OBS WebSocket requires a password. Copy it from OBS (Tools > WebSocket Server Settings > Show Connect Info) into " +
-                                 "[Streaming] ObsWebSocketPassword in com.crix.crixoptimizer.cfg, or turn authentication off in OBS.");
+                        if (!authWarningLogged)
+                            log.Warn("OBS WebSocket requires a password. Copy it from OBS (Tools > WebSocket Server Settings > Show Connect Info) into " +
+                                     "[Streaming] ObsWebSocketPassword in com.crix.crixoptimizer.cfg, or turn authentication off in OBS.");
+                        authWarningLogged = true;
                         return;
                     }
                     identify["authentication"] = ComputeAuthentication(password, MiniJson.Str(auth, "salt") ?? "", MiniJson.Str(auth, "challenge") ?? "");
@@ -225,7 +235,9 @@ namespace CRIXOptimizer.Streaming
                     if (lastCloseCode == 4009)
                     {
                         status = status.With(s => { s.AuthenticationFailed = true; s.LastError = "OBS rejected the password"; });
-                        log.Warn("OBS WebSocket rejected the password in [Streaming] ObsWebSocketPassword.");
+                        if (!authWarningLogged)
+                            log.Warn("OBS WebSocket rejected the password in [Streaming] ObsWebSocketPassword.");
+                        authWarningLogged = true;
                         return;
                     }
                     throw new IOException("OBS closed the connection during identification (code " + lastCloseCode + ")");
@@ -275,11 +287,13 @@ namespace CRIXOptimizer.Streaming
         {
             SendRequest(stream, GetStreamStatus, "crix-stream");
             SendRequest(stream, GetRecordStatus, "crix-record");
+            SendRequest(stream, GetReplayBufferStatus, "crix-replay");
+            SendRequest(stream, GetVirtualCamStatus, "crix-vcam");
         }
 
         private void SendRequest(Stream stream, string requestType, string requestId)
         {
-            if (requestType != GetStreamStatus && requestType != GetRecordStatus)
+            if (requestType != GetStreamStatus && requestType != GetRecordStatus && requestType != GetReplayBufferStatus && requestType != GetVirtualCamStatus)
                 throw new InvalidOperationException("CRIX only reads OBS status");
             Send(stream, new Dictionary<string, object>
             {
@@ -303,6 +317,10 @@ namespace CRIXOptimizer.Streaming
                     SetOutput(stream: active.Value, record: null);
                 else if (type == GetRecordStatus)
                     SetOutput(stream: null, record: active.Value);
+                else if (type == GetReplayBufferStatus)
+                    SetOther(replay: active.Value, vcam: null);
+                else if (type == GetVirtualCamStatus)
+                    SetOther(replay: null, vcam: active.Value);
             }
             else if (op == 5)
             {
@@ -314,7 +332,20 @@ namespace CRIXOptimizer.Streaming
                     SetOutput(stream: active.Value, record: null);
                 else if (type == "RecordStateChanged")
                     SetOutput(stream: null, record: active.Value);
+                else if (type == "ReplayBufferStateChanged")
+                    SetOther(replay: active.Value, vcam: null);
+                else if (type == "VirtualcamStateChanged")
+                    SetOther(replay: null, vcam: active.Value);
             }
+        }
+
+        private void SetOther(bool? replay, bool? vcam)
+        {
+            status = status.With(s =>
+            {
+                if (replay.HasValue) s.ReplayBuffer = replay.Value;
+                if (vcam.HasValue) s.VirtualCam = vcam.Value;
+            });
         }
 
         private void SetOutput(bool? stream, bool? record)

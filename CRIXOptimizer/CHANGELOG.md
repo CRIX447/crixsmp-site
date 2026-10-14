@@ -35,8 +35,8 @@ are claimed.
 
 ### Added
 
-- **`HighRefresh` profile** for 120/144 Hz headsets: keeps resolution (adaptive mode may lower it after checking it
-  helps), cuts per-frame CPU work (distant cosmetics 3.5/6 m and 4/8 players, cosmetic updates 20/s, LOD bias 0.8,
+- **`HighRefresh` profile** for 120/144 Hz headsets: keeps resolution (adaptive mode does not change it in this
+  profile), cuts per-frame CPU work (distant cosmetics 3.5/6 m and 4/8 players, cosmetic updates 20/s, LOD bias 0.8,
   two-bone skinning, 64 particle raycasts, 1 ms upload slices), MSAA capped at 2x, 10 % GPU headroom. The log points
   out when the headset reports less than 110 Hz and how to set 120 Hz in Virtual Desktop, Meta Quest Link or SteamVR.
 - **`DesktopCamera` profile setting** (`Unchanged` / `OffWhenNotStreaming` / `Off`; `OffWhenNotStreaming` in
@@ -52,11 +52,12 @@ are claimed.
   (20 s). Only Balanced/OBSStreaming/DiscordCall are switched; VirtualDesktop moves to its Streaming preset;
   MaximumPerformance, HighRefresh, ReShadeCompatible, MultiMod and Custom are never replaced.
   - **OBS Studio 28+:** read-only obs-websocket v5 client (127.0.0.1 only, SHA-256 challenge authentication). It
-    only ever sends `GetStreamStatus` and `GetRecordStatus` and listens to stream/record state events; it cannot
+    only ever sends `GetStreamStatus`, `GetRecordStatus`, `GetReplayBufferStatus` and `GetVirtualCamStatus` and
+    listens to the matching state events; it cannot
     start, stop or change anything in OBS. The WebSocket server must be enabled in OBS (see INSTALLATION.md).
     Without it, "OBS running" is the signal. The password is hidden from in-game config editors.
   - **Streamlabs Desktop:** read-only poll of its local API (127.0.0.1:28194, `StreamingService.getModel`, every
-    5 s) while Streamlabs runs (`[Streaming] StreamlabsApi`). Dual-output (horizontal + vertical) state is combined;
+    2 s) while Streamlabs runs (`[Streaming] StreamlabsApi`). Dual-output (horizontal + vertical) state is combined;
     "busy" answers while Streamlabs loads count as unknown.
   - **Discord:** its call/Go Live state cannot be read without injecting into Discord, which CRIX does not do;
     "Discord running" (or its overlay in the game) is the signal.
@@ -102,6 +103,17 @@ are claimed.
   every minute instead of every 5 minutes.
 - Adaptive mode keeps its CPU-side levers if the graphics module has failed, and the end of a "CPU-bound" period is
   handled like any other change (a resolution drop then is checked by the probe).
+- **Lag spikes from resolution changes.** Every render-scale change reallocates the VR eye textures (a visible
+  hitch). Adaptive mode now lowers resolution at most once a minute, undoes a drop at once when frames do not get
+  faster or stay locked at half the refresh rate (reprojection), and HighRefresh does not change resolution at all.
+- **Hitch log.** Frames over 70 ms are logged with what was going on (garbage collection, map load, a CRIX change)
+  and counted in the system report, so "lag spikes" can be traced.
+- OBS: the replay buffer and virtual camera count as capturing (read-only `GetReplayBufferStatus` /
+  `GetVirtualCamStatus`); Streamlabs is polled every 2 s and its replay buffer is read too.
+- Desktop camera: left alone once the game or another mod turns it back on (until the profile is re-applied); the
+  mirror setting recovers after a headset reconnect; status texts name the real reason.
+- OBS password warnings are logged once instead of every minute; a reset to defaults no longer re-runs the 1.0.0
+  preset upgrade; the refresh-rate advice only uses rates the VR runtime reported.
 
 ## 1.0.0 - 2026-10-12
 

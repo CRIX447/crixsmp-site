@@ -27,7 +27,8 @@ namespace CRIXOptimizer.GPU
     /// </summary>
     internal sealed class DesktopCameraModule
     {
-        private const int MaxFindByNameAttempts = 6;
+        /// <summary>GameObject.Find walks the whole scene, so the by-name lookup runs at most this often.</summary>
+        private const float FindByNameIntervalSeconds = 30f;
 
         private readonly SettingsLedger ledger;
         private readonly ILogSink log;
@@ -36,7 +37,7 @@ namespace CRIXOptimizer.GPU
         private Camera tracked;
         private Behaviour brain;
         private TrackedSetting<bool> enabledSetting;
-        private int findByNameAttempts;
+        private float nextFindByName;
 
         public bool Available { get; }
         public string Status { get; private set; } = "not used by this profile";
@@ -58,14 +59,14 @@ namespace CRIXOptimizer.GPU
         /// Turns the camera off (wantOff) or gives it back to the game. Main thread, about once a second; cheap when
         /// nothing changes. <paramref name="allowWhenTakenOver"/>: also switch it off when another mod moved it.
         /// </summary>
-        public void Apply(bool wantOff, string reason, bool allowWhenTakenOver)
+        public void Apply(bool wantOff, string reason, bool allowWhenTakenOver, float now)
         {
             if (!Available)
                 return;
             GameObject rig = Rig();
             // UnityObjects.IsAlive: plain reference check first, Unity's "destroyed" check only for real objects.
             bool trackedAlive = UnityObjects.IsAlive(tracked);
-            Camera cam = trackedAlive ? tracked : wantOff ? Resolve(rig) : null;
+            Camera cam = trackedAlive ? tracked : wantOff ? Resolve(rig, now) : null;
             if (!ReferenceEquals(cam, tracked) || (!trackedAlive && enabledSetting != null))
                 Track(cam);
 
@@ -75,13 +76,21 @@ namespace CRIXOptimizer.GPU
                 return;
             }
 
+            // The game or another mod turned it back on after CRIX switched it off: leave it alone until the profile
+            // is re-applied (the ledger re-arms it then). Releasing here would reset that and switch it off again.
+            if (enabledSetting.State == SettingState.ExternallyModified)
+            {
+                Status = "turned back on by the game or another mod; left alone until the profile is re-applied";
+                return;
+            }
+
             string keepOn = null;
             if (wantOff)
             {
                 if (cam.targetTexture != null || cam.stereoTargetEye != StereoTargetEyeMask.None)
                     keepOn = "left on: it no longer draws only to the desktop window";
                 else if (UnityObjects.IsAlive(brain) && !brain.enabled)
-                    keepOn = "left on: the game's LIV camera is using it";
+                    keepOn = "left on: its camera controller is paused (the game's LIV camera or another mod is driving it)";
                 else if (UnityObjects.IsAlive(rig) && !cam.transform.IsChildOf(rig.transform) && !allowWhenTakenOver)
                     keepOn = "left on: another mod (e.g. Sakuraa's spectator camera) uses it; [Compatibility] DesktopCameraWhenModsUseIt = true allows switching it off";
             }
@@ -90,7 +99,7 @@ namespace CRIXOptimizer.GPU
             {
                 enabledSetting.Apply(false);
                 Status = enabledSetting.State == SettingState.Applied ? "off: " + reason
-                    : enabledSetting.State == SettingState.ExternallyModified ? "turned back on by the game or another mod; left alone"
+                    : enabledSetting.State == SettingState.ExternallyModified ? "turned back on by the game or another mod; left alone until the profile is re-applied"
                     : "could not be changed: " + enabledSetting.LastError;
             }
             else
@@ -120,16 +129,15 @@ namespace CRIXOptimizer.GPU
             return null;
         }
 
-        private Camera Resolve(GameObject rig)
+        private Camera Resolve(GameObject rig, float now)
         {
             Camera cam = null;
             if (UnityObjects.IsAlive(rig))
                 cam = rig.GetComponentInChildren<Camera>(true);
-            // Another mod may already have moved the camera out of the rig; look it up by name a few times only
-            // (GameObject.Find walks the whole scene).
-            if (!UnityObjects.IsAlive(cam) && findByNameAttempts < MaxFindByNameAttempts)
+            // Another mod may already have moved the camera out of the rig; look it up by name, rate-limited.
+            if (!UnityObjects.IsAlive(cam) && now >= nextFindByName)
             {
-                findByNameAttempts++;
+                nextFindByName = now + FindByNameIntervalSeconds;
                 cam = FindByName("Shoulder Camera");
             }
             // Safety: only a camera that draws to the desktop window, never the VR camera or a texture camera.

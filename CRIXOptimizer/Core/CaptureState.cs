@@ -28,11 +28,15 @@ namespace CRIXOptimizer.Core
         public bool ObsWebSocketConnected;
         public bool ObsStreaming;
         public bool ObsRecording;
+        /// <summary>Replay buffer or virtual camera running: OBS is capturing the game without recording or streaming.</summary>
+        public bool ObsOtherOutput;
         /// <summary>
-        /// True when process detection ran. Capture/overlay DLLs stay loaded in the game after their app exits, so
-        /// with process information available a hook only counts while its app is still running.
+        /// Capture/overlay DLLs stay loaded in the game after their app exits. A hook is stale when its app was
+        /// seen running earlier in this session and is no longer running. (An app that was never seen, e.g. OBS
+        /// started as administrator, which a normal game process cannot see, keeps its hook counted.)
         /// </summary>
-        public bool AppsKnown;
+        public bool ObsHookStale;
+        public bool DiscordHookStale;
     }
 
     /// <summary>
@@ -81,10 +85,10 @@ namespace CRIXOptimizer.Core
         public static CaptureKind Evaluate(StreamingTrigger trigger, CaptureSignals s, out string reason)
         {
             bool obsApp = (s.Apps & (CompanionApp.Obs | CompanionApp.StreamlabsDesktop)) != 0;
-            bool obsHook = (s.Hooks & GraphicsHook.ObsGameCapture) != 0 && (!s.AppsKnown || obsApp);
-            bool obsLive = s.ObsWebSocketConnected && (s.ObsStreaming || s.ObsRecording);
+            bool obsHook = (s.Hooks & GraphicsHook.ObsGameCapture) != 0 && !s.ObsHookStale;
+            bool obsLive = s.ObsWebSocketConnected && (s.ObsStreaming || s.ObsRecording || s.ObsOtherOutput);
             bool discordApp = (s.Apps & CompanionApp.Discord) != 0;
-            bool discordHook = (s.Hooks & GraphicsHook.DiscordOverlay) != 0 && (!s.AppsKnown || discordApp);
+            bool discordHook = (s.Hooks & GraphicsHook.DiscordOverlay) != 0 && !s.DiscordHookStale;
 
             switch (trigger)
             {
@@ -150,6 +154,6 @@ namespace CRIXOptimizer.Core
 
         private static string ObsLiveReason(CaptureSignals s) =>
             s.ObsStreaming && s.ObsRecording ? "OBS is live and recording"
-            : s.ObsStreaming ? "OBS is live" : "OBS is recording";
+            : s.ObsStreaming ? "OBS is live" : s.ObsRecording ? "OBS is recording" : "OBS replay buffer / virtual camera is running";
     }
 }

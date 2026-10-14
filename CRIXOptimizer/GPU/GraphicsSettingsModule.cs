@@ -274,7 +274,11 @@ namespace CRIXOptimizer.GPU
         }
 
         /// <summary>Applies a resolved profile plus the current adaptive level. Writes only values that differ.</summary>
-        public void Apply(OptimizationSettings s, bool graphicsEnabled, bool pacingEnabled, int adaptiveLevel, QualityLadderSettings ladder, bool cpuBound)
+        /// <param name="holdRenderScaleDrop">
+        /// Keep the current render scale instead of lowering it further (adaptive rate limit: every render-scale change
+        /// reallocates the VR eye textures, which is a visible hitch). Raising it back is never held.
+        /// </param>
+        public void Apply(OptimizationSettings s, bool graphicsEnabled, bool pacingEnabled, int adaptiveLevel, QualityLadderSettings ladder, bool cpuBound, bool holdRenderScaleDrop = false)
         {
             xr.Refresh(Time.unscaledTime);
             bool vr = xr.IsVrActive;
@@ -289,7 +293,7 @@ namespace CRIXOptimizer.GPU
                 var levers = new QualityLevers();
                 float gameScale = 0f, gameShadow = 0f, gameLod = 0f;
                 int gameLights = 0;
-                if (vr && renderScale.TryGetBaseline(out gameScale))
+                if (vr && renderScale != null && renderScale.TryGetBaseline(out gameScale))
                 {
                     levers.HasRenderScale = true;
                     levers.RenderScale = s.RenderScale > 0f ? s.RenderScale : gameScale;
@@ -315,6 +319,9 @@ namespace CRIXOptimizer.GPU
                 ProfileLevers = levers;
 
                 QualityLevers target = adaptiveLevel == 0 ? levers : QualityLadder.Compute(levers, adaptiveLevel, ladder, cpuBound);
+                QualityLevers previous = AppliedLevers;
+                if (holdRenderScaleDrop && target.HasRenderScale && previous.HasRenderScale && target.RenderScale < previous.RenderScale - 0.001f)
+                    target.RenderScale = previous.RenderScale;
                 AppliedLevers = target;
 
                 // ---- levers (profile + adaptive): only managed when they differ from the game's own value ----
@@ -364,6 +371,13 @@ namespace CRIXOptimizer.GPU
 
                 ApplyOrRelease(occlusionMesh, vr && s.EnsureOcclusionMesh, true);
                 bool mirrorWanted = vr && s.DesktopMirror != DesktopMirrorMode.Unchanged && ResolveMirrorConstants();
+                // The mirror belongs to the XR display, which goes away when the headset disconnects (the setting then
+                // fails) and comes back as a new display: start tracking it afresh once a display is running again.
+                if (mirror.State == SettingState.Failed && xr.Display != null)
+                {
+                    ledger.Unregister(mirror);
+                    mirror = Track(new TrackedSetting<int>("Desktop mirror mode", ReadMirror, WriteMirror, null, DescribeMirror));
+                }
                 ApplyOrRelease(mirror, mirrorWanted, mirrorWanted ? MirrorValue(s.DesktopMirror) : 0);
 
                 ApplyCameraHdr(s.CameraHdr);

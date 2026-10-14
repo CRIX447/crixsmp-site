@@ -33,6 +33,8 @@ namespace CRIXOptimizer.Diagnostics
         public long Hitches { get; private set; }
         public double CurrentFps { get; private set; }
         public float LastFrameMs { get; private set; }
+        /// <summary>A garbage collection happened during the last sampled frame.</summary>
+        public bool LastFrameCollected { get; private set; }
         public float BudgetMs { get; set; } = 1000f / 90f;
 
         public void SetWindowSeconds(double seconds) => window.WindowSeconds = seconds;
@@ -56,6 +58,7 @@ namespace CRIXOptimizer.Diagnostics
             if (collected)
                 TotalGcCollections += gc - lastGcCount;
             lastGcCount = gc;
+            LastFrameCollected = collected;
 
             if (BudgetMs > 0f && ms > BudgetMs * 2f)
             {

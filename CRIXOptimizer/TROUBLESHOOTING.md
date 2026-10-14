@@ -73,6 +73,27 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
    cameras, minimaps, tablets) render the scene again. The `Cameras:` line in `system-report.txt` lists them with
    their pixel load relative to one VR eye.
 
+## Lag spikes / stuck below 60 FPS
+
+1. **Half-rate lock.** At 120 Hz, a game that misses frames is locked to 60 FPS by reprojection (Virtual Desktop SSW,
+   Meta ASW, SteamVR motion smoothing); at 90 Hz to 45. Set the headset to **90 Hz** (or 72/80) first. To see the
+   real frame rate while testing, turn reprojection off (Virtual Desktop: *Streaming* tab, *SSW* = Disabled; Quest
+   Link: Oculus Debug Tool, *Asynchronous Spacewarp* = Disabled; SteamVR: *Video*, *Motion Smoothing* off).
+2. **Is CRIX involved?** Press **F10** in game (CRIX restores everything and steps aside) and play a minute. If the
+   spikes are the same, they do not come from CRIX. Press F10 again to resume.
+3. **The hitch log.** CRIX logs every frame over 70 ms in `BepInEx/LogOutput.log` (`Hitch: one frame took ... ms
+   (reason)`) and counts them in `system-report.txt` (`Big hitches`). The reason says whether a garbage collection
+   ran, a map was loading, or CRIX had just changed a setting.
+4. **Resolution changes are hitches.** Each render-scale change reallocates the VR eye textures. Adaptive mode lowers
+   resolution at most once a minute, undoes it at once when it does not help, and does not change it at all in the
+   HighRefresh and streaming profiles. `AdaptiveMayChangeRenderScale = false` in your profile turns it off anywhere.
+5. **Other mods.** Shader packs and client mods (e.g. Sakuraa's GTFX effects and its extra cameras) can cost more
+   than CRIX saves; test once without them.
+6. **Virtual Desktop vs Link cable.** Virtual Desktop streams over Wi-Fi; a USB cable plugged into the headset only
+   charges it. Quest Link (cable) is a different runtime with its own settings. Do not run both at once. Check the
+   Virtual Desktop performance overlay: if *Game FPS* is fine but the image stutters, the cause is the encoder or
+   Wi-Fi, not the game.
+
 ## Not reaching 120 FPS
 
 - Is the headset really at 120 Hz? The dashboard and `system-report.txt` (`Headset refresh rate`) show what the VR
