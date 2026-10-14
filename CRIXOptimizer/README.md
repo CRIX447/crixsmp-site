@@ -41,7 +41,7 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
 - **ReShade preset advisor:** reads your active ReShade preset (read-only), names the usually expensive effects and
   checks Performance Mode; `[Actions] CreateLightReShadePreset` writes a lighter copy and leaves yours unchanged.
 - **Extra-camera limit (opt-in):** `[Performance] ExtraCameraMaxFps` updates cameras that render into textures
-  (minimaps, tablets, Sakuraa's display cameras) at most N times a second. Off by default because it switches other
+  (minimaps, tablets, Sakuraa's display cameras) at most N times a second. Off by default because it affects other
   mods' cameras.
 - The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing.
 
@@ -73,8 +73,8 @@ game's saved settings (PlayerPrefs), and never injects into, modifies, re-priori
 (Virtual Desktop, OBS, Streamlabs, Discord, Spotify, ReShade, SteamVR, Sakuraa, other mods). What it reads from them:
 process names, which DLLs are loaded in the game, other mods' plugin names and Harmony patch lists, the cameras in
 the scene, `ReShade.ini` and the active ReShade preset, and (read-only, on 127.0.0.1) OBS's and Streamlabs'
-live/recording state. Two options act only when you turn them on: `ExtraCameraMaxFps` switches render-texture
-cameras (also other mods') on and off, and `CreateLightReShadePreset` writes a new preset file next to yours.
+live/recording state. Two options act only when you turn them on: `ExtraCameraMaxFps` skips some renders of
+render-texture cameras (also other mods'), and `CreateLightReShadePreset` writes a new preset file next to yours.
 
 ## Profiles
 

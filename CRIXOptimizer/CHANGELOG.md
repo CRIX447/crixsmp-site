@@ -72,11 +72,14 @@ are claimed.
   Sakuraa's own presets; CRIX does not modify Sakuraa or GTFX, and leaves its cameras alone unless
   `ExtraCameraMaxFps` is set.
 - **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
-  render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second,
-  frame-staggered, by switching `Camera.enabled`. Never VR cameras or the desktop-window camera; names matching the
-  exclusion list (default `mirror,lck,photo,reflection,portal`) are skipped. A camera whose own mod switches it, or
-  that starts drawing to the screen, is handed back and no longer limited. Released on `0`, F10, disable, quit and
-  after repeated errors.
+  render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
+  (time-based, staggered). Two player-loop steps around Unity's `FinishFrameRendering` switch off only the cameras
+  that are on and not due, and `RenderPipelineManager.endContextRendering` switches exactly those back on, so every
+  script (including the camera's own mod) always sees the camera as its mod set it. Never VR cameras or the
+  desktop-window camera; names matching the exclusion list (default `mirror,lck,photo,reflection,portal`) are
+  skipped, also when the list is changed later. Fail-open: nothing is limited in a frame in which CRIX's own update
+  did not run and allow it (suspended, disabled, faulted, plugin disabled). Stops by itself if the render pipeline's
+  end event is missing or another mod keeps replacing the player loop. Needs URP.
 - **ReShade preset advisor** (read-only). When ReShade is detected, reads `ReShade.ini` (`PerformanceMode`,
   `PresetPath`) and the active preset's `Techniques` list, and logs (and reports) whether Performance Mode is off and
   which enabled effects are usually expensive (global illumination, ambient occlusion, screen-space reflections,

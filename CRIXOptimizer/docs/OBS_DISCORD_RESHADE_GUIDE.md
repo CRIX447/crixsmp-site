@@ -111,12 +111,16 @@ updates a second. `[Performance] ExtraCameraMaxFps` in `com.crix.crixoptimizer.c
 with `30`, each one renders at most 30 times a second, staggered so they do not all render in the same frame; between
 updates its screen keeps the last image.
 
-- Only `Camera.enabled` is switched. Never touched: VR cameras, the camera that draws the desktop window, and cameras
-  whose name contains an entry of `[Performance] ExtraCameraExclude` (default `mirror,lck,photo,reflection,portal`:
-  the game's mirror, its LCK/LIV camera, photo booth, reflection and portal cameras).
-- If the camera's own mod switches it on or off, or it starts drawing to the screen, CRIX stops limiting that
-  camera and leaves it as its owner set it.
-- Setting `0`, the F10 restore, disabling CRIX and quitting hand every camera back switched on.
+- How: directly before Unity draws a frame (after every mod's Update and LateUpdate), CRIX switches off the limited
+  cameras that are not due, and switches exactly those back on as soon as the frame is drawn. Every script, including
+  the camera's own mod and its menus, always sees the camera on or off as its mod set it; a camera its mod switched off
+  stays off, and CRIX never turns a camera on that its mod turned off.
+- Never touched: VR cameras, the camera that draws the desktop window, and cameras whose name contains an entry of
+  `[Performance] ExtraCameraExclude` (default `mirror,lck,photo,reflection,portal`: the game's mirror, its LCK/LIV
+  camera, photo booth, reflection and portal cameras). A camera that starts drawing to the screen is no longer limited.
+- Nothing is limited while CRIX is suspended (F10), disabled, or not running its update; `0` removes the hook.
+- Needs a scriptable render pipeline (Gorilla Tag uses URP). If Unity's end-of-frame event is not seen, or another
+  mod keeps replacing Unity's player loop, the limit stops by itself and says so in the log and system report.
 - The limited cameras are listed in the log (debug level) and in the system report (`Extra camera limit`).
 - If a mod shows a render-texture camera in the desktop window or a stream, that view is also limited; add its name
   to `ExtraCameraExclude` (the system report lists the names).

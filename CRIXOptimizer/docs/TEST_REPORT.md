@@ -7,11 +7,11 @@ Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21
 
 | Run | Runtime | BepInEx | HarmonyX | Result |
 |---|---|---|---|---|
-| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **134 passed, 0 failed** |
-| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **134 passed, 0 failed** |
+| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **140 passed, 0 failed** |
+| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **140 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
-| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 251 type / 998 member refs resolve |
-| - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 167 Unity member references declared |
+| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 258 type / 1010 member refs resolve |
+| - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 70 Unity type / 176 member references declared |
 
 **In the real game (field report, not a test run by the developers):** a user ran a 1.1.0 preview build on Gorilla
 Tag 1.1.147 (Unity 6000.2.9f1, BepInEx 5.4.23.5, Windows 11, Ryzen 5 5500, RTX 4060, Quest via a Meta/OpenXR runtime)
@@ -33,7 +33,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
   engine calls those methods directly and they cannot be inlined.
 - Pure logic (`Core/`, `Adaptive/`, configuration) is tested directly.
 
-## What was tested (134 tests)
+## What was tested (140 tests)
 
 | Area | Tests | What they establish |
 |---|---|---|
@@ -61,6 +61,8 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
 | Desktop camera | 2 | game member found by name; waits safely (nothing managed) while the game is not ready; reports "unavailable" when the member is missing |
 | Sakuraa / Spotify detection | 4 | detection by Harmony owner and plugin GUID, advice only when detected, state cleared on refresh; Spotify classified, described, never switches profile |
 | ReShade preset advisor (real files in a temp folder) | 3 | reads `PerformanceMode` and `PresetPath` from `ReShade.ini`; flags ambient occlusion, depth of field and DisplayDepth, not SMAA or sharpening; the light copy drops only those from `Techniques` and keeps effect settings and `TechniqueSorting` (**regression: `TechniqueSorting` was rewritten too because it starts with "Techniques" when case is ignored**); the user's preset is byte-identical afterwards; missing `ReShade.ini`, old name-only format, nothing to remove |
+| Extra-camera limit schedule | 4 | at most N renders per second and per any 1-second window, and at least 90 % of N, for 90/120/72/144 fps against 2-100/s (**regression: the earlier frame-interval maths did not limit 60/s at 90 fps and gave 9/s for 2/s at 144 fps**); a slower game renders every frame; irregular frame times and a 1.5 s hitch cause no burst; cameras start at different times |
+| Player-loop hook | 2 | steps are inserted directly before and after `PostLateUpdate.FinishFrameRendering`; removal takes out only CRIX's steps and keeps another mod's; a missing target is reported, nothing inserted |
 | Preset upgrades (real BepInEx ConfigFile, real 1.0.0 profiles file as fixture) | 5 | frozen 1.0.0 presets match the shipped 1.0.0 file; upgrade from 1.0.0 keeps user edits and applies new defaults; upgrade from the 1.1.0 previews (revision 2) applies only the later changes; fresh installs need no upgrade; reset to defaults does not re-run the upgrade |
 
 ### Scheduling simulation (synthetic, not a game benchmark)
@@ -105,7 +107,7 @@ peak is measurable in Gorilla Tag depends on how expensive these updates are in 
 | Desktop camera switch, XR mirror, LIV/Sakuraa take-over detection | Logic tested without Unity; the in-game behaviour (what the window shows, the LIV camera's CinemachineBrain signal) is unverified. |
 | OBS WebSocket / Streamlabs against the real applications | Tested against protocol-faithful fake servers only. |
 | Interaction with other real mods, ReShade, OBS hooks, Virtual Desktop | Unverified beyond the logic tests. |
-| Extra-camera limit (`ExtraCameraMaxFps`) | Not executed (needs Unity cameras). Off by default. Check the system report's *Extra camera limit* line lists only render-texture cameras (e.g. Sakuraa's `MiniMapCam`/`DisplayCam`) and that the headset and desktop views stay smooth. |
+| Extra-camera limit (`ExtraCameraMaxFps`) | The schedule and the player-loop edit are unit tested; the hook itself is not executed (needs Unity). It relies on Unity 6 collecting the frame's cameras inside `FinishFrameRendering` and URP 17 raising `endContextRendering` (checked in Unity's and URP's published source, not in the game). Off by default. Check the system report's *Extra camera limit* line lists only render-texture cameras (e.g. Sakuraa's `MiniMapCam`/`DisplayCam`) and that the headset and desktop views stay smooth. |
 | ReShade advisor against real ReShade installs | Tested with hand-written ReShade 5/6-style files only; preset paths written in other forms by other ReShade versions may not be found (then nothing is written). |
 
 ## Outstanding issues and known limitations

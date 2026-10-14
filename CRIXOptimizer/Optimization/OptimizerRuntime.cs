@@ -251,6 +251,7 @@ namespace CRIXOptimizer.Optimization
 
             Guard("Game patches", () => GamePatches?.Shutdown());
             RestoreEverything("shutdown");
+            try { ExtraCameras?.Dispose(); } catch (Exception e) { log.Warn("Extra camera limit shutdown: " + e.Message); }
             Guard("Memory monitor", MemoryStats.Dispose);
             StopObsClient();
             StopStreamlabsClient();
@@ -296,19 +297,11 @@ namespace CRIXOptimizer.Optimization
                 try { GamePatches.Tick(); } catch (Exception e) { Fail("Game patches", e); }
             }
 
-            if (ExtraCameras != null && ExtraCameras.ManagedCount > 0 && !Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"))
+            if (ExtraCameras != null && ExtraCameras.MaxFps > 0f)
             {
-                try
-                {
-                    ExtraCameras.Tick(Time.frameCount, Frames.CurrentFps);
-                }
-                catch (Exception e)
-                {
-                    Fail("Extra cameras", e);
-                    // Never leave another mod's camera switched off because CRIX stopped working.
-                    if (IsFaulted("Extra cameras"))
-                        try { ExtraCameras.ReleaseAll("error"); } catch { }
-                }
+                // Limiting only happens in frames where this call ran and allowed it, so a suspended, disabled or
+                // faulted CRIX never leaves a camera switched off.
+                try { ExtraCameras.Tick(!Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras")); } catch (Exception e) { Fail("Extra cameras", e); }
             }
 
             PollHotkeys();
@@ -641,8 +634,8 @@ namespace CRIXOptimizer.Optimization
         {
             if (ExtraCameras == null)
                 return;
-            float wanted = cfg.Enabled.Value && !Suspended ? cfg.ExtraCameraMaxFps.Value : 0f;
-            Guard("Extra cameras", () => ExtraCameras.Configure(wanted, cfg.ExtraCameraExclude.Value));
+            // The configured value always; whether limiting may run (CRIX on, not suspended) is decided per frame in Tick.
+            Guard("Extra cameras", () => ExtraCameras.Configure(cfg.ExtraCameraMaxFps.Value, cfg.ExtraCameraExclude.Value));
         }
 
         /// <summary>The profile asks for the game's desktop camera to be off right now (ignores whether CRIX is active).</summary>
