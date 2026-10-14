@@ -90,7 +90,9 @@ No mod can promise a frame rate: it depends on the headset, the lobby, the map a
    time for the desktop window (its third-person camera). HighRefresh switches that camera off while you are not
    recording or streaming with OBS/Streamlabs, and the window shows your headset view instead. It turns back on
    by itself when OBS/Streamlabs goes live or starts recording (with the OBS WebSocket set up, below; without it,
-   whenever OBS is running). It also stays on while the game's own LIV camera is out, and when another mod uses it:
+   whenever OBS is running); the first second or so of a new recording can still show the headset view, so start
+   recording a moment before the part you want. It also stays on while the game's own LIV camera is out, and when
+   another mod uses it:
    **Sakuraa Client uses this camera as its spectator camera**, so with Sakuraa CRIX leaves it on unless you set
    `[Compatibility] DesktopCameraWhenModsUseIt = true` in `com.crix.crixoptimizer.cfg` (then Sakuraa's spectator
    view is only on the desktop while you record or stream). Set `DesktopCamera = Unchanged` in the `[HighRefresh]`

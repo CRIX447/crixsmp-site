@@ -9,8 +9,9 @@ at runtime, so building only needs three sets of compile-time references:
 | HarmonyX (`0Harmony.dll`) | 2.9.0 (the version BepInEx 5.4.21-5.4.23 ships) | your game's `BepInEx/core`, or NuGet package `HarmonyX` 2.9.0 (net35 build) |
 | Unity engine modules (`UnityEngine.*Module.dll`) | Unity 2021.3 API surface | your game's `Gorilla Tag_Data/Managed`, or NuGet package `UnityEngine.Modules` 2021.3.33 |
 
-The target framework is **.NET Standard 2.1**, the same as Potassium 1.0.0, which is known to load in current
-Gorilla Tag PC builds (they use Unity 2021.2+ with .NET Standard 2.1 support).
+The target framework is **.NET Standard 2.1**, the same as Potassium 1.0.0. Gorilla Tag PC itself runs **Unity
+6000.1.9f1** (Unity 6) with URP 17. Compiling against the older 2021.3 API keeps CRIX to members that exist in both;
+`tools/check_unity_api.py` (below) checks the result against Unity 6's published source.
 
 ## Option A: build against your installed game (Windows)
 
@@ -70,6 +71,16 @@ dotnet run --project tools/RefCheck -c Release -- bin/Release/CRIXOptimizer.dll 
 The second form checks against your actual game install, which is the best offline check that the plugin matches
 your game's Unity version.
 
+Without a game install, `tools/check_unity_api.py` compares every Unity member the DLL references with Unity's
+published C# source at the game's version (names and [Obsolete] markers, not binary signatures):
+
+```bash
+git clone --depth 1 --filter=blob:none --sparse --branch 6000.1.9f1 \
+    https://github.com/Unity-Technologies/UnityCsReference ucs && (cd ucs && git sparse-checkout set Runtime Modules)
+python3 tools/check_unity_api.py bin/Release/CRIXOptimizer.dll ucs
+UNITY_CS_REFERENCE=ucs tools/package-release.sh      # also runs it during packaging
+```
+
 ## Release package
 
 ```bash
@@ -95,11 +106,13 @@ CRIXOptimizer/
   Adaptive/                    adaptive controller and quality ladder
   Diagnostics/                 frame monitor, GPU timing, XR runtime info, benchmark recorder, system report
   Compatibility/               plugin inventory, Harmony overlap scan, environment (apps/hooks) scanner
-  VirtualDesktop/ Streaming/ Discord/ ReShade/   detection and advice; ReShade guard
+  VirtualDesktop/ Streaming/ Discord/ ReShade/   detection and advice; ReShade guard; read-only OBS WebSocket
+                               and Streamlabs status clients
   UI/                          dashboard overlay and text
   Utilities/                   name-based game type index, compiled accessors, patch set, helpers
   Tests/                       stand-in game assembly, test suite, Mono runner
-  tools/                       setup-references.sh, package-release.sh, compare_benchmarks.py, RefCheck
+  tools/                       setup-references.sh, package-release.sh, compare_benchmarks.py, RefCheck,
+                               check_unity_api.py
   docs/                        guides, generated profile reference, build and test reports
 ```
 

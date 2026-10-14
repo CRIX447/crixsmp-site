@@ -4,7 +4,10 @@
 # Output (in release/):
 #   CRIXOptimizer.dll                  the plugin
 #   CRIXOptimizer-<ver>.zip            install/ (drop-in plugin folder) + source/ + docs + checksums
-#   logs/build.log, logs/tests-*.log, logs/refcheck-*.log
+#   logs/build.log, logs/tests-*.log, logs/refcheck-*.log, logs/unity-api-check.log
+#
+# Optional environment: EXTRA_BEPINEX_DLL / EXTRA_BEPINEX_DIR (test and ref-check against a second BepInEx build),
+# UNITY_CS_REFERENCE (a UnityCsReference checkout at the game's Unity version, see tools/check_unity_api.py).
 #
 # Usage: tools/package-release.sh [--skip-tests]
 # Requires lib/ (tools/setup-references.sh) unless building against a local game install (RefMode=Game).
@@ -47,6 +50,11 @@ dotnet build "$ROOT/tools/RefCheck/RefCheck.csproj" -c Release -nologo -v quiet 
 dotnet "$ROOT/tools/RefCheck/bin/Release/net8.0/RefCheck.dll" "$DLL" "$ROOT/lib/bepinex" "$ROOT/lib/unity" | tee "$LOGS/refcheck-lib.log" | tail -1
 if [ -n "${EXTRA_BEPINEX_DIR:-}" ]; then
   dotnet "$ROOT/tools/RefCheck/bin/Release/net8.0/RefCheck.dll" "$DLL" "$EXTRA_BEPINEX_DIR" "$ROOT/lib/unity" | tee "$LOGS/refcheck-extra.log" | tail -1
+fi
+
+if [ -n "${UNITY_CS_REFERENCE:-}" ]; then
+  echo "== Unity API check against $UNITY_CS_REFERENCE"
+  python3 -I "$ROOT/tools/check_unity_api.py" "$DLL" "$UNITY_CS_REFERENCE" | tee "$LOGS/unity-api-check.log" | tail -1
 fi
 
 echo "== Stage"
