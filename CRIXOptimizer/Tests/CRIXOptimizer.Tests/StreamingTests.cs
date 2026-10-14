@@ -765,6 +765,72 @@ namespace CRIXOptimizer.Tests
         }
     }
 
+    public sealed class ReShadeAdvisorTests
+    {
+        private const string Preset =
+            "PreprocessorDefinitions=\r\n" +
+            "Techniques=SMAA@SMAA.fx,MXAO@qUINT_mxao.fx,CinematicDOF@CinematicDOF.fx,LumaSharpen@LumaSharpen.fx,DisplayDepth@DisplayDepth.fx\r\n" +
+            "TechniqueSorting=SMAA@SMAA.fx,MXAO@qUINT_mxao.fx,CinematicDOF@CinematicDOF.fx,LumaSharpen@LumaSharpen.fx,DisplayDepth@DisplayDepth.fx\r\n" +
+            "\r\n[qUINT_mxao.fx]\r\nMXAO_SAMPLE_RADIUS=2.5\r\n";
+
+        private static string TempGame()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "crix-reshade-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+
+        [Test]
+        public void FlagsUsuallyExpensiveEffectsAndPerformanceMode()
+        {
+            string game = TempGame();
+            File.WriteAllText(Path.Combine(game, "ReShade.ini"), "[GENERAL]\r\nPerformanceMode=0\r\nPresetPath=.\\ReShadePreset.ini\r\n".Replace("\\", Path.DirectorySeparatorChar.ToString()));
+            File.WriteAllText(Path.Combine(game, "ReShadePreset.ini"), Preset);
+            var a = new ReShade.ReShadePresetAdvisor();
+            a.Analyze(game);
+            Assert.True(a.Found);
+            Assert.Equal(false, a.PerformanceMode);
+            Assert.Equal(5, a.Enabled.Count);
+            var heavy = a.Heavy.Select(t => t.Name).ToList();
+            Assert.True(heavy.Contains("MXAO") && heavy.Contains("CinematicDOF") && heavy.Contains("DisplayDepth"), string.Join(",", heavy));
+            Assert.False(heavy.Contains("SMAA") || heavy.Contains("LumaSharpen"), "cheap effects are not flagged");
+            Assert.True(a.Advice.Any(l => l.Contains("Performance Mode is off")));
+            Assert.True(a.Advice.Any(l => l.Contains("MXAO")));
+        }
+
+        [Test]
+        public void LightPresetIsACopyWithoutHeavyEffects()
+        {
+            string game = TempGame();
+            File.WriteAllText(Path.Combine(game, "ReShade.ini"), "[GENERAL]\nPerformanceMode=1\nPresetPath=ReShadePreset.ini\n");
+            string presetPath = Path.Combine(game, "ReShadePreset.ini");
+            File.WriteAllText(presetPath, Preset);
+            var a = new ReShade.ReShadePresetAdvisor();
+            a.Analyze(game);
+            Assert.Equal(true, a.PerformanceMode);
+            string written = a.WriteLightPreset();
+            Assert.Equal(Path.Combine(game, "ReShadePreset.CRIX-light.ini"), written);
+            Assert.Equal(Preset, File.ReadAllText(presetPath), "the user's preset is unchanged");
+            string light = File.ReadAllText(written);
+            Assert.True(light.Contains("Techniques=SMAA@SMAA.fx,LumaSharpen@LumaSharpen.fx\r\n"), light);
+            Assert.True(light.Contains("MXAO_SAMPLE_RADIUS=2.5"), "effect settings kept");
+            Assert.True(light.Contains("TechniqueSorting=SMAA@SMAA.fx,MXAO"), "sorting line kept as is");
+        }
+
+        [Test]
+        public void HandlesMissingFilesAndOldPresetFormat()
+        {
+            var a = new ReShade.ReShadePresetAdvisor();
+            a.Analyze(TempGame());
+            Assert.False(a.Found, "no ReShade.ini");
+            a.AnalyzePresetText("Techniques=MXAO,Vibrance\n");
+            Assert.Equal(2, a.Enabled.Count);
+            Assert.Equal("MXAO", a.Enabled[0].Name);
+            Assert.True(a.Enabled[0].HeavyReason != null && a.Enabled[1].HeavyReason == null);
+            Assert.Throws<InvalidOperationException>(() => a.WriteLightPreset());
+        }
+    }
+
     public sealed class SpotifyDetectionTests
     {
         [Test]

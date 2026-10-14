@@ -1,4 +1,4 @@
-checked 166 Unity member references
+checked 167 Unity member references
 obsolete (still present): UnityEngine.GameObject.AddComponent: [Obsolete("GameObject.AddComponent with string argument has been deprecated. Use GameObject.AddCompo)]
 obsolete (still present): UnityEngine.QualitySettings.get_masterTextureLimit: [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgrad)]
 obsolete (still present): UnityEngine.QualitySettings.set_masterTextureLimit: [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgrad)]

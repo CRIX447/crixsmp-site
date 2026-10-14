@@ -63,6 +63,9 @@ namespace CRIXOptimizer.Optimization
         public readonly ReShadeSupport ReShade = new ReShadeSupport();
         public readonly SakuraaSupport Sakuraa = new SakuraaSupport();
         public readonly CameraInventory Cameras = new CameraInventory();
+        public readonly ReShadePresetAdvisor ReShadeAdvisor = new ReShadePresetAdvisor();
+        public ExtraCameraLimiter ExtraCameras { get; private set; }
+        private int reshadeAnalyses;
 
         public GraphicsSettingsModule Graphics { get; private set; }
         public DesktopCameraModule DesktopCamera { get; private set; }
@@ -198,6 +201,8 @@ namespace CRIXOptimizer.Optimization
                 GamePatches = new GamePatchCatalog(Patches, Types, log);
             });
             Guard("Desktop camera", () => DesktopCamera = new DesktopCameraModule(Types, Ledger, log));
+            ExtraCameras = new ExtraCameraLimiter(log);
+            ConfigureExtraCameras();
 
             if (cfg.UpgradeNote.Length > 0)
                 log.Info(cfg.UpgradeNote);
@@ -289,6 +294,21 @@ namespace CRIXOptimizer.Optimization
             if (GamePatches != null && !IsFaulted("Game patches"))
             {
                 try { GamePatches.Tick(); } catch (Exception e) { Fail("Game patches", e); }
+            }
+
+            if (ExtraCameras != null && ExtraCameras.ManagedCount > 0 && !Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"))
+            {
+                try
+                {
+                    ExtraCameras.Tick(Time.frameCount, Frames.CurrentFps);
+                }
+                catch (Exception e)
+                {
+                    Fail("Extra cameras", e);
+                    // Never leave another mod's camera switched off because CRIX stopped working.
+                    if (IsFaulted("Extra cameras"))
+                        try { ExtraCameras.ReleaseAll("error"); } catch { }
+                }
             }
 
             PollHotkeys();
@@ -408,10 +428,12 @@ namespace CRIXOptimizer.Optimization
                     Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
                     Guard("Graphics settings", Graphics.VerifyRenderScale);
                 }
+                if (ExtraCameras != null && ExtraCameras.MaxFps > 0f && !Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"))
+                    Guard("Extra cameras", ExtraCameras.Discover);
                 if (cfg.Diagnostics.Value)
                 {
                     TickMemory(now);
-                    // The camera list is for the dashboard and the report: every 5 s while the dashboard is open, else 30 s.
+                // The camera list is for the dashboard and the report: every 5 s while the dashboard is open, else 30 s.
                     if (dashboard != null || now >= nextCameraInventory)
                     {
                         nextCameraInventory = now + 30f;
@@ -615,6 +637,14 @@ namespace CRIXOptimizer.Optimization
             UpdateStatus();
         }
 
+        private void ConfigureExtraCameras()
+        {
+            if (ExtraCameras == null)
+                return;
+            float wanted = cfg.Enabled.Value && !Suspended ? cfg.ExtraCameraMaxFps.Value : 0f;
+            Guard("Extra cameras", () => ExtraCameras.Configure(wanted, cfg.ExtraCameraExclude.Value));
+        }
+
         /// <summary>The profile asks for the game's desktop camera to be off right now (ignores whether CRIX is active).</summary>
         private bool DesktopCameraModeWantsOff(DesktopCameraMode mode)
         {
@@ -652,6 +682,7 @@ namespace CRIXOptimizer.Optimization
                 Live.Suspended = true;
                 Graphics?.Apply(null, false, false, 0, Ladder, false);
                 DesktopCamera?.Apply(false, "restored", false, Time.unscaledTime);
+                ExtraCameras?.ReleaseAll(reason);
                 SettingsLedger.RestoreReport report = Ledger.RestoreAll();
                 if (report.Restored > 0 || report.SkippedExternal > 0 || report.Failed > 0)
                     log.Info($"Restore ({reason}): {report.Restored} setting(s) restored, {report.SkippedExternal} left alone (changed externally), {report.Failed} failed.");
@@ -767,6 +798,7 @@ namespace CRIXOptimizer.Optimization
                     : $"Auto streaming mode ended -> back to profile {ActiveSection}.");
             EnsureObsClient();
             EnsureStreamlabsClient();
+            ConfigureExtraCameras();
             if (statusLogPending)
             {
                 statusLogPending = false;
@@ -796,6 +828,26 @@ namespace CRIXOptimizer.Optimization
                     break;
                 case "WriteSystemReportNow":
                     WriteSystemReport();
+                    break;
+                case "CreateLightReShadePreset":
+                    Guard("ReShade advisor", () =>
+                    {
+                        ReShadeAdvisor.Analyze(Paths.GameRootPath);
+                        if (!ReShadeAdvisor.Found)
+                        {
+                            log.Warn("CreateLightReShadePreset: no ReShade.ini in the game folder, nothing written.");
+                            return;
+                        }
+                        try
+                        {
+                            string path = ReShadeAdvisor.WriteLightPreset();
+                            log.Info("Wrote a lighter ReShade preset: " + path + ". Your own preset was not changed. Select the new one in the ReShade overlay (Home key).");
+                        }
+                        catch (InvalidOperationException e)
+                        {
+                            log.Info("CreateLightReShadePreset: " + e.Message + "; nothing written.");
+                        }
+                    });
                     break;
             }
         }
@@ -1238,6 +1290,13 @@ namespace CRIXOptimizer.Optimization
                     once.Info("discord:" + line, line);
                 foreach (string line in ReShade.Advice)
                     once.Info("reshade:" + line, line);
+
+                if (ReShade.Detected && (reshadeAnalyses++ % 10) == 0)
+                {
+                    ReShadeAdvisor.Analyze(Paths.GameRootPath);
+                    foreach (string line in ReShadeAdvisor.Advice)
+                        once.Info("reshade-preset:" + line, line);
+                }
 
                 if (guardChanged)
                 {

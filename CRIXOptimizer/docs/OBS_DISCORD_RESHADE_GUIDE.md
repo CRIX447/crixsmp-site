@@ -2,8 +2,11 @@
 
 CRIX only changes Gorilla Tag. It **never** changes OBS, Streamlabs, Discord, Spotify, Sakuraa or ReShade settings,
 never injects into them, never changes process priorities and never terminates anything. Its interaction with them
-is read-only: whether their process runs, whether their DLL is loaded into the game process, and (1.1) OBS's and
-Streamlabs' live/recording state through their own local APIs on 127.0.0.1.
+is read-only: whether their process runs, whether their DLL is loaded into the game process, ReShade's `ReShade.ini`
+and active preset (read, never written), and (1.1) OBS's and Streamlabs' live/recording state through their own
+local APIs on 127.0.0.1. Two options act only when you turn them on: `[Performance] ExtraCameraMaxFps` (limits
+cameras that render into textures, including other mods' cameras, see Sakuraa below) and
+`[Actions] CreateLightReShadePreset` (writes a new preset file next to yours, see ReShade below).
 
 ## Auto streaming mode (1.1)
 
@@ -93,12 +96,33 @@ system, injected by Sakuraa's launcher. CRIX:
   derived pixel load relative to one VR eye, and points out a large desktop camera while you stream;
 - reduces the game's own load around Sakuraa as usual.
 
-CRIX does **not** change Sakuraa, GTFX or Sakuraa's own cameras (that would be changing another mod's settings).
-Sakuraa's spectator view uses the game's third-person camera; the `DesktopCamera` setting of the HighRefresh profile
+CRIX does **not** change Sakuraa or GTFX, and leaves Sakuraa's cameras alone unless you turn on the extra-camera
+limit below. Sakuraa's spectator view uses the game's third-person camera; the `DesktopCamera` setting of the HighRefresh profile
 therefore leaves that camera on when Sakuraa has taken it over, unless you allow it with
 `[Compatibility] DesktopCameraWhenModsUseIt = true` (the spectator view is then shown only while you record or stream). To make
 GTFX cheaper, choose a lighter GTFX preset inside Sakuraa while streaming. Sakuraa sets Unity's
 `targetFrameRate`/`vSyncCount`; VR runtimes ignore those, and CRIX does not manage them.
+
+### Extra-camera limit (opt-in, 1.1)
+
+Every camera that renders into a texture (a minimap, a tablet or in-game screen, Sakuraa's `MiniMapCam` and
+`DisplayCam`) draws the whole scene again, every frame, on top of the two VR eyes. Most of them do not need 120
+updates a second. `[Performance] ExtraCameraMaxFps` in `com.crix.crixoptimizer.cfg` (default `0` = off) limits them:
+with `30`, each one renders at most 30 times a second, staggered so they do not all render in the same frame; between
+updates its screen keeps the last image.
+
+- Only `Camera.enabled` is switched. Never touched: VR cameras, the camera that draws the desktop window, and cameras
+  whose name contains an entry of `[Performance] ExtraCameraExclude` (default `mirror,lck,photo,reflection,portal`:
+  the game's mirror, its LCK/LIV camera, photo booth, reflection and portal cameras).
+- If the camera's own mod switches it on or off, or it starts drawing to the screen, CRIX stops limiting that
+  camera and leaves it as its owner set it.
+- Setting `0`, the F10 restore, disabling CRIX and quitting hand every camera back switched on.
+- The limited cameras are listed in the log (debug level) and in the system report (`Extra camera limit`).
+- If a mod shows a render-texture camera in the desktop window or a stream, that view is also limited; add its name
+  to `ExtraCameraExclude` (the system report lists the names).
+
+This changes other mods' cameras, so it is off until you set it. It only saves GPU time when such cameras exist;
+the camera inventory in the system report shows them and their pixel load.
 
 Download Sakuraa only from its official source; CRIX does not check where a copy came from.
 
@@ -133,3 +157,26 @@ else changes resolution.
 
 Turning the ReShade mode off is safe at any time: CRIX restores the values it changed. Your ReShade configuration is
 never touched.
+
+### Making ReShade cheaper (preset advisor, 1.1)
+
+ReShade's cost is the effects in the active preset. In VR each effect that is applied to the headset view runs on
+every eye at the eye resolution, which is much more work than on a flat monitor (CRIX's eye-resolution cap,
+`MaxEyeMegapixels`, therefore also makes ReShade cheaper).
+
+When ReShade is detected, CRIX reads `ReShade.ini` in the game folder (`PerformanceMode`, `PresetPath`) and the
+active preset's enabled effects (read-only) and logs advice, also shown in the system report:
+
+- **Performance Mode off:** turn it on at the bottom of the *Home* tab of the ReShade overlay (Home key). Effects are
+  then compiled with fixed settings, which is faster; turn it off again only to edit settings.
+- **Usually expensive effects** are listed by kind: global illumination (RTGI and similar), ambient occlusion (MXAO,
+  SSAO, HBAO, ...), screen-space reflections, depth of field/bokeh, motion blur, large-radius local contrast
+  (Clarity), god rays/volumetric light, and the DisplayDepth debug view (only for setup). This is a name-based
+  guess, not a measurement; the real cost depends on each effect's settings. Colour, sharpening, SMAA and similar
+  effects are cheap and not listed.
+- **`[Actions] CreateLightReShadePreset = true`** writes a copy of the active preset, `<preset>.CRIX-light.ini` next to
+  it, with the listed effects switched off and every effect setting kept. Your preset and `ReShade.ini` are not
+  changed. Select the copy in the preset list at the top of the ReShade overlay; select your own preset to go back.
+  Running it again overwrites only the `.CRIX-light.ini` copy.
+
+Measure before and after with the benchmark recorder (F6) in the same lobby type.

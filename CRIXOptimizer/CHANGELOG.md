@@ -69,7 +69,21 @@ are claimed.
   GPU time). The log explains Spotify's hardware-acceleration option. CRIX never touches Spotify.
 - **Sakuraa Client / GTFX awareness.** Detects Sakuraa (assemblies, plugin GUIDs and Harmony owners whose name
   contains "Sakuraa") and lists it in the log and system report. GTFX is part of Sakuraa and can only be tuned in
-  Sakuraa's own presets; CRIX does not modify Sakuraa, GTFX or its cameras.
+  Sakuraa's own presets; CRIX does not modify Sakuraa or GTFX, and leaves its cameras alone unless
+  `ExtraCameraMaxFps` is set.
+- **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
+  render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second,
+  frame-staggered, by switching `Camera.enabled`. Never VR cameras or the desktop-window camera; names matching the
+  exclusion list (default `mirror,lck,photo,reflection,portal`) are skipped. A camera whose own mod switches it, or
+  that starts drawing to the screen, is handed back and no longer limited. Released on `0`, F10, disable, quit and
+  after repeated errors.
+- **ReShade preset advisor** (read-only). When ReShade is detected, reads `ReShade.ini` (`PerformanceMode`,
+  `PresetPath`) and the active preset's `Techniques` list, and logs (and reports) whether Performance Mode is off and
+  which enabled effects are usually expensive (global illumination, ambient occlusion, screen-space reflections,
+  depth of field, motion blur, Clarity, god rays/volumetrics, DisplayDepth), by name.
+- **`[Actions] CreateLightReShadePreset`**: writes `<preset>.CRIX-light.ini` next to the active preset with those
+  effects removed from its `Techniques` line (effect settings and `TechniqueSorting` kept). The user's preset and
+  `ReShade.ini` are never written.
 - **Camera inventory.** Lists every active camera (VR, desktop window, render textures) with resolution and a
   derived pixel load relative to one VR eye (system report, dashboard), and points out a large desktop camera.
 - **URP asset report.** The game's URP asset values at start-up (render scale, MSAA, shadows, HDR, opaque/depth
@@ -96,6 +110,8 @@ are claimed.
     headroom 20 %, adaptive render scale off. VirtualDesktop.Performance: cascades 1, MSAA 2x.
   - MaximumPerformance: MSAA 2x. ReShadeCompatible: cascades 2.
 - Streamlabs Desktop's own obs64 backend process is no longer reported as OBS Studio; `DiscordDevelopment` is detected.
+- `DesktopCamera`: the "never a VR camera" check uses `Camera.stereoEnabled` (whether the camera actually renders to
+  the headset) instead of `stereoTargetEye`, which the game's desktop camera may leave at its default.
 
 ### Fixed during review (before release)
 

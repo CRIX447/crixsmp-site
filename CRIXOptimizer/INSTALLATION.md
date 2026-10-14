@@ -41,6 +41,7 @@ Nothing else is installed or modified: no game files, no registry, no other prog
 | `BepInEx/config/com.crix.crixoptimizer.profiles.cfg` | Editable values of every built-in profile (one section each). |
 | `BepInEx/CRIXOptimizer/system-report.txt` | Written ~20 s after start: versions, GPU, XR runtime, plugins, patch status, managed settings. |
 | `BepInEx/CRIXOptimizer/benchmarks/*.csv`, `*.summary.txt` | Benchmark captures (only when you start one). |
+| `<your ReShade preset>.CRIX-light.ini` (next to the preset, usually in the game folder) | Only when you use `[Actions] CreateLightReShadePreset`: a lighter copy of your ReShade preset. Delete it any time. |
 
 Annotated examples of both config files with all defaults are in [docs/examples/](docs/examples/).
 
@@ -118,7 +119,12 @@ No mod can promise a frame rate: it depends on the headset, the lobby, the map a
      (browsers with video, OBS previews you do not need) closed.
    - Virtual Desktop at 120 Hz needs more encoder work: the RTX 40 series encodes AV1 and H.264/HEVC; if the stream
      stutters while the game itself holds 120 FPS, lower Virtual Desktop's resolution or bitrate.
-6. **Measure**: F6 records a benchmark; compare profiles in the same lobby type. The dashboard shows frame time,
+6. **Shaders and extra cameras.** ReShade effects and render-texture cameras (minimaps, tablets, Sakuraa's
+   `MiniMapCam`/`DisplayCam`) are extra GPU work in every frame. Turn on ReShade's *Performance Mode*, use
+   `[Actions] CreateLightReShadePreset = true` for a copy of your preset without the usually expensive effects, and set
+   `[Performance] ExtraCameraMaxFps = 30` to update render-texture cameras at most 30 times a second (opt-in, it
+   changes other mods' cameras). Details: [docs/OBS_DISCORD_RESHADE_GUIDE.md](docs/OBS_DISCORD_RESHADE_GUIDE.md).
+7. **Measure**: F6 records a benchmark; compare profiles in the same lobby type. The dashboard shows frame time,
    1 % low and whether frames are CPU-bound.
 
 ## Auto streaming mode (OBS, Streamlabs, Discord)

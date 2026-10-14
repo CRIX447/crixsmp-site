@@ -87,7 +87,7 @@ namespace CRIXOptimizer.GPU
             string keepOn = null;
             if (wantOff)
             {
-                if (cam.targetTexture != null || cam.stereoTargetEye != StereoTargetEyeMask.None)
+                if (cam.targetTexture != null || cam.stereoEnabled)
                     keepOn = "left on: it no longer draws only to the desktop window";
                 else if (UnityObjects.IsAlive(brain) && !brain.enabled)
                     keepOn = "left on: its camera controller is paused (the game's LIV camera or another mod is driving it)";
@@ -140,8 +140,10 @@ namespace CRIXOptimizer.GPU
                 nextFindByName = now + FindByNameIntervalSeconds;
                 cam = FindByName("Shoulder Camera");
             }
-            // Safety: only a camera that draws to the desktop window, never the VR camera or a texture camera.
-            if (!UnityObjects.IsAlive(cam) || cam.targetTexture != null || cam.stereoTargetEye != StereoTargetEyeMask.None)
+            // Safety: only a camera that draws to the desktop window, never one rendering in stereo (VR) or into a
+            // texture. (stereoTargetEye is not used: a desktop-only camera can keep its default "Both" and simply not
+            // be an XR camera.)
+            if (!UnityObjects.IsAlive(cam) || cam.targetTexture != null || cam.stereoEnabled)
                 return null;
             return cam;
         }

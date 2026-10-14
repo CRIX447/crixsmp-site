@@ -108,6 +108,11 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<bool> ActionResetConfig;
         public readonly ConfigEntry<bool> ActionStartBenchmark;
         public readonly ConfigEntry<bool> ActionWriteReport;
+        public readonly ConfigEntry<bool> ActionLightReShadePreset;
+
+        // [Performance]
+        public readonly ConfigEntry<float> ExtraCameraMaxFps;
+        public readonly ConfigEntry<string> ExtraCameraExclude;
 
         public PluginConfig(ConfigFile file)
         {
@@ -259,6 +264,18 @@ namespace CRIXOptimizer.Configuration
             ActionResetConfig = file.Bind("Actions", "ResetConfigToDefaults", false, "Set to true to reset this file and the profiles file to defaults (resets itself).");
             ActionStartBenchmark = file.Bind("Actions", "StartBenchmarkNow", false, "Set to true to start a benchmark capture (resets itself).");
             ActionWriteReport = file.Bind("Actions", "WriteSystemReportNow", false, "Set to true to write the system report now (resets itself).");
+            ActionLightReShadePreset = file.Bind("Actions", "CreateLightReShadePreset", false,
+                "Set to true to write a copy of your active ReShade preset without the usually expensive effects (ambient occlusion, global illumination, reflections, depth of field, ...), " +
+                "named <preset>.CRIX-light.ini next to it. Your preset and ReShade.ini are not changed; pick the copy in the ReShade overlay (resets itself).");
+
+            ExtraCameraMaxFps = file.Bind("Performance", "ExtraCameraMaxFps", 0f,
+                new ConfigDescription("Cameras that render into a texture (minimaps, tablets, spectator displays from mods such as Sakuraa Client) draw the whole scene again every frame. " +
+                                      "A value above 0 lets each of them render at most this many times per second; between updates their screen keeps the last image. " +
+                                      "0 = off (default). This changes other mods' cameras, so it is only active when you set it. Mirrors, the game's LIV camera and the photo booth are excluded (ExtraCameraExclude).",
+                    new AcceptableValueRange<float>(0f, 144f)));
+            ExtraCameraExclude = file.Bind("Performance", "ExtraCameraExclude", "mirror,lck,photo,reflection,portal",
+                "Comma-separated name fragments of render-texture cameras ExtraCameraMaxFps never limits (case-insensitive). Add a camera's name here if it must update every frame, " +
+                "e.g. one whose image you stream.");
 
             // 1.0.0 had "[Adaptive] Enabled" (default false). 1.1.0 replaces it with "[Adaptive] Mode" (default On)
             // so existing installs get adaptive quality; drop the old key so the file does not show both.

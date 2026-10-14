@@ -37,7 +37,12 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
 - **Stronger presets.** Existing profile files are upgraded, and any value you edited yourself is kept.
 - **Auto streaming mode:** OBS (read-only WebSocket), Streamlabs and Discord switch to a streaming profile
   automatically and back afterwards. Setup: [INSTALLATION.md](INSTALLATION.md#auto-streaming-mode-obs-streamlabs-discord).
-- **Spotify, Sakuraa Client/GTFX and extra-camera awareness** (detection and advice only; other programs and mods are never changed).
+- **Spotify, Sakuraa Client/GTFX and extra-camera awareness** (detection and advice; other programs and mods are not changed).
+- **ReShade preset advisor:** reads your active ReShade preset (read-only), names the usually expensive effects and
+  checks Performance Mode; `[Actions] CreateLightReShadePreset` writes a lighter copy and leaves yours unchanged.
+- **Extra-camera limit (opt-in):** `[Performance] ExtraCameraMaxFps` updates cameras that render into textures
+  (minimaps, tablets, Sakuraa's display cameras) at most N times a second. Off by default because it switches other
+  mods' cameras.
 - The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing.
 
 VR frame rates are capped at the headset refresh rate, so if the game already holds it the FPS number cannot rise;
@@ -67,7 +72,9 @@ CRIX **never** changes gameplay, physics, player movement, networking or multipl
 game's saved settings (PlayerPrefs), and never injects into, modifies, re-prioritises or terminates other programs
 (Virtual Desktop, OBS, Streamlabs, Discord, Spotify, ReShade, SteamVR, Sakuraa, other mods). What it reads from them:
 process names, which DLLs are loaded in the game, other mods' plugin names and Harmony patch lists, the cameras in
-the scene, and (read-only, on 127.0.0.1) OBS's and Streamlabs' live/recording state.
+the scene, `ReShade.ini` and the active ReShade preset, and (read-only, on 127.0.0.1) OBS's and Streamlabs'
+live/recording state. Two options act only when you turn them on: `ExtraCameraMaxFps` switches render-texture
+cameras (also other mods') on and off, and `CreateLightReShadePreset` writes a new preset file next to yours.
 
 ## Profiles
 
@@ -137,7 +144,9 @@ Switching profile applies immediately, with no restart. The full table of built-
   fails, and `Resolution.refreshRate` as the desktop-monitor fallback when the VR runtime reports no refresh rate.
 - **GTFX (Sakuraa Client's shaders) cannot be optimised by CRIX.** It is closed, injected by Sakuraa's launcher, and
   its settings belong to Sakuraa. Use GTFX's lighter presets in Sakuraa while streaming. CRIX reduces the game's own
-  load around it and reports extra cameras (e.g. a spectator camera) and their pixel load.
+  load around it, reports extra cameras (e.g. a spectator camera) and their pixel load, and can limit Sakuraa's
+  render-texture cameras if you turn on `ExtraCameraMaxFps`.
+- **The ReShade advisor goes by effect names**, not measurements; an effect's real cost depends on its settings.
 - **Discord's call/Go Live state is not readable** without injecting into Discord, so "Discord running" is the signal.
 - **The OBS WebSocket password** is stored in plain text in the BepInEx config (it is never logged).
 - **The dashboard is drawn into the game window**, so OBS window/game capture will record it. Keep it off while live.

@@ -133,11 +133,23 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 
 ## Sakuraa Client / GTFX
 
-- CRIX detects Sakuraa and lists it in the log and system report. It never changes Sakuraa, GTFX or Sakuraa's cameras.
+- CRIX detects Sakuraa and lists it in the log and system report. It never changes Sakuraa or GTFX.
 - GTFX effects (clouds, rain, grass and similar) are only adjustable in Sakuraa's own GTFX presets. Pick a lighter one while streaming.
+- Sakuraa's minimap and display cameras (`MiniMapCam`, `DisplayCam`) render the scene again every frame. Set
+  `[Performance] ExtraCameraMaxFps = 30` to update them at most 30 times a second (opt-in; see
+  [docs/OBS_DISCORD_RESHADE_GUIDE.md](docs/OBS_DISCORD_RESHADE_GUIDE.md#extra-camera-limit-opt-in-11)). If a view you
+  need turns choppy, add its camera name to `[Performance] ExtraCameraExclude`.
 - Sakuraa's spectator camera renders the game a second time to the desktop window. A smaller game window, or a lower
   quality setting for that camera in Sakuraa, saves GPU time.
 - Download Sakuraa only from its official source; CRIX does not check where a copy came from.
+
+## ReShade costs too much FPS
+
+- Turn on *Performance Mode* at the bottom of the *Home* tab of the ReShade overlay (the log says when it is off).
+- The log and system report list the usually expensive effects in your active preset (ambient occlusion, global
+  illumination, reflections, depth of field, motion blur, ...). `[Actions] CreateLightReShadePreset = true` writes
+  `<preset>.CRIX-light.ini` without them; select it in the ReShade overlay. Your own preset is not changed.
+- Depth effects broken: see *Visual problems* above.
 
 ## Spotify
 

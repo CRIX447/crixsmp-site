@@ -47,6 +47,14 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Sakuraa Client: ").Append(rt.Sakuraa.Detected ? rt.Sakuraa.Detail : "not detected").Append('\n');
             sb.Append("Cameras: ").Append(rt.Cameras.Describe()).Append('\n');
             sb.Append("Game desktop camera (DesktopCamera setting): ").Append(rt.DesktopCamera?.Status ?? "n/a").Append('\n');
+            sb.Append("Extra camera limit ([Performance] ExtraCameraMaxFps): ").Append(rt.ExtraCameras?.Status ?? "n/a").Append('\n');
+            if (rt.ReShadeAdvisor.Found)
+            {
+                sb.Append("ReShade preset: ").Append(rt.ReShadeAdvisor.PresetPath.Length > 0 ? rt.ReShadeAdvisor.PresetPath : "none")
+                  .Append(", performance mode ").Append(rt.ReShadeAdvisor.PerformanceMode == null ? "unknown" : rt.ReShadeAdvisor.PerformanceMode.Value ? "on" : "off")
+                  .Append(", effects: ").Append(rt.ReShadeAdvisor.Enabled.Count == 0 ? "none" : string.Join(", ", rt.ReShadeAdvisor.Enabled.ConvertAll(t => t.Name + (t.HeavyReason != null ? " (heavy)" : "")).ToArray()))
+                  .Append('\n');
+            }
             sb.Append("Headset refresh rate: ").Append(rt.Xr.RefreshRate > 1f ? rt.Xr.RefreshRate.ToString("0.#", Inv) + " Hz (" + rt.Xr.RefreshRateSource + ")" : "n/a")
               .Append(" - the frame rate cannot exceed it\n");
             sb.Append("Streaming (auto mode): ").Append(UI.DashboardText.StreamingLine(rt)).Append('\n');
@@ -57,6 +65,7 @@ namespace CRIXOptimizer.Diagnostics
             AppendLines(sb, "Advice", rt.ReShade.Advice);
             AppendLines(sb, "Advice", rt.Sakuraa.Advice);
             AppendLines(sb, "Setup", rt.SetupAdvice);
+            AppendLines(sb, "ReShade", rt.ReShadeAdvisor.Advice);
             if ((rt.Apps & CompanionApp.Spotify) != 0)
                 sb.Append("Advice: ").Append(OptimizerRuntime.SpotifyAdvice).Append('\n');
             sb.Append('\n');
