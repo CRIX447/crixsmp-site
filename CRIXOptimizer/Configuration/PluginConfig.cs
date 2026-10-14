@@ -55,6 +55,7 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<int> ObsWebSocketPort;
         public readonly ConfigEntry<string> ObsWebSocketPassword;
         public readonly ConfigEntry<bool> StreamlabsApi;
+        public readonly ConfigEntry<bool> DesktopCameraWhenModsUseIt;
 
         /// <summary>Set when a 1.0.0 key was replaced (shown once in the log).</summary>
         public string UpgradeNote { get; } = "";
@@ -239,6 +240,9 @@ namespace CRIXOptimizer.Configuration
                 "When the game or another plugin changes a setting CRIX manages: Respect (stop managing it) or Reapply.");
             DriftCheckSeconds = file.Bind("Compatibility", "DriftCheckSeconds", 2f,
                 new ConfigDescription("How often to check whether managed settings were changed by something else.", new AcceptableValueRange<float>(0.5f, 60f)));
+            DesktopCameraWhenModsUseIt = file.Bind("Compatibility", "DesktopCameraWhenModsUseIt", false,
+                "The DesktopCamera profile setting leaves the game's desktop camera on when another mod has taken it over (Sakuraa Client uses it as its spectator camera). " +
+                "true = switch it off anyway while you are not recording/streaming (that mod's spectator view then disappears from the desktop window until you stream).");
             ReShadeGuard = file.Bind("Compatibility", "ReShadeGuard", ReShadeGuardMode.Auto,
                 "Keep ReShade-sensitive settings (MSAA, HDR, desktop mirror, adaptive render scale) untouched. Auto = only when ReShade is detected.");
 

@@ -91,7 +91,10 @@ system, injected by Sakuraa's launcher. CRIX:
   derived pixel load relative to one VR eye, and points out a large desktop camera while you stream;
 - reduces the game's own load around Sakuraa as usual.
 
-CRIX does **not** change Sakuraa, GTFX or Sakuraa's cameras (that would be changing another mod's settings). To make
+CRIX does **not** change Sakuraa, GTFX or Sakuraa's own cameras (that would be changing another mod's settings).
+Sakuraa's spectator view uses the game's third-person camera; the `DesktopCamera` setting of the HighRefresh profile
+therefore leaves that camera on when Sakuraa has taken it over, unless you allow it with
+`[Compatibility] DesktopCameraWhenModsUseIt = true` (the spectator view is then shown only while you record or stream). To make
 GTFX cheaper, choose a lighter GTFX preset inside Sakuraa while streaming. Sakuraa sets Unity's
 `targetFrameRate`/`vSyncCount`; VR runtimes ignore those, and CRIX does not manage them.
 

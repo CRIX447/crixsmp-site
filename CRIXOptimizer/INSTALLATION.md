@@ -90,8 +90,13 @@ No mod can promise a frame rate: it depends on the headset, the lobby, the map a
    time for the desktop window (its third-person camera). HighRefresh switches that camera off while you are not
    recording or streaming with OBS/Streamlabs, and the window shows your headset view instead. It turns back on
    by itself when OBS/Streamlabs goes live or starts recording (with the OBS WebSocket set up, below; without it,
-   whenever OBS is running). Set `DesktopCamera = Unchanged` in the `[HighRefresh]` section of the profiles file
-   if you share the game window on Discord or watch the third-person view yourself.
+   whenever OBS is running). It also stays on while the game's own LIV camera is out, and when another mod uses it:
+   **Sakuraa Client uses this camera as its spectator camera**, so with Sakuraa CRIX leaves it on unless you set
+   `[Compatibility] DesktopCameraWhenModsUseIt = true` in `com.crix.crixoptimizer.cfg` (then Sakuraa's spectator
+   view is only on the desktop while you record or stream). Set `DesktopCamera = Unchanged` in the `[HighRefresh]`
+   section of the profiles file if you share the game window on Discord or watch the third-person view yourself.
+   If the desktop window turns black while the camera is off, your VR runtime's mirror view is off; it does not
+   affect the headset, but set `DesktopCamera = Unchanged` if you need the window.
 5. **PC-side settings CRIX cannot change** (check them yourself):
    - **RAM speed.** If Windows shows your memory at **2133 MT/s**, XMP/DOCP/EXPO is probably off in the BIOS.
      Most DDR4 kits are rated 3200 MT/s or higher; on AMD Ryzen the memory speed also sets the CPU's internal

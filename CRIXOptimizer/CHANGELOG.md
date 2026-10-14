@@ -42,9 +42,11 @@ are claimed.
 - **`DesktopCamera` profile setting** (`Unchanged` / `OffWhenNotStreaming` / `Off`; `OffWhenNotStreaming` in
   HighRefresh, `Unchanged` elsewhere). Switches off the game's third-person camera, which renders the scene a second
   time to the desktop window, while OBS/Streamlabs is not recording or live; the window then shows the headset view
-  (XR mirror, left eye). Rendering only (`Camera.enabled`), never without an active headset, never a stereo or
-  render-texture camera, restored like every other setting, and left alone if the game or another mod turns it back
-  on. Not applied under the ReShade guard.
+  (XR mirror, left eye). Rendering only (`Camera.enabled` of the "Shoulder Camera"; its CinemachineBrain and
+  scripts keep running), never without an active headset, never a stereo or render-texture camera, restored like
+  every other setting, and left alone if the game or another mod turns it back on. It stays on while the game's LIV
+  camera drives it, under the ReShade guard, and when another mod has taken it over (Sakuraa Client uses it as its
+  spectator camera) unless `[Compatibility] DesktopCameraWhenModsUseIt = true`.
 - **Auto streaming mode** (`[Streaming]`, on by default). While OBS/Streamlabs records or streams, or Discord runs,
   CRIX switches to `ObsProfile` (OBSStreaming) or `DiscordProfile` (DiscordCall), and back after `HoldSeconds`
   (20 s). Only Balanced/OBSStreaming/DiscordCall are switched; VirtualDesktop moves to its Streaming preset;

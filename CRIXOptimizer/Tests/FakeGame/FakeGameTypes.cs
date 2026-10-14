@@ -30,6 +30,13 @@ namespace GorillaTagScripts.Builder
     }
 }
 
+/// <summary>Stand-in with only the members CRIX's desktop-camera option looks up (no Unity objects in tests).</summary>
+public class GorillaTagger
+{
+    public static GorillaTagger Instance { get; set; }
+    public object thirdPersonCamera;
+}
+
 public class NetworkSystem
 {
     public static NetworkSystem Instance { get; set; }

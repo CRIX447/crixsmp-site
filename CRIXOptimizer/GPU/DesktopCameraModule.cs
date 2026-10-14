@@ -9,24 +9,34 @@ using UnityEngine;
 namespace CRIXOptimizer.GPU
 {
     /// <summary>
-    /// Optional: switches off the game's own third-person ("shoulder") camera, which renders the whole scene a
-    /// second time to the desktop window on PC. That second render costs CPU (culling, draw calls) and GPU every
-    /// frame. While it is off, the desktop window shows the headset view through Unity's XR mirror instead.
+    /// Optional: switches off the game's own third-person "Shoulder Camera" (child of GorillaTagger.thirdPersonCamera),
+    /// which renders the whole scene a second time to the desktop window on PC. That second render costs CPU
+    /// (culling, draw calls) and GPU every frame. While it is off, URP's XR mirror view (drawn into the window before
+    /// the shoulder camera) shows the headset view instead.
     ///
-    /// Rendering only: the camera object, its position and every script on it stay as they are; only
-    /// Camera.enabled is changed, through the settings ledger, so it is restored on profile change, F10, disable
-    /// and quit, and CRIX stops managing it if the game or another mod turns it back on. It is never touched when
-    /// no VR headset is active (the camera may then be the only view), and never if the camera found is a stereo
-    /// (VR) camera or renders into a texture.
+    /// Rendering only: the camera object, its position, its CinemachineBrain and every script on it stay as they
+    /// are; only Camera.enabled is changed, through the settings ledger, so it is restored on profile change, F10,
+    /// disable and quit, and CRIX stops managing it if the game or another mod turns it back on.
+    /// The camera is left on:
+    ///  - when no VR headset is active (it may then be the only view);
+    ///  - while the game's LIV camera (LCK) drives it: the game then disables the shoulder camera's CinemachineBrain
+    ///    and shows the LCK view through it (MonitorOutputController.TakeOverShoulderCamera);
+    ///  - when another mod has moved it out of the game's camera rig (Sakuraa Client uses it as its spectator
+    ///    camera), unless the user allowed that explicitly;
+    ///  - if the camera found is a stereo (VR) camera or renders into a texture.
     /// </summary>
     internal sealed class DesktopCameraModule
     {
+        private const int MaxFindByNameAttempts = 6;
+
         private readonly SettingsLedger ledger;
         private readonly ILogSink log;
         private readonly Func<object> instance;
-        private readonly Func<object, object> cameraMember;
+        private readonly Func<object, object> rigMember;
         private Camera tracked;
+        private Behaviour brain;
         private TrackedSetting<bool> enabledSetting;
+        private int findByNameAttempts;
 
         public bool Available { get; }
         public string Status { get; private set; } = "not used by this profile";
@@ -37,32 +47,46 @@ namespace CRIXOptimizer.GPU
             this.log = log ?? NullLogSink.Instance;
             Type tagger = types?.Find("GorillaTagger");
             instance = Accessors.StaticGetter<object>(tagger, "Instance")
-                       ?? Accessors.StaticGetter<object>(tagger, "instance")
                        ?? Accessors.StaticGetter<object>(tagger, "_instance");
-            cameraMember = Accessors.Getter<object>(tagger, "thirdPersonCamera");
-            Available = instance != null && cameraMember != null;
+            rigMember = Accessors.Getter<object>(tagger, "thirdPersonCamera");
+            Available = instance != null && rigMember != null;
             if (!Available)
                 Status = "unavailable (GorillaTagger.thirdPersonCamera not found in this game build)";
         }
 
-        /// <summary>The game's desktop camera is currently switched off by CRIX.</summary>
-        public bool IsOff => enabledSetting != null && enabledSetting.State == SettingState.Applied && tracked != null && !SafeEnabled(tracked);
-
-        /// <summary>Turns the camera off (wantOff) or gives it back to the game. Main thread; cheap when nothing changes.</summary>
-        public void Apply(bool wantOff, string reason)
+        /// <summary>
+        /// Turns the camera off (wantOff) or gives it back to the game. Main thread, about once a second; cheap when
+        /// nothing changes. <paramref name="allowWhenTakenOver"/>: also switch it off when another mod moved it.
+        /// </summary>
+        public void Apply(bool wantOff, string reason, bool allowWhenTakenOver)
         {
             if (!Available)
                 return;
-            Camera cam = wantOff ? Resolve() : tracked;
-            if (!ReferenceEquals(cam, tracked))
+            GameObject rig = Rig();
+            // UnityObjects.IsAlive: plain reference check first, Unity's "destroyed" check only for real objects.
+            bool trackedAlive = UnityObjects.IsAlive(tracked);
+            Camera cam = trackedAlive ? tracked : wantOff ? Resolve(rig) : null;
+            if (!ReferenceEquals(cam, tracked) || (!trackedAlive && enabledSetting != null))
                 Track(cam);
 
             if (enabledSetting == null)
             {
-                Status = wantOff ? "desktop camera not found yet (scene still loading?)" : "on (game default)";
+                Status = wantOff ? "desktop camera not found (yet)" : "on (" + reason + ")";
                 return;
             }
+
+            string keepOn = null;
             if (wantOff)
+            {
+                if (cam.targetTexture != null || cam.stereoTargetEye != StereoTargetEyeMask.None)
+                    keepOn = "left on: it no longer draws only to the desktop window";
+                else if (UnityObjects.IsAlive(brain) && !brain.enabled)
+                    keepOn = "left on: the game's LIV camera is using it";
+                else if (UnityObjects.IsAlive(rig) && !cam.transform.IsChildOf(rig.transform) && !allowWhenTakenOver)
+                    keepOn = "left on: another mod (e.g. Sakuraa's spectator camera) uses it; [Compatibility] DesktopCameraWhenModsUseIt = true allows switching it off";
+            }
+
+            if (wantOff && keepOn == null)
             {
                 enabledSetting.Apply(false);
                 Status = enabledSetting.State == SettingState.Applied ? "off: " + reason
@@ -72,7 +96,59 @@ namespace CRIXOptimizer.GPU
             else
             {
                 enabledSetting.Release();
-                Status = "on (" + reason + ")";
+                Status = keepOn ?? "on (" + reason + ")";
+            }
+        }
+
+        private GameObject Rig()
+        {
+            try
+            {
+                object owner = instance();
+                if (owner == null || !UnityObjects.IsAlive(owner))
+                    return null;
+                object value = rigMember(owner);
+                if (value is GameObject go && go != null)
+                    return go;
+                if (value is Component component && component != null)
+                    return component.gameObject;
+            }
+            catch
+            {
+                // game not ready
+            }
+            return null;
+        }
+
+        private Camera Resolve(GameObject rig)
+        {
+            Camera cam = null;
+            if (UnityObjects.IsAlive(rig))
+                cam = rig.GetComponentInChildren<Camera>(true);
+            // Another mod may already have moved the camera out of the rig; look it up by name a few times only
+            // (GameObject.Find walks the whole scene).
+            if (!UnityObjects.IsAlive(cam) && findByNameAttempts < MaxFindByNameAttempts)
+            {
+                findByNameAttempts++;
+                cam = FindByName("Shoulder Camera");
+            }
+            // Safety: only a camera that draws to the desktop window, never the VR camera or a texture camera.
+            if (!UnityObjects.IsAlive(cam) || cam.targetTexture != null || cam.stereoTargetEye != StereoTargetEyeMask.None)
+                return null;
+            return cam;
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static Camera FindByName(string name)
+        {
+            try
+            {
+                GameObject named = GameObject.Find(name);
+                return named != null ? named.GetComponent<Camera>() : null;
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -81,54 +157,27 @@ namespace CRIXOptimizer.GPU
             if (enabledSetting != null)
             {
                 // A destroyed camera (scene change) has nothing left to restore.
-                if (tracked != null)
+                if (UnityObjects.IsAlive(tracked))
                     enabledSetting.Release();
                 ledger.Unregister(enabledSetting);
                 enabledSetting = null;
             }
             tracked = cam;
-            if (cam == null)
+            brain = null;
+            if (ReferenceEquals(cam, null))
                 return;
+            foreach (Behaviour b in cam.GetComponents<Behaviour>())
+            {
+                if (b != null && b.GetType().Name == "CinemachineBrain")
+                {
+                    brain = b;
+                    break;
+                }
+            }
             Camera captured = cam;
             enabledSetting = ledger.Register(new TrackedSetting<bool>("Desktop camera (game's third-person view)",
                 () => captured.enabled, v => captured.enabled = v, null, v => v ? "on" : "off"));
-            log.Debug("Desktop camera found: " + SafeName(cam));
-        }
-
-        private Camera Resolve()
-        {
-            object owner;
-            object value;
-            try
-            {
-                owner = instance();
-                value = owner == null || !UnityObjects.IsAlive(owner) ? null : cameraMember(owner);
-            }
-            catch
-            {
-                return null;
-            }
-            Camera cam = value as Camera;
-            if (cam == null && value is GameObject go && go != null)
-                cam = go.GetComponentInChildren<Camera>(true);
-            if (cam == null && value is Component component && component != null)
-                cam = component.GetComponentInChildren<Camera>(true);
-            // Safety: only a camera that draws to the desktop window, never the VR camera or a texture camera.
-            if (cam == null || cam.targetTexture != null || cam.stereoTargetEye != StereoTargetEyeMask.None)
-                return null;
-            return cam;
-        }
-
-        private static bool SafeEnabled(Camera cam)
-        {
-            try
-            {
-                return cam != null && cam.enabled;
-            }
-            catch
-            {
-                return false;
-            }
+            log.Debug("Desktop camera found: " + SafeName(cam) + (brain != null ? " (with CinemachineBrain)" : ""));
         }
 
         private static string SafeName(Camera cam)

@@ -685,6 +685,33 @@ namespace CRIXOptimizer.Tests
         }
     }
 
+    public sealed class DesktopCameraTests
+    {
+        [Test]
+        public void FindsTheGameMemberAndWaitsSafelyWhileTheGameIsNotReady()
+        {
+            var ledger = new SettingsLedger(new MemoryLogSink());
+            var module = new GPU.DesktopCameraModule(Utilities.GameTypes.FromLoadedAssemblies(), ledger, new MemoryLogSink());
+            Assert.True(module.Available, "GorillaTagger.Instance / thirdPersonCamera found by name");
+            GorillaTagger.Instance = null;
+            module.Apply(true, "test", false);
+            Assert.True(module.Status.Contains("not found"), module.Status);
+            Assert.Equal(0, ledger.Settings.Count, "nothing managed without a camera");
+            module.Apply(false, "test", false);
+            Assert.True(module.Status.StartsWith("on"), module.Status);
+        }
+
+        [Test]
+        public void ReportsUnavailableWhenTheGameMemberIsMissing()
+        {
+            var types = Utilities.GameTypes.FromAssemblies(new[] { typeof(DesktopCameraTests).Assembly });
+            var module = new GPU.DesktopCameraModule(types, new SettingsLedger(new MemoryLogSink()), new MemoryLogSink());
+            Assert.False(module.Available);
+            module.Apply(true, "test", false);
+            Assert.True(module.Status.StartsWith("unavailable"), module.Status);
+        }
+    }
+
     public sealed class SpotifyDetectionTests
     {
         [Test]

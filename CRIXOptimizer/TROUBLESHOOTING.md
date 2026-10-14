@@ -82,7 +82,10 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
   help; fewer players/cosmetics in view, `DesktopCamera = OffWhenNotStreaming` and the PC-side checks (RAM speed in
   particular) are what can.
 - `Desktop camera: unavailable` in the report means this game build does not expose the camera CRIX looks for; the
-  rest of the profile still works.
+  rest of the profile still works. `left on: another mod ... uses it` means Sakuraa (or a similar mod) uses it as a
+  spectator camera; see `[Compatibility] DesktopCameraWhenModsUseIt`.
+- Desktop window black or showing one eye: that is the desktop camera switched off by HighRefresh while you are not
+  streaming. Set `DesktopCamera = Unchanged` in the `[HighRefresh]` section if you want the third-person view.
 
 ## Auto streaming mode
 

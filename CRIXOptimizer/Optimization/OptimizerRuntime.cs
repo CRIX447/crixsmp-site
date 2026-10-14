@@ -320,8 +320,6 @@ namespace CRIXOptimizer.Optimization
                     Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
                     Guard("Graphics settings", Graphics.VerifyRenderScale);
                 }
-                // Scene loads recreate cameras and XR may start late: re-check the desktop camera.
-                ApplyDesktopCamera(cfg.Enabled.Value && !Suspended);
                 if (cfg.Diagnostics.Value)
                 {
                     TickMemory(now);
@@ -381,6 +379,9 @@ namespace CRIXOptimizer.Optimization
             }
 
             UpdateCaptureState(now);
+            // Scene loads recreate cameras, XR may start late and the game's LIV camera can take the desktop camera
+            // over at any time: re-check once a second (reads a few flags; finds the camera only when needed).
+            ApplyDesktopCamera(cfg.Enabled.Value && !Suspended);
 
             if (cfg.Diagnostics.Value && cfg.AlertsEnabled.Value)
                 UpdateAlerts(now);
@@ -529,7 +530,7 @@ namespace CRIXOptimizer.Optimization
             bool off = active && Xr.IsVrActive && DesktopCameraModeWantsOff(mode);
             string reason = !active ? "CRIX suspended" : mode == DesktopCameraMode.Unchanged ? "profile leaves it alone"
                 : !Xr.IsVrActive ? "no VR headset active" : ReShade.GuardActive ? "ReShade guard" : off ? (mode == DesktopCameraMode.Off ? "profile setting" : "not streaming") : "streaming/recording";
-            Guard("Desktop camera", () => DesktopCamera.Apply(off, reason));
+            Guard("Desktop camera", () => DesktopCamera.Apply(off, reason, cfg.DesktopCameraWhenModsUseIt.Value));
         }
 
         private void RestoreEverything(string reason)
@@ -538,7 +539,7 @@ namespace CRIXOptimizer.Optimization
             {
                 Live.Suspended = true;
                 Graphics?.Apply(null, false, false, 0, Ladder, false);
-                DesktopCamera?.Apply(false, "restored");
+                DesktopCamera?.Apply(false, "restored", false);
                 SettingsLedger.RestoreReport report = Ledger.RestoreAll();
                 if (report.Restored > 0 || report.SkippedExternal > 0 || report.Failed > 0)
                     log.Info($"Restore ({reason}): {report.Restored} setting(s) restored, {report.SkippedExternal} left alone (changed externally), {report.Failed} failed.");
