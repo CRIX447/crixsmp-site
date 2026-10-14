@@ -43,6 +43,8 @@ namespace CRIXOptimizer.Configuration
             }
         }
 
+        public static bool HasSection(string section) => section == "Custom" || Array.IndexOf(SectionNamesV1, section) >= 0;
+
         public static OptimizationSettings ForSection(string section)
         {
             switch (section)

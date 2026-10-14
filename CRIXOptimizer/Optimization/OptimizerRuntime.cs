@@ -65,6 +65,7 @@ namespace CRIXOptimizer.Optimization
         public readonly CameraInventory Cameras = new CameraInventory();
 
         public GraphicsSettingsModule Graphics { get; private set; }
+        public DesktopCameraModule DesktopCamera { get; private set; }
         public PatchSet Patches { get; private set; }
         public GamePatchCatalog GamePatches { get; private set; }
         public GameTypes Types { get; private set; }
@@ -102,6 +103,7 @@ namespace CRIXOptimizer.Optimization
         private string lastSuggestion;
         private string obsClientKey;
         private bool spotifyRunning;
+        private bool obsWasRunning;
         private int environmentScans;
         private float alertVisibleUntil;
         private float lastDeferredUnload = -1e9f;
@@ -112,6 +114,7 @@ namespace CRIXOptimizer.Optimization
         private int adaptiveFrameCount;
         private double adaptiveEmaMs;
         private float cpuSuspectedUntil = -1f;
+        private float cpuSuspectSeconds = 180f;
         private readonly ResolutionProbe resolutionProbe = new ResolutionProbe();
 
         // timers
@@ -170,7 +173,10 @@ namespace CRIXOptimizer.Optimization
                 Patches = new PatchSet(new Harmony(ModInfo.HarmonyId), log, Status);
                 GamePatches = new GamePatchCatalog(Patches, Types, log);
             });
+            Guard("Desktop camera", () => DesktopCamera = new DesktopCameraModule(Types, Ledger, log));
 
+            if (cfg.UpgradeNote.Length > 0)
+                log.Info(cfg.UpgradeNote);
             if (profiles.MigratedEntries > 0)
                 log.Info($"Upgraded {profiles.MigratedEntries} profile value(s) to the {ModInfo.Version} defaults. Values you had changed yourself were kept.");
             ResolveProfile();
@@ -308,11 +314,14 @@ namespace CRIXOptimizer.Optimization
             {
                 nextFive = now + 5f;
                 Guard("XR info", () => Xr.Refresh(now));
+                CheckRefreshRate();
                 if (Graphics != null && !Suspended && cfg.Enabled.Value)
                 {
                     Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
                     Guard("Graphics settings", Graphics.VerifyRenderScale);
                 }
+                // Scene loads recreate cameras and XR may start late: re-check the desktop camera.
+                ApplyDesktopCamera(cfg.Enabled.Value && !Suspended);
                 if (cfg.Diagnostics.Value)
                 {
                     TickMemory(now);
@@ -420,6 +429,9 @@ namespace CRIXOptimizer.Optimization
                 // Spotify's desktop app renders with the GPU by default; keep a little more headroom while it runs.
                 settings.AdaptiveGpuHeadroomPercent += 5f;
             }
+            // With the game's desktop camera off, the window shows the XR mirror; make sure it shows one eye.
+            if (DesktopCameraModeWantsOff(settings.DesktopCamera) && settings.DesktopMirror == DesktopMirrorMode.Unchanged)
+                settings.DesktopMirror = DesktopMirrorMode.LeftEye;
             if (ReShade.GuardActive)
                 SettingsNotes.AddRange(ReShadeGuard.Apply(settings));
             if (logNotes)
@@ -488,7 +500,36 @@ namespace CRIXOptimizer.Optimization
                     Fail("Graphics settings", e);
                 }
             }
+            ApplyDesktopCamera(active);
             UpdateStatus();
+        }
+
+        /// <summary>The profile asks for the game's desktop camera to be off right now (ignores whether CRIX is active).</summary>
+        private bool DesktopCameraModeWantsOff(DesktopCameraMode mode)
+        {
+            if (ReShade.GuardActive)
+                return false; // ReShade may be applied to the desktop window; leave what it draws alone
+            switch (mode)
+            {
+                case DesktopCameraMode.Off:
+                    return true;
+                case DesktopCameraMode.OffWhenNotStreaming:
+                    return Capture.Active != CaptureKind.Obs;
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyDesktopCamera(bool active)
+        {
+            if (DesktopCamera == null || IsFaulted("Desktop camera"))
+                return;
+            DesktopCameraMode mode = ActiveSettings?.DesktopCamera ?? DesktopCameraMode.Unchanged;
+            // Never without a headset: the desktop camera may then be the only view of the game.
+            bool off = active && Xr.IsVrActive && DesktopCameraModeWantsOff(mode);
+            string reason = !active ? "CRIX suspended" : mode == DesktopCameraMode.Unchanged ? "profile leaves it alone"
+                : !Xr.IsVrActive ? "no VR headset active" : ReShade.GuardActive ? "ReShade guard" : off ? (mode == DesktopCameraMode.Off ? "profile setting" : "not streaming") : "streaming/recording";
+            Guard("Desktop camera", () => DesktopCamera.Apply(off, reason));
         }
 
         private void RestoreEverything(string reason)
@@ -497,6 +538,7 @@ namespace CRIXOptimizer.Optimization
             {
                 Live.Suspended = true;
                 Graphics?.Apply(null, false, false, 0, Ladder, false);
+                DesktopCamera?.Apply(false, "restored");
                 SettingsLedger.RestoreReport report = Ledger.RestoreAll();
                 if (report.Restored > 0 || report.SkippedExternal > 0 || report.Failed > 0)
                     log.Info($"Restore ({reason}): {report.Restored} setting(s) restored, {report.SkippedExternal} left alone (changed externally), {report.Failed} failed.");
@@ -737,23 +779,30 @@ namespace CRIXOptimizer.Optimization
             if (frameMs > 0)
                 adaptiveEmaMs = adaptiveEmaMs <= 0 ? frameMs : adaptiveEmaMs * 0.7 + frameMs * 0.3;
 
-            if (!AdaptiveActive || Graphics == null || IsFaulted("Adaptive"))
+            // Without the graphics module (faulted or unavailable) adaptive mode still has its CPU-side levers.
+            if (!AdaptiveActive || IsFaulted("Adaptive"))
             {
                 resolutionProbe.Cancel();
                 return;
             }
             try
             {
-                if (resolutionProbe.Sample(now, frameMs) == ProbeResult.Ineffective)
+                ProbeResult probe = resolutionProbe.Sample(now, frameMs);
+                if (probe == ProbeResult.Ineffective)
                 {
-                    cpuSuspectedUntil = now + 180f;
+                    cpuSuspectedUntil = now + cpuSuspectSeconds;
                     log.Info($"Adaptive quality: lowering resolution did not make frames faster ({resolutionProbe.LastImprovement * 100:0.#}% change). " +
-                             "The bottleneck looks CPU-side (busy lobby, cosmetics), so resolution is restored and CPU-side reductions are used instead (rechecked in 3 min).");
+                             $"The bottleneck looks CPU-side (busy lobby, cosmetics), so resolution is restored and CPU-side reductions are used instead (rechecked in {cpuSuspectSeconds / 60f:0} min).");
+                    // Each failed recheck costs two eye-texture reallocations, so recheck less often each time.
+                    cpuSuspectSeconds = Mathf.Min(1800f, cpuSuspectSeconds * 2f);
                     ApplyAdaptiveLevel();
                     return;
                 }
+                if (probe == ProbeResult.Effective)
+                    cpuSuspectSeconds = 180f;
 
                 bool cpuBefore = CpuBoundSuspected;
+                // The probe's 3-minute verdict ends here; the change in CPU-bound state is handled below.
                 if (cpuSuspectedUntil > 0f && now >= cpuSuspectedUntil)
                     cpuSuspectedUntil = -1f;
 
@@ -768,17 +817,19 @@ namespace CRIXOptimizer.Optimization
                 if (!decision.Changed && !(cpuNow != cpuBefore && Adaptive.Level < 0))
                     return;
 
-                bool hadScale = Graphics.AppliedLevers.HasRenderScale;
-                float scaleBefore = Graphics.AppliedLevers.RenderScale;
+                bool graphicsOk = GraphicsUsable;
+                bool hadScale = graphicsOk && Graphics.AppliedLevers.HasRenderScale;
+                float scaleBefore = graphicsOk ? Graphics.AppliedLevers.RenderScale : 0f;
                 ApplyAdaptiveLevel();
 
+                // Any resolution drop (a step down, or the CPU-bound verdict ending) is checked by the probe.
+                bool loweredResolution = hadScale && GraphicsUsable && Graphics.AppliedLevers.HasRenderScale && Graphics.AppliedLevers.RenderScale < scaleBefore - 0.001f;
+                if (loweredResolution && !Gpu.HasGpuTime)
+                    resolutionProbe.Begin(now, adaptiveEmaMs, 1000.0 / TargetFps);
+                else if (decision.Changed)
+                    resolutionProbe.Cancel();
                 if (decision.Changed)
                 {
-                    bool loweredResolution = hadScale && Graphics.AppliedLevers.HasRenderScale && Graphics.AppliedLevers.RenderScale < scaleBefore - 0.001f;
-                    if (decision.Reason == AdaptiveReason.SteppedDown && loweredResolution && !Gpu.HasGpuTime)
-                        resolutionProbe.Begin(now, adaptiveEmaMs);
-                    else
-                        resolutionProbe.Cancel();
                     log.Info($"Adaptive quality: level {Adaptive.Level} ({decision.Reason}); frame {frameMs:0.0} ms vs target {1000.0 / TargetFps:0.0} ms" +
                              (Gpu.HasGpuTime ? $", GPU {Gpu.AverageGpuMs:0.0} ms" : "") + (cpuNow ? " (CPU-bound: resolution kept)" : ""));
                 }
@@ -789,10 +840,16 @@ namespace CRIXOptimizer.Optimization
             }
         }
 
+        private bool GraphicsUsable => Graphics != null && !IsFaulted("Graphics settings");
+
         /// <summary>Profile plus adaptive CPU-side levers (cosmetic detail, update rates). What game patches run with.</summary>
         public OptimizationSettings EffectiveSettings { get; private set; }
 
-        public bool CpuBoundSuspected => Adaptive.LastJudgedCpuBound || (cpuSuspectedUntil > 0f && Time.unscaledTime < cpuSuspectedUntil);
+        /// <summary>
+        /// CPU-bound according to runtime GPU timing, or because a resolution drop did not help (kept until
+        /// EvaluateAdaptive clears it, so the end of that period is noticed and re-applied there).
+        /// </summary>
+        public bool CpuBoundSuspected => Adaptive.LastJudgedCpuBound || cpuSuspectedUntil > 0f;
 
         private void RecomputeEffective()
         {
@@ -806,7 +863,17 @@ namespace CRIXOptimizer.Optimization
         private void ApplyAdaptiveLevel()
         {
             RecomputeEffective();
-            Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, AdaptiveActive ? Adaptive.Level : 0, Ladder, CpuBoundSuspected);
+            if (GraphicsUsable)
+            {
+                try
+                {
+                    Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, AdaptiveActive ? Adaptive.Level : 0, Ladder, CpuBoundSuspected);
+                }
+                catch (Exception e)
+                {
+                    Fail("Graphics settings", e);
+                }
+            }
             if (GamePatches != null && !IsFaulted("Game patches"))
             {
                 GamePatches.UpdateLive(EffectiveSettings, Groups(), false);
@@ -916,6 +983,13 @@ namespace CRIXOptimizer.Optimization
                 }
                 log.Info($"Compatibility scan: {Plugins.Count} BepInEx plugin(s) loaded, {Footprint.PatchedMethods} method(s) patched by Harmony, {Footprint.Overlaps.Count} overlap(s) with CRIX.");
             });
+            if (Graphics != null && Graphics.UsesUrpAsset)
+            {
+                Guard("Graphics settings", Graphics.RefreshUrpAssetValues);
+                if (Graphics.UrpOpaqueOrDepthCopies)
+                    once.Info("urp-copies", "The URP asset copies the opaque colour and/or depth texture for every camera (" + Graphics.UrpAssetValues +
+                              "). Some mod menus turn this on; it costs GPU time on both eyes and the desktop camera. CRIX leaves it as it is.");
+            }
             RefreshSakuraa();
         }
 
@@ -940,11 +1014,11 @@ namespace CRIXOptimizer.Optimization
             {
                 Cameras.Refresh(Xr.IsVrActive ? Xr.EyeTextureWidth : 0, Xr.IsVrActive ? Xr.EyeTextureHeight : 0);
                 CameraInventory.Entry big = Cameras.LargestScreenCamera;
-                if (big != null && big.PixelLoad >= 0.5 && Capture.Active != CaptureKind.None)
+                if (big != null && big.PixelLoad >= 0.5)
                     once.Info("cam:" + big.Name,
-                        $"While streaming, camera '{big.Name}' also renders the scene to the desktop window at {big.Width}x{big.Height} " +
-                        $"(about {big.PixelLoad * 100:0}% of one VR eye's pixels, derived). If it is a spectator/shoulder camera (Sakuraa or another mod), " +
-                        "lowering the game window size or that camera's quality in its own settings saves GPU time. CRIX does not change other mods' cameras.");
+                        $"Camera '{big.Name}' renders the scene a second time to the desktop window at {big.Width}x{big.Height} " +
+                        $"(about {big.PixelLoad * 100:0}% of one VR eye's pixels, derived). A smaller game window lowers that cost. " +
+                        "CRIX does not change other mods' cameras; for the game's own desktop camera see the DesktopCamera profile setting.");
             });
         }
 
@@ -973,6 +1047,10 @@ namespace CRIXOptimizer.Optimization
                 Discord.Update(result.Apps, result.Hooks, cfg.Profile.Value);
 
                 EnsureStreamlabsClient();
+                bool obsRunning = (result.Apps & CompanionApp.Obs) != 0;
+                if (obsRunning && !obsWasRunning)
+                    Obs?.Nudge(); // OBS was just started: connect now instead of waiting out the retry delay
+                obsWasRunning = obsRunning;
                 if (compatScanned)
                     RefreshSakuraa();
 
@@ -1068,6 +1146,8 @@ namespace CRIXOptimizer.Optimization
             if (changed.Count > 0)
                 sb.Append(": ").Append(string.Join("; ", changed.ToArray()));
             sb.Append(". Adaptive quality ").Append(AdaptiveActive ? $"on (level {Adaptive.Level}, target {TargetFps:0} FPS)" : "off").Append('.');
+            if (DesktopCamera != null && ActiveSettings != null && ActiveSettings.DesktopCamera != DesktopCameraMode.Unchanged)
+                sb.Append(" Desktop camera: ").Append(DesktopCamera.Status).Append('.');
             return sb.ToString();
         }
 
@@ -1080,9 +1160,24 @@ namespace CRIXOptimizer.Optimization
                     : GamePatches?.DeferredToPotassium == true ? "Potassium is installed and handles the stutter fixes"
                     : !Xr.IsVrActive ? "no VR headset is active yet"
                     : "every value in this profile already matches the game";
-                log.Warn("CRIX is loaded but nothing is being changed right now: " + why +
-                         ". Adaptive quality still steps in if the frame rate drops. See BepInEx/CRIXOptimizer/system-report.txt.");
+                log.Warn("CRIX is loaded but nothing is being changed right now: " + why + ". " +
+                         (AdaptiveActive ? "Adaptive quality still steps in if the frame rate drops. " : "Adaptive quality is off ([Adaptive] Mode). ") +
+                         "See BepInEx/CRIXOptimizer/system-report.txt.");
             }
+        }
+
+        internal const string RefreshRateAdvice =
+            "VR frame rates are capped at the headset refresh rate. For 120 FPS set 120 Hz in your VR runtime: Virtual Desktop (VR Frame Rate), " +
+            "Meta Quest Link/Air Link (Meta Quest Link app > Devices > Graphics Preferences > Refresh rate) or SteamVR (per-application video settings). " +
+            "120 Hz also makes Gorilla Tag run its physics 120 times a second, so it needs more CPU than 90 Hz.";
+
+        /// <summary>Points out when the HighRefresh profile runs on a headset set below 120 Hz (once per rate).</summary>
+        private void CheckRefreshRate()
+        {
+            if (ActiveSection != "HighRefresh" || !Xr.IsVrActive || Xr.RefreshRate <= 1f || Xr.RefreshRate >= 110f)
+                return;
+            once.Info("hz:" + Mathf.RoundToInt(Xr.RefreshRate),
+                $"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. " + RefreshRateAdvice);
         }
 
         // ================================================================== streaming / recording awareness
@@ -1129,15 +1224,8 @@ namespace CRIXOptimizer.Optimization
 
         private void UpdateCaptureState(float now)
         {
-            if (!cfg.AutoStreamingMode.Value)
-            {
-                if (Capture.Active != CaptureKind.None)
-                {
-                    Capture.Reset();
-                    MarkDirty();
-                }
-                return;
-            }
+            // Evaluated even with auto streaming mode off: the DesktopCamera setting also needs it. Profile
+            // switching itself is gated by AutoStreamingMode in ResolveEffectiveProfile.
             try
             {
                 ObsStatus obs = Obs?.Status ?? ObsStatus.Disconnected;
@@ -1151,6 +1239,7 @@ namespace CRIXOptimizer.Optimization
                     ObsWebSocketConnected = obs.Connected || slobs.Connected,
                     ObsStreaming = obs.Streaming || slobs.Streaming,
                     ObsRecording = obs.Recording || slobs.Recording,
+                    AppsKnown = cfg.CompanionAppDetection.Value && Scanner.Latest != null && Scanner.Latest.ProcessesScanned,
                 });
                 if (changed)
                     MarkDirty();
@@ -1163,7 +1252,7 @@ namespace CRIXOptimizer.Optimization
 
         private void EnsureObsClient()
         {
-            bool wanted = cfg.ObsWebSocket.Value && cfg.AutoStreamingMode.Value && !IsFaulted("OBS WebSocket");
+            bool wanted = cfg.ObsWebSocket.Value && !IsFaulted("OBS WebSocket");
             string key = wanted ? cfg.ObsWebSocketPort.Value + "|" + cfg.ObsWebSocketPassword.Value : null;
             if (key == obsClientKey)
                 return;
@@ -1186,7 +1275,7 @@ namespace CRIXOptimizer.Optimization
         /// <summary>Streamlabs Desktop's local API needs no setup, so it is read whenever Streamlabs is running.</summary>
         private void EnsureStreamlabsClient()
         {
-            bool wanted = cfg.AutoStreamingMode.Value && (Apps & CompanionApp.StreamlabsDesktop) != 0 && !IsFaulted("Streamlabs API");
+            bool wanted = cfg.StreamlabsApi.Value && (Apps & CompanionApp.StreamlabsDesktop) != 0 && !IsFaulted("Streamlabs API");
             if (wanted == (Streamlabs != null))
                 return;
             if (!wanted)

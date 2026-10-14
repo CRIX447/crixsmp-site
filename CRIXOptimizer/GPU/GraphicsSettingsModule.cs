@@ -44,7 +44,6 @@ namespace CRIXOptimizer.GPU
         private TrackedSetting<int> textureLimit;
         private TrackedSetting<bool> reflectionProbes;
         private TrackedSetting<bool> softParticles;
-        private TrackedSetting<bool> softShadows;
         private TrackedSetting<int> particleBudget;
         private TrackedSetting<SkinWeights> skinWeights;
         private TrackedSetting<bool> occlusionMesh;
@@ -65,6 +64,11 @@ namespace CRIXOptimizer.GPU
         public IReadOnlyList<string> Notes => notes;
         /// <summary>True when render scale and MSAA go through the URP asset rather than XRSettings/QualitySettings.</summary>
         public bool UsesUrpAsset { get; private set; }
+        /// <summary>The game's own URP asset values as found at start-up (read-only report), or "" when not URP.</summary>
+        public string UrpAssetValues { get; private set; } = "";
+        /// <summary>True when the URP asset copies the opaque colour and/or depth texture for every camera (extra GPU work).</summary>
+        public bool UrpOpaqueOrDepthCopies { get; private set; }
+        private object urpAsset;
         /// <summary>Result of the last check that the render scale actually reached the VR eye textures.</summary>
         public string RenderScaleCheck { get; private set; } = "not checked yet";
         private int renderScaleMismatches;
@@ -99,12 +103,14 @@ namespace CRIXOptimizer.GPU
             else if (Pipeline == PipelineKind.Universal)
             {
                 // The URP asset's public properties replace the built-in quality settings URP ignores.
+                // URP copies the asset's renderScale (values within 0.05 of 1.0 count as 1.0) and msaaSampleCount into
+                // the VR eye textures every frame. Its renderScale also scales cameras that draw to the desktop window.
+                urpAsset = asset;
                 renderScale = UrpSetting<float>(asset, "renderScale", "Render scale (URP asset, sets the VR eye resolution)", approx, F2);
                 shadowDistance = UrpSetting<float>(asset, "shadowDistance", "Shadow distance (URP asset)", approx, F1);
                 shadowCascades = UrpSetting<int>(asset, "shadowCascadeCount", "Shadow cascades (URP asset)", null, null);
                 msaa = UrpSetting<int>(asset, "msaaSampleCount", "MSAA samples (URP asset)", null, null);
                 pixelLights = UrpSetting<int>(asset, "maxAdditionalLightsCount", "Additional lights per object (URP asset)", null, null);
-                softShadows = UrpSetting<bool>(asset, "supportsSoftShadows", "Soft shadows (URP asset)", null, null);
                 UsesUrpAsset = renderScale != null;
                 var used = new List<string>();
                 if (renderScale != null) used.Add("render scale");
@@ -112,18 +118,23 @@ namespace CRIXOptimizer.GPU
                 if (shadowCascades != null) used.Add("shadow cascades");
                 if (msaa != null) used.Add("MSAA");
                 if (pixelLights != null) used.Add("additional lights");
-                if (softShadows != null) used.Add("soft shadows");
                 notes.Add($"{RenderPipelineInfo.Describe(Pipeline)} detected ({assetType}): built-in-only quality settings are not used. " +
                           (used.Count > 0 ? "Managed through the URP asset: " + string.Join(", ", used.ToArray()) + "." : "The URP asset exposes none of the expected settings."));
+                ReadUrpAssetValues();
+                notes.Add("Game's URP asset at start-up: " + UrpAssetValues);
             }
             else
             {
                 notes.Add($"{RenderPipelineInfo.Describe(Pipeline)} detected ({assetType}): built-in-only quality settings (shadow quality/resolution/cascades, MSAA, pixel lights, soft particles) are not changed.");
             }
 
-            if (renderScale == null)
+            // XRSettings.eyeTextureResolutionScale is not supported under URP (URP overwrites the display scale),
+            // so it is only used for the built-in pipeline and other pipelines.
+            if (renderScale == null && Pipeline != PipelineKind.Universal)
                 renderScale = Track(new TrackedSetting<float>("XR eye texture scale",
                     () => XRSettings.eyeTextureResolutionScale, v => XRSettings.eyeTextureResolutionScale = v, approx, F2));
+            else if (renderScale == null)
+                notes.Add("Render scale: the URP asset has no public renderScale property, so CRIX cannot change resolution.");
 
             anisotropic = Track(new TrackedSetting<AnisotropicFiltering>("Anisotropic filtering", () => QualitySettings.anisotropicFiltering, v => QualitySettings.anisotropicFiltering = v));
             lodBias = Track(new TrackedSetting<float>("LOD bias", () => QualitySettings.lodBias, v => QualitySettings.lodBias = v, approx, F2));
@@ -190,9 +201,44 @@ namespace CRIXOptimizer.GPU
             return Track(new TrackedSetting<T>(label, get, set, comparer, format));
         }
 
+        /// <summary>Reads the game's own URP asset values for the report (read-only).</summary>
+        private void ReadUrpAssetValues()
+        {
+            if (urpAsset == null)
+                return;
+            var parts = new List<string>();
+            void Add<T>(string label, string property, Func<T, string> format)
+            {
+                Func<T> get = Accessors.BoundGetter<T>(urpAsset, property);
+                if (get == null)
+                    return;
+                try
+                {
+                    parts.Add(label + " " + format(get()));
+                }
+                catch
+                {
+                    // property not readable on this URP version
+                }
+            }
+            Add<float>("renderScale", "renderScale", F2);
+            Add<int>("MSAA", "msaaSampleCount", v => v.ToString());
+            Add<float>("shadowDistance", "shadowDistance", F1);
+            Add<int>("cascades", "shadowCascadeCount", v => v.ToString());
+            Add<int>("additionalLights", "maxAdditionalLightsCount", v => v.ToString());
+            Add<bool>("HDR", "supportsHDR", v => v ? "on" : "off");
+            Add<bool>("opaqueTexture", "supportsCameraOpaqueTexture", v => v ? "on" : "off");
+            Add<bool>("depthTexture", "supportsCameraDepthTexture", v => v ? "on" : "off");
+            UrpAssetValues = parts.Count > 0 ? string.Join(", ", parts.ToArray()) : "not readable";
+            UrpOpaqueOrDepthCopies = UrpAssetValues.Contains("opaqueTexture on") || UrpAssetValues.Contains("depthTexture on");
+        }
+
+        /// <summary>Re-reads the URP asset values (another mod may change them after start-up). Every few seconds at most.</summary>
+        public void RefreshUrpAssetValues() => ReadUrpAssetValues();
+
         /// <summary>
         /// Confirms the managed render scale reached the VR eye textures (URP ignores changes within 0.05 of 1.0).
-        /// Read-only; called every few seconds.
+        /// Reads the XR display's render-target scale, which is what URP writes. Read-only; called every few seconds.
         /// </summary>
         public void VerifyRenderScale()
         {
@@ -207,7 +253,8 @@ namespace CRIXOptimizer.GPU
             float actual;
             try
             {
-                actual = XRSettings.eyeTextureResolutionScale;
+                XRDisplaySubsystem display = xr.Display;
+                actual = display != null ? display.scaleOfAllRenderTargets : XRSettings.eyeTextureResolutionScale;
             }
             catch
             {
@@ -291,7 +338,12 @@ namespace CRIXOptimizer.GPU
                     ApplyOrRelease(shadowResolution, limit, limit ? (ShadowResolution)Math.Min((int)Baseline(shadowResolution), (int)cap) : default);
                 }
                 if (shadowCascades != null)
-                    ApplyOrRelease(shadowCascades, s.ShadowCascadesLimit > 0, Math.Min(Baseline(shadowCascades), Math.Max(1, s.ShadowCascadesLimit)));
+                {
+                    // URP's setter throws outside 1..4; only lower a valid game value.
+                    int game = Baseline(shadowCascades);
+                    int cap = Math.Max(1, s.ShadowCascadesLimit);
+                    ApplyOrRelease(shadowCascades, s.ShadowCascadesLimit > 0 && game >= 1 && game <= 4 && cap < game, Math.Min(game, cap));
+                }
                 if (msaa != null)
                 {
                     // A cap, never raised. URP stores 1 for "off", the built-in pipeline 0.
@@ -299,8 +351,7 @@ namespace CRIXOptimizer.GPU
                     int game = Baseline(msaa);
                     ApplyOrRelease(msaa, s.MsaaSamples >= 0 && cap < game, Math.Min(game, cap));
                 }
-                if (softShadows != null)
-                    ApplyOrRelease(softShadows, s.ShadowQuality != ShadowQualityLimit.Unchanged && Baseline(softShadows), false);
+
                 if (softParticles != null)
                     ApplyOrRelease(softParticles, s.SoftParticles != TriState.Unchanged, s.SoftParticles == TriState.On);
 
@@ -358,7 +409,6 @@ namespace CRIXOptimizer.GPU
             Release(textureLimit);
             Release(reflectionProbes);
             Release(softParticles);
-            Release(softShadows);
             Release(particleBudget);
             Release(skinWeights);
             Release(occlusionMesh);

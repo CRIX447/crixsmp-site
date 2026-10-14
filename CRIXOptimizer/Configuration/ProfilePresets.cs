@@ -20,6 +20,7 @@ namespace CRIXOptimizer.Configuration
         {
             "Balanced",
             "MaximumPerformance",
+            "HighRefresh",
             "VirtualDesktop",
             "VirtualDesktop.Performance",
             "VirtualDesktop.Quality",
@@ -49,6 +50,7 @@ namespace CRIXOptimizer.Configuration
             {
                 case "Balanced": return Balanced();
                 case "MaximumPerformance": return MaximumPerformance();
+                case "HighRefresh": return HighRefresh();
                 case "VirtualDesktop": return VirtualDesktopBalanced();
                 case "VirtualDesktop.Performance": return VirtualDesktopPerformance();
                 case "VirtualDesktop.Quality": return VirtualDesktopQuality();
@@ -108,6 +110,37 @@ namespace CRIXOptimizer.Configuration
             CosmeticMaximumDistance = 6f,
             CosmeticFullDetailCount = 4,
             CosmeticMaximumCount = 8,
+        };
+
+        /// <summary>
+        /// 120/144 Hz headsets. At 120 Hz every frame has 8.3 ms instead of 11.1 ms, and Gorilla Tag also runs its
+        /// physics at the refresh rate, so the CPU is usually the limit. This profile keeps the game's resolution
+        /// (adaptive mode lowers it only if that is shown to help) and cuts per-frame CPU work: distant remote
+        /// cosmetics, cosmetic update rates, LOD detail, skinning and particle work, smaller loading slices.
+        /// </summary>
+        public static OptimizationSettings HighRefresh() => new OptimizationSettings
+        {
+            ShadowDistanceLimit = 20f,
+            ShadowCascadesLimit = 1,
+            MsaaSamples = 2,
+            LodBiasLimit = 0.8f,
+            PixelLightLimit = 1,
+            RealtimeReflectionProbes = TriState.Off,
+            SoftParticles = TriState.Off,
+            ParticleRaycastBudgetLimit = 64,
+            SkinWeights = SkinWeightLimit.TwoBones,
+            EnsureOcclusionMesh = true,
+            AsyncUploadTimeSliceMs = 1,
+            BackgroundLoading = LoadingPriority.BelowNormal,
+            TextureTransitionRate = 20f,
+            VoiceVisualRate = 20f,
+            ProximityRate = 20f,
+            CosmeticFullDetailDistance = 3.5f,
+            CosmeticMaximumDistance = 6f,
+            CosmeticFullDetailCount = 4,
+            CosmeticMaximumCount = 8,
+            AdaptiveGpuHeadroomPercent = 10f,
+            DesktopCamera = DesktopCameraMode.OffWhenNotStreaming,
         };
 
         /// <summary>Wireless PCVR via Virtual Desktop, balanced: leaves GPU time for the video encoder and keeps loads smooth.</summary>
@@ -172,6 +205,8 @@ namespace CRIXOptimizer.Configuration
             VoiceVisualRate = 24f,
             ProximityRate = 24f,
             AdaptiveGpuHeadroomPercent = 20f,
+            // Under URP the render scale also sets the desktop camera's resolution, i.e. what OBS records.
+            AdaptiveMayChangeRenderScale = false,
         };
 
         /// <summary>
@@ -196,6 +231,8 @@ namespace CRIXOptimizer.Configuration
             CosmeticFullDetailDistance = 4f,
             CosmeticMaximumDistance = 7f,
             AdaptiveGpuHeadroomPercent = 20f,
+            // Under URP the render scale also sets the desktop camera's resolution, i.e. what viewers see.
+            AdaptiveMayChangeRenderScale = false,
         };
 
         /// <summary>Voice/video calls and screen sharing: modest game-side reductions.</summary>

@@ -56,8 +56,8 @@ namespace CRIXOptimizer.UI
                 sb.Append("n/a");
             sb.Append("   compositor ").Append(float.IsNaN(rt.Gpu.AverageCompositorMs) ? "n/a" : F2(rt.Gpu.AverageCompositorMs) + " ms [R]");
             sb.Append("   dropped ").Append(rt.Gpu.DroppedFramesSinceReset >= 0 ? rt.Gpu.DroppedFramesSinceReset.ToString(Inv) + " [R]" : "n/a");
-            if (rt.Adaptive.LastJudgedCpuBound && rt.AdaptiveActive)
-                sb.Append("   <color=#ffd060>CPU-bound</color>");
+            if (rt.CpuBoundSuspected && rt.AdaptiveActive)
+                sb.Append("   <color=#ffd060>").Append(rt.Adaptive.LastJudgedCpuBound ? "CPU-bound [D]" : "CPU-bound (suspected) [D]").Append("</color>");
             sb.Append('\n');
 
             sb.Append("XR ").Append(rt.Xr.DescribeRuntime());
@@ -89,6 +89,8 @@ namespace CRIXOptimizer.UI
               .Append(Live.VoiceVisualInterval).Append('/').Append(Live.ProximityInterval).Append('/').Append(Live.TextureTransitionInterval).Append('\n');
             sb.Append("Changes: ").Append(rt.ChangedSettingsCount).Append(" engine settings, ").Append(rt.ActivePatchCount).Append(" game patches").Append('\n');
             sb.Append("Streaming: ").Append(StreamingLine(rt)).Append('\n');
+            if (rt.DesktopCamera != null && rt.ActiveSettings != null && rt.ActiveSettings.DesktopCamera != Configuration.DesktopCameraMode.Unchanged)
+                sb.Append("Desktop camera: ").Append(rt.DesktopCamera.Status).Append('\n');
             if (rt.Cameras.ExtraCameras > 0 || rt.Sakuraa.Detected)
             {
                 sb.Append("Extra cameras ").Append(rt.Cameras.ExtraCameras).Append(" (desktop ").Append(rt.Cameras.ScreenCameras).Append(')');
@@ -136,7 +138,9 @@ namespace CRIXOptimizer.UI
             if (rt.Obs == null)
                 obs = "OBS WebSocket off";
             else if (status == null || !status.Connected)
-                obs = status != null && status.AuthenticationRequired ? "OBS WebSocket needs password" : status != null && status.AuthenticationFailed ? "OBS password rejected" : "OBS WebSocket not connected";
+                obs = status != null && status.Kicked ? "OBS WebSocket: disconnected in OBS (restart game to reconnect)"
+                    : status != null && status.AuthenticationRequired ? "OBS WebSocket needs password"
+                    : status != null && status.AuthenticationFailed ? "OBS password rejected" : "OBS WebSocket not connected";
             else
                 obs = status.Streaming && status.Recording ? "OBS live+recording" : status.Streaming ? "OBS live" : status.Recording ? "OBS recording" : "OBS idle";
             if (rt.Streamlabs != null)

@@ -9,6 +9,8 @@ namespace CRIXOptimizer.Adaptive
         Pending,
         Effective,
         Ineffective,
+        /// <summary>Frames were locked at half the refresh rate (reprojection) before and after; no conclusion possible.</summary>
+        Inconclusive,
     }
 
     /// <summary>
@@ -27,18 +29,21 @@ namespace CRIXOptimizer.Adaptive
 
         private double startTime = -1;
         private double beforeMs;
+        private double budgetMs;
         private double sum;
         private int count;
 
         public bool IsPending => startTime >= 0;
         public double LastImprovement { get; private set; }
 
-        public void Begin(double now, double frameMsBefore)
+        /// <param name="budgetMs">Frame budget at the headset refresh rate (0 = unknown).</param>
+        public void Begin(double now, double frameMsBefore, double budgetMs = 0)
         {
             if (frameMsBefore <= 0)
                 return;
             startTime = now;
             beforeMs = frameMsBefore;
+            this.budgetMs = budgetMs;
             sum = 0;
             count = 0;
         }
@@ -60,7 +65,13 @@ namespace CRIXOptimizer.Adaptive
             double after = sum / count;
             LastImprovement = (beforeMs - after) / beforeMs;
             startTime = -1;
-            return LastImprovement >= MinImprovement ? ProbeResult.Effective : ProbeResult.Ineffective;
+            if (LastImprovement >= MinImprovement)
+                return ProbeResult.Effective;
+            // VR runtimes snap a late frame to the next refresh (reprojection at half rate). A GPU-bound frame
+            // that got faster but is still late shows the same ~2x-budget frame time, so no change proves nothing.
+            if (budgetMs > 0 && beforeMs >= 1.7 * budgetMs && after >= 1.7 * budgetMs)
+                return ProbeResult.Inconclusive;
+            return ProbeResult.Ineffective;
         }
     }
 }

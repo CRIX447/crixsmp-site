@@ -69,7 +69,7 @@ namespace CRIXOptimizer.Tests
             foreach (KeyValuePair<string, OptimizationSettings> pair in ProfilePresets.All())
             {
                 Assert.True(pair.Value.MapSanitizer != SanitizerMode.FullReplacement, pair.Key + " must not bypass the game's sanitizer by default");
-                bool performance = pair.Key == "MaximumPerformance" || pair.Key == "VirtualDesktop.Performance";
+                bool performance = pair.Key == "MaximumPerformance" || pair.Key == "VirtualDesktop.Performance" || pair.Key == "HighRefresh";
                 if (performance)
                     Assert.Equal(2, pair.Value.MsaaSamples, pair.Key + " caps MSAA at 2x");
                 else
@@ -232,6 +232,8 @@ namespace CRIXOptimizer.Tests
             int compared = 0;
             foreach (string section in ProfilePresets.SectionNames)
             {
+                if (!ProfilePresetsV1.HasSection(section))
+                    continue; // added after 1.0.0
                 OptimizationSettings v1 = ProfilePresetsV1.ForSection(section);
                 foreach (FieldInfo f in SettingCatalog.ProfileFields())
                 {
@@ -274,6 +276,8 @@ namespace CRIXOptimizer.Tests
             Assert.Equal(30f, obs.ShadowDistanceLimit, "unchanged 1.0.0 default upgraded");
             Assert.Equal(20f, obs.AdaptiveGpuHeadroomPercent);
             Assert.Equal(-1f, store.Resolve("MultiMod").ShadowDistanceLimit, "unchanged presets stay");
+            Assert.Equal(20f, store.Resolve("HighRefresh").ShadowDistanceLimit, "sections added in 1.1 get their defaults");
+            Assert.True(File.ReadAllText(Path.Combine(dir, "main.cfg")).Contains("PresetRevision = " + ProfileStore.CurrentPresetRevision), "main config marker saved");
             Assert.True(File.ReadAllText(path).Contains("PresetRevision = " + ProfileStore.CurrentPresetRevision), "revision saved");
 
             // A second start migrates nothing and keeps everything.

@@ -1,75 +1,105 @@
 # Changelog
 
-## 1.1.0 - 2026-10-12
+## 1.1.0 - 2026-10-14
 
-Answers the report "it does 0 optimization", adds automatic streaming/recording mode (OBS, Streamlabs, Discord),
-Spotify awareness and Sakuraa Client / GTFX awareness. **Built and unit/integration-tested; still not tested inside
-Gorilla Tag or benchmarked on hardware** (see docs/TEST_REPORT.md). No performance numbers are claimed.
+Answers the report "it does 0 optimization", adds a 120/144 Hz profile, automatic streaming/recording mode (OBS,
+Streamlabs, Discord), Spotify awareness and Sakuraa Client / GTFX awareness. **Built and unit/integration-tested;
+still not tested inside Gorilla Tag or benchmarked on hardware** (see docs/TEST_REPORT.md). No performance numbers
+are claimed.
 
 ### Why 1.0.0 could look like it did nothing (and what changed)
 
-- **URP.** Gorilla Tag PC appears to render with the Universal Render Pipeline. URP ignores the built-in quality
-  settings (shadow quality/cascades, MSAA, pixel lights), and it copies its own asset's render scale and MSAA into
-  the VR eye textures every frame, overwriting `XRSettings.eyeTextureResolutionScale`. 1.1.0 changes render scale,
-  MSAA, shadow distance, shadow cascades, additional lights per object and soft shadows through the **public
-  properties of the active URP asset** when the game uses URP (each one only if the property exists). It also
-  checks every 5 s that the render scale actually reached the eye textures, and warns if it did not.
-- **Adaptive quality was off by default.** It is now on (new key `[Adaptive] Mode = On`, which replaces
-  `[Adaptive] Enabled`, so existing installs get the new default). It only acts when the frame rate is below target.
+- **Unity 6 + URP.** Gorilla Tag PC runs Unity 6000.1.9f1 with the Universal Render Pipeline (URP 17). URP ignores
+  the built-in quality settings (shadow quality/cascades, MSAA, pixel lights), and it copies its own asset's render
+  scale and MSAA into the VR eye textures every frame; `XRSettings.eyeTextureResolutionScale` is not supported under
+  URP. 1.1.0 changes render scale, MSAA, shadow distance, shadow cascades and additional lights per object through
+  the **public properties of the active URP asset** (each only if the property exists and is public). Every 5 s it
+  checks the XR display's render-target scale (what URP writes) and warns if it does not match.
+- **Adaptive quality was off by default.** It is now on (new key `[Adaptive] Mode = On`; the 1.0.0 key
+  `[Adaptive] Enabled` is removed from the file and the log says so). It only acts when the frame rate is below target.
 - **CPU-bound lobbies.** Lowering resolution does not help when the CPU is the bottleneck (full lobbies, many
   cosmetics). Adaptive mode now also reduces distant remote-player cosmetic detail and cosmetic update rates, and
-  a resolution probe checks whether a resolution drop really made frames faster. If it did not, resolution is
-  restored and only CPU-side reductions are used for 3 minutes.
+  checks whether a resolution drop really made frames faster. If it did not, resolution is restored and only
+  CPU-side reductions are used; the next check waits 3 min, then 6, 12 ... up to 30 min while it keeps failing. A
+  frame rate locked at half the refresh rate (reprojection) before and after counts as inconclusive, not CPU-bound.
 - **Mild presets.** Balanced only capped shadow distance. Presets are stronger now (table in docs/PROFILES.md).
   Existing profile files are upgraded automatically: values that still equal the 1.0.0 default get the 1.1.0
-  default, and any value you edited is kept (`[Meta] PresetRevision` in the profiles file).
-- **No visible summary.** The log now prints "CRIX status: ..." once XR is up (profile, active patches, engine
-  settings actually changed with old -> new values, adaptive state). It warns with the reason when nothing is being
+  default, and any value you edited is kept (`[Meta] PresetRevision`, in both config files).
+- **No visible summary.** The log prints "CRIX status: ..." once XR is up: profile, active patches, engine settings
+  actually changed (old -> new), adaptive state, desktop camera. It warns with the reason when nothing is being
   changed. The dashboard and system report show the same summary. Settings applied at the game's own value no
   longer count as "changed".
 - **VR frame rates are capped** at the headset refresh rate, so gains show up as fewer dropped frames, lower and
-  steadier frame times and more GPU/CPU headroom, not as a higher FPS number.
+  steadier frame times and more GPU/CPU headroom, not as a higher FPS number. Gorilla Tag bakes most of its
+  lighting, so shadow and light limits usually change little.
 
 ### Added
 
+- **`HighRefresh` profile** for 120/144 Hz headsets: keeps resolution (adaptive mode may lower it after checking it
+  helps), cuts per-frame CPU work (distant cosmetics 3.5/6 m and 4/8 players, cosmetic updates 20/s, LOD bias 0.8,
+  two-bone skinning, 64 particle raycasts, 1 ms upload slices), MSAA capped at 2x, 10 % GPU headroom. The log points
+  out when the headset reports less than 110 Hz and how to set 120 Hz in Virtual Desktop, Meta Quest Link or SteamVR.
+- **`DesktopCamera` profile setting** (`Unchanged` / `OffWhenNotStreaming` / `Off`; `OffWhenNotStreaming` in
+  HighRefresh, `Unchanged` elsewhere). Switches off the game's third-person camera, which renders the scene a second
+  time to the desktop window, while OBS/Streamlabs is not recording or live; the window then shows the headset view
+  (XR mirror, left eye). Rendering only (`Camera.enabled`), never without an active headset, never a stereo or
+  render-texture camera, restored like every other setting, and left alone if the game or another mod turns it back
+  on. Not applied under the ReShade guard.
 - **Auto streaming mode** (`[Streaming]`, on by default). While OBS/Streamlabs records or streams, or Discord runs,
-  CRIX switches to `ObsProfile` (OBSStreaming) or `DiscordProfile` (DiscordCall). It switches back after `HoldSeconds`
+  CRIX switches to `ObsProfile` (OBSStreaming) or `DiscordProfile` (DiscordCall), and back after `HoldSeconds`
   (20 s). Only Balanced/OBSStreaming/DiscordCall are switched; VirtualDesktop moves to its Streaming preset;
-  MaximumPerformance, ReShadeCompatible, MultiMod and Custom are never replaced.
-  - **OBS Studio 28+:** read-only obs-websocket v5 client (localhost only, SHA-256 challenge authentication).
-    It only ever sends `GetStreamStatus` and `GetRecordStatus` and listens to stream/record state events. It cannot
+  MaximumPerformance, HighRefresh, ReShadeCompatible, MultiMod and Custom are never replaced.
+  - **OBS Studio 28+:** read-only obs-websocket v5 client (127.0.0.1 only, SHA-256 challenge authentication). It
+    only ever sends `GetStreamStatus` and `GetRecordStatus` and listens to stream/record state events; it cannot
     start, stop or change anything in OBS. The WebSocket server must be enabled in OBS (see INSTALLATION.md).
-    Without it, "OBS running" is used as the signal.
-  - **Streamlabs Desktop:** read-only poll of its local API (127.0.0.1:28194, `StreamingService.getModel`, every 5 s)
-    while Streamlabs runs. No setup needed.
-  - **Discord:** Discord's call/Go Live state cannot be read without injecting into Discord, which CRIX does not do;
-    "Discord running" (or its overlay hook in the game) is the signal.
+    Without it, "OBS running" is the signal. The password is hidden from in-game config editors.
+  - **Streamlabs Desktop:** read-only poll of its local API (127.0.0.1:28194, `StreamingService.getModel`, every
+    5 s) while Streamlabs runs (`[Streaming] StreamlabsApi`). Dual-output (horizontal + vertical) state is combined;
+    "busy" answers while Streamlabs loads count as unknown.
+  - **Discord:** its call/Go Live state cannot be read without injecting into Discord, which CRIX does not do;
+    "Discord running" (or its overlay in the game) is the signal.
+  - Capture DLLs stay loaded in the game after OBS/Discord close; they only count while their app still runs.
   - `Trigger`: `Auto`, `WhenAppRunning` or `WhenRecordingOrLive`.
-- **Spotify detection.** While Spotify runs, adaptive mode keeps 5% more GPU headroom. The log explains Spotify's GPU
-  hardware-acceleration option. CRIX never touches Spotify.
-- **Sakuraa Client / GTFX awareness.** Detects Sakuraa (loaded assemblies, plugin GUIDs, Harmony owners), lists it
-  in the log and system report, and warns about unofficial rebuilt copies. GTFX is Sakuraa's closed shader system and
-  can only be tuned in Sakuraa's own presets; CRIX does not modify Sakuraa, GTFX or its cameras.
+- **Spotify detection.** While Spotify runs, adaptive mode keeps 5 % more GPU headroom (when the VR runtime reports
+  GPU time). The log explains Spotify's hardware-acceleration option. CRIX never touches Spotify.
+- **Sakuraa Client / GTFX awareness.** Detects Sakuraa (assemblies, plugin GUIDs and Harmony owners whose name
+  contains "Sakuraa") and lists it in the log and system report. GTFX is part of Sakuraa and can only be tuned in
+  Sakuraa's own presets; CRIX does not modify Sakuraa, GTFX or its cameras.
 - **Camera inventory.** Lists every active camera (VR, desktop window, render textures) with resolution and a
-  derived pixel load relative to one VR eye (system report, dashboard). While streaming, it points out a large
-  desktop spectator camera. Read-only.
-- System report: "What CRIX is doing" section, render-scale lever and check, graphics notes, Sakuraa, cameras,
-  streaming state, base vs running profile.
+  derived pixel load relative to one VR eye (system report, dashboard), and points out a large desktop camera.
+- **URP asset report.** The game's URP asset values at start-up (render scale, MSAA, shadows, HDR, opaque/depth
+  texture copies) go into the log and system report; the log notes when another mod has turned on the opaque/depth
+  copies (extra GPU work on every camera). Read-only.
+- System report: "What CRIX is doing", render-scale lever and check, URP values, Sakuraa, cameras, desktop camera,
+  headset refresh rate, streaming state, base vs running profile.
+- `tools/check_unity_api.py`: checks every Unity member the DLL uses against Unity's published C# source for a given
+  version (all 162 references are declared in 6000.1.9f1; three obsolete-but-present fallbacks).
 
 ### Changed
 
-- MSAA (`MsaaSamples`) is now a cap on both pipelines and is never raised; MaximumPerformance and
+- MSAA (`MsaaSamples`) is a cap on both pipelines and is never raised; MaximumPerformance, HighRefresh and
   VirtualDesktop.Performance cap it at 2x. Other presets still leave MSAA alone.
+- Under URP the render scale also sets the desktop camera's resolution (what OBS records), so `OBSStreaming` and
+  `VirtualDesktop.Streaming` no longer let adaptive mode lower it.
 - Preset values (1.0.0 -> 1.1.0):
   - Balanced: shadow distance 60 -> 50 m, cascades max 2, lights 2, realtime reflection probes off, occlusion
     mesh, async upload 1 ms, background loading below normal.
   - OBSStreaming: shadows 40 -> 30 m, cascades 2, lights 1, soft particles off, particle raycasts 128, cosmetic
-    rates 24/s, closer distant-cosmetic culling, GPU headroom 10 -> 20%.
-  - DiscordCall: shadows 35 m, cascades 2, GPU headroom 10%.
+    rates 24/s, closer distant-cosmetic culling, GPU headroom 10 -> 20 %, adaptive render scale off.
+  - DiscordCall: shadows 35 m, cascades 2, GPU headroom 10 %.
   - VirtualDesktop: cascades 2. VirtualDesktop.Streaming: shadows 30 m, cascades 2, lights 1, rates 24/s,
-    headroom 20%. VirtualDesktop.Performance: cascades 1, MSAA 2x.
+    headroom 20 %, adaptive render scale off. VirtualDesktop.Performance: cascades 1, MSAA 2x.
   - MaximumPerformance: MSAA 2x. ReShadeCompatible: cascades 2.
-- Tests: 87 -> see docs/TEST_REPORT.md.
+- Streamlabs Desktop's own obs64 backend process is no longer reported as OBS Studio; `DiscordDevelopment` is detected.
+
+### Fixed during review (before release)
+
+- OBS client: a WebSocket ping no longer blocks status polling (and drops the connection 10 s later); fragments are
+  reassembled across interleaved control frames and capped at 4 MB in total; the reconnect delay resets after a
+  working session and when OBS is started; a "kicked in OBS" state stays visible; password problems are rechecked
+  every minute instead of every 5 minutes.
+- Adaptive mode keeps its CPU-side levers if the graphics module has failed, and the end of a "CPU-bound" period is
+  handled like any other change (a resolution drop then is checked by the probe).
 
 ## 1.0.0 - 2026-10-12
 

@@ -59,7 +59,12 @@ namespace CRIXOptimizer.Streaming
         private readonly string password;
         private readonly ILogSink log;
         private readonly ManualResetEvent stopSignal = new ManualResetEvent(false);
+        private readonly AutoResetEvent wakeSignal = new AutoResetEvent(false);
         private Thread thread;
+        private const int MaxMessageBytes = 4 * 1024 * 1024;
+        /// <summary>Returned by ReadMessage after a control frame (ping/pong) so the caller can go back to polling.</summary>
+        private static readonly Dictionary<string, object> ControlFrame = new Dictionary<string, object>();
+        private MemoryStream partialMessage;
         private volatile ObsStatus status = ObsStatus.Disconnected;
         private volatile bool stopping;
 
@@ -91,6 +96,13 @@ namespace CRIXOptimizer.Streaming
             thread.Start();
         }
 
+        /// <summary>Retry now instead of waiting for the back-off (e.g. OBS has just been started). Safe from any thread.</summary>
+        public void Nudge()
+        {
+            if (!status.Connected && !status.Kicked)
+                wakeSignal.Set();
+        }
+
         /// <summary>Asks the background thread to stop without waiting for it (safe to call from the game thread).</summary>
         public void Stop()
         {
@@ -119,6 +131,7 @@ namespace CRIXOptimizer.Streaming
             string lastLoggedError = null;
             while (!stopping)
             {
+                bool hadSession = false;
                 try
                 {
                     RunSession(ref wasConnected);
@@ -126,6 +139,7 @@ namespace CRIXOptimizer.Streaming
                 }
                 catch (Exception e)
                 {
+                    hadSession = wasConnected;
                     string message = Describe(e);
                     status = status.With(s =>
                     {
@@ -148,13 +162,19 @@ namespace CRIXOptimizer.Streaming
 
                 if (stopping)
                     break;
-                // A wrong or missing password will not fix itself; check again only occasionally.
-                int wait = status.AuthenticationFailed || (status.AuthenticationRequired && password.Length == 0) ? 300 : retry;
-                if (stopSignal.WaitOne(TimeSpan.FromSeconds(wait)))
+                // After a working session ends (OBS closed or restarted), start again from the short delay.
+                if (hadSession)
+                    retry = RetrySeconds;
+                // A wrong or missing password will not fix itself quickly; check again once a minute.
+                int wait = status.AuthenticationFailed || (status.AuthenticationRequired && password.Length == 0) ? 60 : retry;
+                int signalled = WaitHandle.WaitAny(new WaitHandle[] { stopSignal, wakeSignal }, TimeSpan.FromSeconds(wait));
+                if (signalled == 0 || stopping)
                     break;
-                retry = Math.Min(MaxRetrySeconds, retry * 2);
+                retry = signalled == 1 ? RetrySeconds : Math.Min(MaxRetrySeconds, retry * 2);
             }
-            status = ObsStatus.Disconnected;
+            // Keep the "kicked" state visible: OBS asked this client not to reconnect.
+            if (!status.Kicked)
+                status = ObsStatus.Disconnected;
         }
 
         private void RunSession(ref bool wasConnected)
@@ -167,13 +187,14 @@ namespace CRIXOptimizer.Streaming
                 tcp.EndConnect(connect);
                 tcp.NoDelay = true;
                 NetworkStream stream = tcp.GetStream();
+                partialMessage = null;
                 stream.ReadTimeout = 10000;
                 stream.WriteTimeout = 5000;
 
                 Handshake(stream);
 
                 // Hello
-                Dictionary<string, object> hello = ReadMessage(stream, tcp);
+                Dictionary<string, object> hello = ReadDataMessage(stream, tcp);
                 if (hello == null || MiniJson.Num(hello, "op") != 0)
                     throw new InvalidDataException("expected obs-websocket Hello");
                 Dictionary<string, object> helloData = MiniJson.Obj(hello, "d");
@@ -198,7 +219,7 @@ namespace CRIXOptimizer.Streaming
                 }
                 Send(stream, new Dictionary<string, object> { { "op", 1 }, { "d", identify } });
 
-                Dictionary<string, object> identified = ReadMessage(stream, tcp);
+                Dictionary<string, object> identified = ReadDataMessage(stream, tcp);
                 if (identified == null)
                 {
                     if (lastCloseCode == 4009)
@@ -244,7 +265,8 @@ namespace CRIXOptimizer.Streaming
                         }
                         throw new IOException("OBS closed the connection (code " + lastCloseCode + ")");
                     }
-                    Handle(message);
+                    if (!ReferenceEquals(message, ControlFrame))
+                        Handle(message);
                 }
             }
         }
@@ -369,10 +391,25 @@ namespace CRIXOptimizer.Streaming
             throw new IOException("handshake response too large");
         }
 
-        /// <summary>Reads one complete text message as JSON; null when the server closed the connection.</summary>
+        /// <summary>Like ReadMessage, but skips control frames (used during the handshake).</summary>
+        private Dictionary<string, object> ReadDataMessage(NetworkStream stream, TcpClient tcp)
+        {
+            while (true)
+            {
+                Dictionary<string, object> message = ReadMessage(stream, tcp);
+                if (!ReferenceEquals(message, ControlFrame))
+                    return message;
+            }
+        }
+
+        /// <summary>
+        /// Reads frames until one complete text message (parsed as JSON) or one control frame has been handled.
+        /// Returns null when the server closed the connection and <see cref="ControlFrame"/> after a ping/pong, so
+        /// the caller never blocks waiting for a message that may not come. Fragments of a message are kept across
+        /// calls, because control frames may arrive between them (RFC 6455 section 5.4).
+        /// </summary>
         private Dictionary<string, object> ReadMessage(NetworkStream stream, TcpClient tcp)
         {
-            var payload = new MemoryStream();
             while (true)
             {
                 int b0 = stream.ReadByte();
@@ -395,7 +432,8 @@ namespace CRIXOptimizer.Streaming
                     for (int i = 0; i < 8; i++)
                         length = (length << 8) | ext[i];
                 }
-                if (length > 4 * 1024 * 1024)
+                long buffered = partialMessage?.Length ?? 0;
+                if (length > MaxMessageBytes || buffered + length > MaxMessageBytes)
                     throw new InvalidDataException("WebSocket message too large");
                 byte[] mask = masked ? ReadExactly(stream, 4) : null;
                 byte[] data = ReadExactly(stream, (int)length);
@@ -411,18 +449,21 @@ namespace CRIXOptimizer.Streaming
                         return null;
                     case 0x9: // ping
                         SendFrame(stream, 0xA, data);
-                        continue;
+                        return ControlFrame;
                     case 0xA: // pong
-                        continue;
+                        return ControlFrame;
                     case 0x1: // text
                     case 0x0: // continuation
-                        payload.Write(data, 0, data.Length);
+                        if (partialMessage == null)
+                            partialMessage = new MemoryStream();
+                        partialMessage.Write(data, 0, data.Length);
                         if (!fin)
                             continue;
-                        string text = Encoding.UTF8.GetString(payload.ToArray());
-                        return MiniJson.Parse(text) as Dictionary<string, object>;
+                        string text = Encoding.UTF8.GetString(partialMessage.ToArray());
+                        partialMessage = null;
+                        return MiniJson.Parse(text) as Dictionary<string, object> ?? ControlFrame;
                     default:
-                        continue; // binary frames are not used by the JSON protocol
+                        return ControlFrame; // binary frames are not used by the JSON protocol
                 }
             }
         }

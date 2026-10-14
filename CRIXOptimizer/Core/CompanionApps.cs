@@ -42,8 +42,10 @@ namespace CRIXOptimizer.Core
     }
 
     /// <summary>
-    /// Classifies process and module names. Read-only: the plugin only compares names, it never opens,
-    /// injects into, or changes other processes.
+    /// Classifies process and module names. Read-only: the plugin only compares names; it never injects into or
+    /// changes other processes. (Mono's Process API opens a handle to each process to read its name; CRIX
+    /// releases those handles right away. Processes running as administrator are not visible to a game that runs
+    /// without administrator rights.)
     /// </summary>
     public static class CompanionApps
     {
@@ -58,6 +60,7 @@ namespace CRIXOptimizer.Core
                 { "Discord", CompanionApp.Discord },
                 { "DiscordPTB", CompanionApp.Discord },
                 { "DiscordCanary", CompanionApp.Discord },
+                { "DiscordDevelopment", CompanionApp.Discord },
                 { "VirtualDesktop.Streamer", CompanionApp.VirtualDesktop },
                 { "VirtualDesktop.Service", CompanionApp.VirtualDesktop },
                 { "vrserver", CompanionApp.SteamVR },
@@ -101,8 +104,16 @@ namespace CRIXOptimizer.Core
                 return result;
             foreach (string name in processNames)
                 result |= ClassifyProcess(name);
-            return result;
+            return Normalize(result);
         }
+
+        /// <summary>
+        /// Streamlabs Desktop runs its OBS backend as a child process named obs64, so "obs64 + Streamlabs" is
+        /// reported as Streamlabs only. (Running OBS Studio and Streamlabs at the same time cannot be told apart by
+        /// process name; that combination is reported as Streamlabs.)
+        /// </summary>
+        public static CompanionApp Normalize(CompanionApp apps) =>
+            (apps & CompanionApp.StreamlabsDesktop) != 0 ? apps & ~CompanionApp.Obs : apps;
 
         public static GraphicsHook ClassifyModule(string moduleFileName)
         {

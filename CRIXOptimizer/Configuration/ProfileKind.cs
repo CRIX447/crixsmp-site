@@ -7,6 +7,8 @@ namespace CRIXOptimizer.Configuration
     {
         Balanced,
         MaximumPerformance,
+        /// <summary>120/144 Hz headsets: keeps resolution, cuts CPU work per frame (added in 1.1.0).</summary>
+        HighRefresh,
         VirtualDesktop,
         OBSStreaming,
         DiscordCall,
@@ -73,6 +75,15 @@ namespace CRIXOptimizer.Configuration
         RightEye,
         SideBySide,
         None,
+    }
+
+    /// <summary>The game's own third-person camera that renders the scene a second time to the desktop window.</summary>
+    public enum DesktopCameraMode
+    {
+        Unchanged,
+        /// <summary>Off unless OBS/Streamlabs is recording or live (or running, when its live state is unknown).</summary>
+        OffWhenNotStreaming,
+        Off,
     }
 
     public enum LoadingPriority

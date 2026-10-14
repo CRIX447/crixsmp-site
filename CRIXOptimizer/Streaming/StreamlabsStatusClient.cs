@@ -14,8 +14,10 @@ namespace CRIXOptimizer.Streaming
     /// <summary>
     /// Read-only Streamlabs Desktop status reader. Streamlabs Desktop serves newline-delimited JSON-RPC 2.0 on
     /// 127.0.0.1:28194 and trusts local clients without a token. This client only ever calls
-    /// StreamingService.getModel and reads streamingStatus / recordingStatus. Background thread; the game reads
-    /// <see cref="Status"/>.
+    /// StreamingService.getModel and reads streamingStatus / recordingStatus (plus the per-display status that
+    /// dual-output mode uses). Background thread; the game reads <see cref="Status"/>.
+    /// While Streamlabs is starting or switching scene collections it answers with errors or not at all; that
+    /// counts as "not connected", so the runtime falls back to "Streamlabs is running".
     /// </summary>
     public sealed class StreamlabsStatusClient : IDisposable
     {
@@ -25,6 +27,7 @@ namespace CRIXOptimizer.Streaming
         private readonly int port;
         private readonly ILogSink log;
         private readonly ManualResetEvent stopSignal = new ManualResetEvent(false);
+        private const int MaxRetrySeconds = 15;
         private Thread thread;
         private volatile bool stopping;
         private volatile ObsStatus status = ObsStatus.Disconnected;
@@ -103,7 +106,8 @@ namespace CRIXOptimizer.Streaming
                 }
                 if (stopping || stopSignal.WaitOne(TimeSpan.FromSeconds(retry)))
                     break;
-                retry = Math.Min(60, retry * 2);
+                // Short cap: this client only runs while Streamlabs is running, so it should come up soon.
+                retry = Math.Min(MaxRetrySeconds, retry * 2);
             }
             status = ObsStatus.Disconnected;
         }
@@ -115,18 +119,31 @@ namespace CRIXOptimizer.Streaming
             Dictionary<string, object> result = MiniJson.Obj(message, "result");
             if (result == null)
             {
-                status = new ObsStatus { Connected = true, LastError = "unexpected Streamlabs response" };
+                // An error (e.g. "API server is busy" while Streamlabs loads) tells nothing about the outputs.
+                Dictionary<string, object> error = MiniJson.Obj(message, "error");
+                status = new ObsStatus { Connected = false, LastError = "Streamlabs: " + (MiniJson.Str(error, "message") ?? "unexpected response") };
                 return;
             }
-            string stream = MiniJson.Str(result, "streamingStatus") ?? "offline";
-            string record = MiniJson.Str(result, "recordingStatus") ?? "offline";
+            bool streaming = IsLive(MiniJson.Str(result, "streamingStatus"));
+            bool recording = IsRecording(MiniJson.Str(result, "recordingStatus"));
+            // Dual output: the top-level fields hold whichever display updated last, so check each display too.
+            Dictionary<string, object> displays = MiniJson.Obj(result, "status");
+            if (displays != null)
+            {
+                foreach (KeyValuePair<string, object> display in displays)
+                {
+                    var d = display.Value as Dictionary<string, object>;
+                    streaming |= IsLive(MiniJson.Str(d, "streaming"));
+                    recording |= IsRecording(MiniJson.Str(d, "recording"));
+                }
+            }
             ObsStatus before = status;
             var after = new ObsStatus
             {
                 Connected = true,
                 ObsVersion = "Streamlabs Desktop",
-                Streaming = stream == "live" || stream == "reconnecting",
-                Recording = record == "recording",
+                Streaming = streaming,
+                Recording = recording,
             };
             status = after;
             if (before.Connected && before.Streaming != after.Streaming)
@@ -134,6 +151,9 @@ namespace CRIXOptimizer.Streaming
             if (before.Connected && before.Recording != after.Recording)
                 log.Info(after.Recording ? "Streamlabs reports: recording started." : "Streamlabs reports: recording stopped.");
         }
+
+        private static bool IsLive(string state) => state == "live" || state == "reconnecting";
+        private static bool IsRecording(string state) => state == "recording";
 
         private static string ReadLine(Stream stream)
         {

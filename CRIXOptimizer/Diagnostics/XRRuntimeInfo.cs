@@ -81,6 +81,17 @@ namespace CRIXOptimizer.Diagnostics
                 Display = null;
             }
 
+            // URP sets the display's render-target scale itself every frame (from its asset); prefer that value.
+            try
+            {
+                if (Display != null && Display.scaleOfAllRenderTargets > 0f)
+                    EyeTextureScale = Display.scaleOfAllRenderTargets;
+            }
+            catch
+            {
+                // keep the XRSettings value
+            }
+
             RefreshRate = 0f;
             RefreshRateSource = "unavailable";
             try

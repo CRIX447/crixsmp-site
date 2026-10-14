@@ -28,6 +28,11 @@ namespace CRIXOptimizer.Core
         public bool ObsWebSocketConnected;
         public bool ObsStreaming;
         public bool ObsRecording;
+        /// <summary>
+        /// True when process detection ran. Capture/overlay DLLs stay loaded in the game after their app exits, so
+        /// with process information available a hook only counts while its app is still running.
+        /// </summary>
+        public bool AppsKnown;
     }
 
     /// <summary>
@@ -76,10 +81,10 @@ namespace CRIXOptimizer.Core
         public static CaptureKind Evaluate(StreamingTrigger trigger, CaptureSignals s, out string reason)
         {
             bool obsApp = (s.Apps & (CompanionApp.Obs | CompanionApp.StreamlabsDesktop)) != 0;
-            bool obsHook = (s.Hooks & GraphicsHook.ObsGameCapture) != 0;
+            bool obsHook = (s.Hooks & GraphicsHook.ObsGameCapture) != 0 && (!s.AppsKnown || obsApp);
             bool obsLive = s.ObsWebSocketConnected && (s.ObsStreaming || s.ObsRecording);
             bool discordApp = (s.Apps & CompanionApp.Discord) != 0;
-            bool discordHook = (s.Hooks & GraphicsHook.DiscordOverlay) != 0;
+            bool discordHook = (s.Hooks & GraphicsHook.DiscordOverlay) != 0 && (!s.AppsKnown || discordApp);
 
             switch (trigger)
             {

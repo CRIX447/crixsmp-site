@@ -51,7 +51,7 @@ namespace CRIXOptimizer.Configuration
                 foreach (string section in ProfilePresets.SectionNames)
                     sections[section] = BindSection(profilesFile, section, ProfilePresets.ForSection(section));
                 sections["Custom"] = BindSection(mainFile, "Custom", ProfilePresets.ForSection("Custom"));
-                Migrate(profilesFile);
+                Migrate(profilesFile, mainFile);
             }
             finally
             {
@@ -67,21 +67,28 @@ namespace CRIXOptimizer.Configuration
         /// so without this an existing 1.0.0 install would never receive improved defaults. Only entries that
         /// still equal the old default are updated; anything the user edited is left exactly as it is.
         /// </summary>
-        private void Migrate(ConfigFile profilesFile)
+        private void Migrate(ConfigFile profilesFile, ConfigFile mainFile)
         {
-            ConfigEntry<int> revision = profilesFile.Bind("Meta", "PresetRevision", 0,
-                new ConfigDescription("Managed by CRIX: version of the built-in preset values this file was last upgraded to. Do not edit."));
-            int from = revision.Value;
-            MigratedFromRevision = from;
-            if (from >= CurrentPresetRevision)
-                return;
+            // Each file carries its own marker: the built-in presets live in the profiles file, Custom in the
+            // main config, and either file can be deleted or reset on its own.
+            var description = new ConfigDescription("Managed by CRIX: version of the built-in preset values this file was last upgraded to. Do not edit.");
+            ConfigEntry<int> profilesRevision = profilesFile.Bind("Meta", "PresetRevision", 0, description);
+            ConfigEntry<int> mainRevision = mainFile.Bind("Meta", "PresetRevision", 0, description);
+            MigratedFromRevision = profilesRevision.Value;
+            bool migrateProfiles = profilesRevision.Value < CurrentPresetRevision;
+            bool migrateCustom = mainRevision.Value < CurrentPresetRevision;
 
             int changed = 0;
             foreach (KeyValuePair<string, List<Binding>> section in sections)
             {
-                string presetSection = section.Key == "Custom" ? "Custom" : section.Key;
-                OptimizationSettings oldDefaults = ProfilePresetsV1.ForSection(presetSection);
-                OptimizationSettings newDefaults = ProfilePresets.ForSection(presetSection);
+                bool isCustom = section.Key == "Custom";
+                if (isCustom ? !migrateCustom : !migrateProfiles)
+                    continue;
+                // Sections added after 1.0.0 have no older defaults to upgrade from.
+                if (!ProfilePresetsV1.HasSection(section.Key))
+                    continue;
+                OptimizationSettings oldDefaults = ProfilePresetsV1.ForSection(section.Key);
+                OptimizationSettings newDefaults = ProfilePresets.ForSection(section.Key);
                 foreach (Binding binding in section.Value)
                 {
                     object oldValue = binding.Field.GetValue(oldDefaults);
@@ -93,7 +100,8 @@ namespace CRIXOptimizer.Configuration
                 }
             }
             MigratedEntries = changed;
-            revision.Value = CurrentPresetRevision;
+            profilesRevision.Value = CurrentPresetRevision;
+            mainRevision.Value = CurrentPresetRevision;
         }
 
         public OptimizationSettings Resolve(string section)

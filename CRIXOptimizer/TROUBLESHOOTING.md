@@ -73,6 +73,17 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
    cameras, minimaps, tablets) render the scene again. The `Cameras:` line in `system-report.txt` lists them with
    their pixel load relative to one VR eye.
 
+## Not reaching 120 FPS
+
+- Is the headset really at 120 Hz? The dashboard and `system-report.txt` (`Headset refresh rate`) show what the VR
+  runtime reports; the frame rate cannot exceed it. See INSTALLATION.md, "Aiming for 120 FPS".
+- Use the `HighRefresh` profile and keep adaptive quality on.
+- `CPU-bound` on the dashboard means the processor, not the graphics card, is the limit. Lowering resolution will not
+  help; fewer players/cosmetics in view, `DesktopCamera = OffWhenNotStreaming` and the PC-side checks (RAM speed in
+  particular) are what can.
+- `Desktop camera: unavailable` in the report means this game build does not expose the camera CRIX looks for; the
+  rest of the profile still works.
+
 ## Auto streaming mode
 
 | Symptom | Cause / fix |
@@ -89,14 +100,13 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 - GTFX effects (clouds, rain, grass and similar) are only adjustable in Sakuraa's own GTFX presets. Pick a lighter one while streaming.
 - Sakuraa's spectator camera renders the game a second time to the desktop window. A smaller game window, or a lower
   quality setting for that camera in Sakuraa, saves GPU time.
-- Use the official client. Rebuilt "recovered" copies shared on GitHub were reported to contain a hidden extra
-  library; CRIX warns when it sees a GUID used by such copies.
+- Download Sakuraa only from its official source; CRIX does not check where a copy came from.
 
 ## Spotify
 
 Spotify's desktop app uses GPU hardware acceleration by default. If you notice stutter while it plays, turn off
-hardware acceleration in Spotify's settings (restart Spotify afterwards). While Spotify runs, CRIX keeps 5% more GPU
-headroom in adaptive mode. It never touches Spotify.
+hardware acceleration in Spotify's settings (restart Spotify afterwards). While Spotify runs, adaptive mode keeps 5 %
+more GPU headroom (only when the VR runtime reports GPU time). CRIX never touches Spotify.
 
 ## Performance did not improve
 

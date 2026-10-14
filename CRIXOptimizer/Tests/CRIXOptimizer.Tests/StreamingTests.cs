@@ -92,6 +92,21 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void StaleHooksIgnoredOnceTheirAppHasExited()
+        {
+            // OBS's capture DLL and Discord's overlay DLL stay loaded in the game after their app closes.
+            CaptureSignals obsGone = S(hooks: GraphicsHook.ObsGameCapture | GraphicsHook.DiscordOverlay);
+            obsGone.AppsKnown = true;
+            Assert.Equal(CaptureKind.None, CaptureStateMachine.Evaluate(StreamingTrigger.Auto, obsGone, out _));
+            Assert.Equal(CaptureKind.None, CaptureStateMachine.Evaluate(StreamingTrigger.WhenRecordingOrLive, obsGone, out _));
+            CaptureSignals obsRunning = S(CompanionApp.Obs, GraphicsHook.ObsGameCapture);
+            obsRunning.AppsKnown = true;
+            Assert.Equal(CaptureKind.Obs, CaptureStateMachine.Evaluate(StreamingTrigger.WhenRecordingOrLive, obsRunning, out _));
+            // Without process information the hook is still the best signal.
+            Assert.Equal(CaptureKind.Obs, CaptureStateMachine.Evaluate(StreamingTrigger.Auto, S(hooks: GraphicsHook.ObsGameCapture), out _));
+        }
+
+        [Test]
         public void EscalatesImmediatelyAndHoldsBeforeDroppingBack()
         {
             var m = new CaptureStateMachine { HoldSeconds = 20 };
@@ -141,6 +156,24 @@ namespace CRIXOptimizer.Tests
             Assert.Equal(ProbeResult.Effective, r);
             Assert.True(p.LastImprovement > 0.4);
             Assert.Equal(ProbeResult.Idle, p.Sample(7, 11.1));
+        }
+
+        [Test]
+        public void HalfRateReprojectionIsInconclusive()
+        {
+            // 90 Hz budget 11.1 ms; the runtime holds 45 FPS (22.2 ms) before and after: nothing can be concluded.
+            var p = new ResolutionProbe { SettleSeconds = 2, MeasureSeconds = 3 };
+            p.Begin(0, 22.2, 11.1);
+            ProbeResult r = ProbeResult.Pending;
+            for (double t = 0.5; t <= 6 && r == ProbeResult.Pending; t += 0.5)
+                r = p.Sample(t, 22.1);
+            Assert.Equal(ProbeResult.Inconclusive, r);
+            // Off the half-rate lock, the same small change is a real "did not help".
+            p.Begin(0, 13.0, 11.1);
+            r = ProbeResult.Pending;
+            for (double t = 0.5; t <= 6 && r == ProbeResult.Pending; t += 0.5)
+                r = p.Sample(t, 12.95);
+            Assert.Equal(ProbeResult.Ineffective, r);
         }
     }
 
@@ -225,6 +258,8 @@ namespace CRIXOptimizer.Tests
                                 string text = ReadText(client);
                                 if (text == null)
                                     break;
+                                if (text.Length == 0)
+                                    continue; // pong
                                 var msg = (Dictionary<string, object>)MiniJson.Parse(text);
                                 Dictionary<string, object> d = MiniJson.Obj(msg, "d");
                                 double op = MiniJson.Num(msg, "op").Value;
@@ -291,9 +326,36 @@ namespace CRIXOptimizer.Tests
                 lock (this) client.Write(frame.ToArray(), 0, frame.Count);
             }
 
-            private void SendClose(int code)
+            public void SendClose(int code)
             {
                 lock (this) client.Write(new byte[] { 0x88, 2, (byte)(code >> 8), (byte)code }, 0, 4);
+            }
+
+            public volatile int PongsReceived;
+
+            public void SendPing()
+            {
+                lock (this) client.Write(new byte[] { 0x89, 2, (byte)'h', (byte)'i' }, 0, 4);
+            }
+
+            /// <summary>Sends a RecordStateChanged event split into two frames with a ping between them.</summary>
+            public void RaiseFragmentedRecordEvent(bool active)
+            {
+                Recording = active;
+                byte[] data = Encoding.UTF8.GetBytes(MiniJson.Serialize(new Dictionary<string, object> { { "op", 5 }, { "d", new Dictionary<string, object> {
+                    { "eventType", "RecordStateChanged" }, { "eventIntent", 64 },
+                    { "eventData", new Dictionary<string, object> { { "outputActive", active } } } } } }));
+                int half = data.Length / 2;
+                var first = new List<byte> { 0x01, (byte)half };      // text, FIN=0
+                first.AddRange(data.Take(half));
+                var last = new List<byte> { 0x80, (byte)(data.Length - half) }; // continuation, FIN=1
+                last.AddRange(data.Skip(half));
+                lock (this)
+                {
+                    client.Write(first.ToArray(), 0, first.Count);
+                    client.Write(new byte[] { 0x89, 0 }, 0, 2);
+                    client.Write(last.ToArray(), 0, last.Count);
+                }
             }
 
             private static string ReadText(NetworkStream s)
@@ -308,6 +370,7 @@ namespace CRIXOptimizer.Tests
                 for (int i = 0; i < len; i++) data[i] = (byte)(s.ReadByte() ^ mask[i & 3]);
                 if ((b0 & 0x0F) == 0x8) return null;
                 if ((b1 & 0x80) == 0) throw new InvalidDataException("client frames must be masked");
+                if ((b0 & 0x0F) == 0xA) return "";
                 return Encoding.UTF8.GetString(data);
             }
 
@@ -404,6 +467,52 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void PingDoesNotStallPolling()
+        {
+            using (var obs = new FakeObs(null))
+            using (var client = new ObsWebSocketClient(obs.Port, "", new MemoryLogSink()) { PollSeconds = 1 })
+            {
+                client.Start();
+                Assert.True(WaitFor(() => client.Status.Connected), "connected");
+                Thread.Sleep(300);
+                int before;
+                lock (obs.RequestTypes) before = obs.RequestTypes.Count;
+                obs.SendPing();
+                // Before the fix the client blocked up to 10 s waiting for a message after a ping and did not poll.
+                Assert.True(WaitFor(() => { lock (obs.RequestTypes) return obs.RequestTypes.Count >= before + 4; }, 3500), "kept polling after a ping");
+                Assert.True(client.Status.Connected);
+            }
+        }
+
+        [Test]
+        public void FragmentedMessageWithInterleavedPingIsAssembled()
+        {
+            using (var obs = new FakeObs(null))
+            using (var client = new ObsWebSocketClient(obs.Port, "", new MemoryLogSink()))
+            {
+                client.Start();
+                Assert.True(WaitFor(() => client.Status.Connected), "connected");
+                obs.RaiseFragmentedRecordEvent(true);
+                Assert.True(WaitFor(() => client.Status.Recording), "event assembled from fragments");
+            }
+        }
+
+        [Test]
+        public void KickedStateStaysVisible()
+        {
+            using (var obs = new FakeObs(null))
+            using (var client = new ObsWebSocketClient(obs.Port, "", new MemoryLogSink()))
+            {
+                client.Start();
+                Assert.True(WaitFor(() => client.Status.Connected), "connected");
+                obs.SendClose(4011);
+                Assert.True(WaitFor(() => client.Status.Kicked), "kicked state reported");
+                Thread.Sleep(300);
+                Assert.True(client.Status.Kicked && !client.Status.Connected, "still reported after the thread ended");
+            }
+        }
+
+        [Test]
         public void RefusesNonLocalHosts()
         {
             Assert.Throws<ArgumentException>(() => new ObsWebSocketClient(4455, "", null, "192.168.1.10"));
@@ -442,13 +551,28 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
-        public void ErrorResponsesKeepConnectionButNoState()
+        public void ErrorResponsesCountAsNotConnected()
+        {
+            // Streamlabs answers "API server is busy" while it loads; that says nothing about live/recording,
+            // so the runtime must fall back to "Streamlabs is running".
+            var c = Client();
+            c.Apply("{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32600,\"message\":\"API server is busy\"}}");
+            Assert.False(c.Status.Connected);
+            Assert.False(c.Status.Streaming);
+            Assert.True(c.Status.LastError.Contains("busy"), c.Status.LastError);
+        }
+
+        [Test]
+        public void DualOutputDisplaysAreCombined()
         {
             var c = Client();
-            c.Apply("{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32600,\"message\":\"bad\"}}");
+            // Top-level fields show the display that updated last (horizontal, offline) while vertical is live.
+            c.Apply("{\"result\":{\"streamingStatus\":\"offline\",\"recordingStatus\":\"offline\",\"status\":{" +
+                    "\"horizontal\":{\"streaming\":\"offline\",\"recording\":\"offline\"}," +
+                    "\"vertical\":{\"streaming\":\"live\",\"recording\":\"recording\"}}}}");
             Assert.True(c.Status.Connected);
-            Assert.False(c.Status.Streaming);
-            Assert.True(c.Status.LastError.Length > 0);
+            Assert.True(c.Status.Streaming, "vertical display is live");
+            Assert.True(c.Status.Recording, "vertical display records");
         }
 
         [Test]
@@ -544,22 +668,20 @@ namespace CRIXOptimizer.Tests
             var s = new SakuraaSupport();
             s.Refresh(new PluginInventory.Entry[0], footprint);
             Assert.True(s.Detected);
-            Assert.False(s.UnofficialRebuild);
             Assert.True(s.Detail.Contains("12"), s.Detail);
             Assert.True(s.Advice.Any(a => a.Contains("GTFX")), "GTFX advice present");
         }
 
         [Test]
-        public void FlagsUnofficialRebuildGuids()
+        public void DetectsByPluginGuid()
         {
             var s = new SakuraaSupport();
-            s.Refresh(new[] { Plugin("com.dusted.sakuraa.standalone") }, null);
+            s.Refresh(new[] { Plugin("com.example.sakuraa.client") }, null);
             Assert.True(s.Detected);
-            Assert.True(s.UnofficialRebuild);
-            Assert.True(s.Advice.Any(a => a.Contains("unofficial")));
+            Assert.True(s.Detail.Contains("com.example.sakuraa.client"), s.Detail);
             s.Refresh(new PluginInventory.Entry[0], null);
             Assert.False(s.Detected, "refresh clears state");
-            Assert.False(s.UnofficialRebuild);
+            Assert.Equal(0, s.Advice.Count);
         }
     }
 

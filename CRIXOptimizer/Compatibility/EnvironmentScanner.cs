@@ -23,6 +23,8 @@ namespace CRIXOptimizer.Compatibility
         public sealed class Result
         {
             public CompanionApp Apps;
+            /// <summary>True when the process list could be read (Apps is then meaningful, even if None).</summary>
+            public bool ProcessesScanned;
             public GraphicsHook Hooks;
             public string ReShadeDetail = "";
             public List<string> HookModules = new List<string>();
@@ -53,7 +55,10 @@ namespace CRIXOptimizer.Compatibility
                 try
                 {
                     if (processes)
-                        result.Apps = ScanProcesses();
+                    {
+                        result.Apps = ScanProcesses(out bool scanned);
+                        result.ProcessesScanned = scanned;
+                    }
                     if (hooks)
                     {
                         ScanHooks(result);
@@ -85,9 +90,10 @@ namespace CRIXOptimizer.Compatibility
             });
         }
 
-        private static CompanionApp ScanProcesses()
+        private static CompanionApp ScanProcesses(out bool scanned)
         {
             CompanionApp apps = CompanionApp.None;
+            scanned = false;
             Process[] all;
             try
             {
@@ -97,6 +103,7 @@ namespace CRIXOptimizer.Compatibility
             {
                 return apps;
             }
+            scanned = true;
             foreach (Process p in all)
             {
                 try
@@ -112,7 +119,7 @@ namespace CRIXOptimizer.Compatibility
                     p.Dispose();
                 }
             }
-            return apps;
+            return CompanionApps.Normalize(apps);
         }
 
         private void ScanHooks(Result result)

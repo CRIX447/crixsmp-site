@@ -44,6 +44,9 @@ namespace CRIXOptimizer.Configuration
             { nameof(OptimizationSettings.SkinWeights), D("[CPU/GPU] Upper limit for bones per vertex in skinned meshes.") },
             { nameof(OptimizationSettings.CameraHdr), D("[GPU] HDR rendering on the main camera (Off halves colour-buffer bandwidth; can change the look if the game relies on HDR).") },
             { nameof(OptimizationSettings.EnsureOcclusionMesh), D("[GPU] Make sure the XR occlusion (hidden-area) mesh is enabled so pixels outside the lenses are not shaded.") },
+            { nameof(OptimizationSettings.DesktopCamera), D("[GPU/CPU] The game's third-person camera renders the whole scene a second time to the desktop window. " +
+                "OffWhenNotStreaming switches it off unless OBS/Streamlabs records or streams (the window then shows the headset view); Off always. " +
+                "Only while a VR headset is active; rendering only, restored with the profile. Discord screen sharing is not detected: use Unchanged if you share the game window there.") },
             { nameof(OptimizationSettings.DesktopMirror), D("[GPU] What the desktop window shows in VR. LeftEye is cheaper than SideBySide; None makes the window black. OBS captures this window - keep Unchanged/LeftEye when recording.") },
             // Frame pacing
             { nameof(OptimizationSettings.AsyncUploadTimeSliceMs), R("[CPU] Milliseconds per frame for background texture/mesh uploads (lower = fewer hitches while maps/cosmetics load, slower loading). -1 = unchanged.", -1, 33) },

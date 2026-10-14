@@ -46,6 +46,9 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Potassium installed: ").Append(rt.PotassiumInstalled ? "yes" : "no").Append('\n');
             sb.Append("Sakuraa Client: ").Append(rt.Sakuraa.Detected ? rt.Sakuraa.Detail : "not detected").Append('\n');
             sb.Append("Cameras: ").Append(rt.Cameras.Describe()).Append('\n');
+            sb.Append("Game desktop camera (DesktopCamera setting): ").Append(rt.DesktopCamera?.Status ?? "n/a").Append('\n');
+            sb.Append("Headset refresh rate: ").Append(rt.Xr.RefreshRate > 1f ? rt.Xr.RefreshRate.ToString("0.#", Inv) + " Hz (" + rt.Xr.RefreshRateSource + ")" : "n/a")
+              .Append(" - the frame rate cannot exceed it\n");
             sb.Append("Streaming (auto mode): ").Append(UI.DashboardText.StreamingLine(rt)).Append('\n');
             sb.Append("Base profile: ").Append(rt.BaseSection).Append(", running profile: ").Append(rt.ActiveSection).Append('\n');
             AppendLines(sb, "Advice", rt.VirtualDesktop.Advice);
@@ -89,7 +92,8 @@ namespace CRIXOptimizer.Diagnostics
             if (rt.Graphics != null)
             {
                 sb.Append("Render pipeline: ").Append(GPU.RenderPipelineInfo.Describe(rt.Graphics.Pipeline)).Append(" (").Append(rt.Graphics.PipelineAssetType).Append(")\n");
-                sb.Append("Render scale lever: ").Append(rt.Graphics.UsesUrpAsset ? "URP asset renderScale" : "XRSettings.eyeTextureResolutionScale")
+                sb.Append("Render scale lever: ").Append(rt.Graphics.UsesUrpAsset ? "URP asset renderScale"
+                    : rt.Graphics.Pipeline == GPU.PipelineKind.Universal ? "unavailable" : "XRSettings.eyeTextureResolutionScale")
                   .Append(" (check: ").Append(rt.Graphics.RenderScaleCheck).Append(")\n");
                 foreach (string note in rt.Graphics.Notes)
                     sb.Append("Note: ").Append(note).Append('\n');

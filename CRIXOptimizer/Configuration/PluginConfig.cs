@@ -54,6 +54,10 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<bool> ObsWebSocket;
         public readonly ConfigEntry<int> ObsWebSocketPort;
         public readonly ConfigEntry<string> ObsWebSocketPassword;
+        public readonly ConfigEntry<bool> StreamlabsApi;
+
+        /// <summary>Set when a 1.0.0 key was replaced (shown once in the log).</summary>
+        public string UpgradeNote { get; } = "";
 
         // [Dashboard]
         public readonly ConfigEntry<bool> DashboardVisible;
@@ -180,8 +184,13 @@ namespace CRIXOptimizer.Configuration
                 "Read-only: CRIX only asks for the streaming/recording state and can never start, stop or change anything in OBS. Connects to 127.0.0.1 only.");
             ObsWebSocketPort = file.Bind("Streaming", "ObsWebSocketPort", 4455,
                 new ConfigDescription("Port of the OBS WebSocket server (OBS default 4455).", new AcceptableValueRange<int>(1, 65535)));
+            // Hidden from in-game config editors (they draw on the desktop window that OBS records); edit it in this file.
             ObsWebSocketPassword = file.Bind("Streaming", "ObsWebSocketPassword", "",
-                "Password from OBS (Tools > WebSocket Server Settings > Show Connect Info). Leave empty if authentication is off in OBS. Stored in plain text in this file.");
+                new ConfigDescription("Password from OBS (Tools > WebSocket Server Settings > Show Connect Info). Leave empty if authentication is off in OBS. " +
+                                      "Stored in plain text in this file and never written to the log. Not shown in in-game config editors, because those draw on the window OBS records.",
+                    null, new ConfigurationManagerAttributes { Browsable = false }));
+            StreamlabsApi = file.Bind("Streaming", "StreamlabsApi", true,
+                "While Streamlabs Desktop runs, read whether it is live or recording from its local API (127.0.0.1:28194, no setup, read-only: only StreamingService.getModel is called).");
 
             DashboardVisible = file.Bind("Dashboard", "Visible", false,
                 "Show the performance dashboard on the desktop window (not in the headset). Off by default: drawing it costs a little CPU, and OBS window/game capture will record it.");
@@ -246,6 +255,43 @@ namespace CRIXOptimizer.Configuration
             ActionResetConfig = file.Bind("Actions", "ResetConfigToDefaults", false, "Set to true to reset this file and the profiles file to defaults (resets itself).");
             ActionStartBenchmark = file.Bind("Actions", "StartBenchmarkNow", false, "Set to true to start a benchmark capture (resets itself).");
             ActionWriteReport = file.Bind("Actions", "WriteSystemReportNow", false, "Set to true to write the system report now (resets itself).");
+
+            // 1.0.0 had "[Adaptive] Enabled" (default false). 1.1.0 replaces it with "[Adaptive] Mode" (default On)
+            // so existing installs get adaptive quality; drop the old key so the file does not show both.
+            if (TryRemoveOrphan(file, "Adaptive", "Enabled", out string oldValue))
+                UpgradeNote = $"Adaptive quality is now on by default (the 1.0.0 key [Adaptive] Enabled = {oldValue} was replaced by [Adaptive] Mode). " +
+                              "Set [Adaptive] Mode = Off to turn it off.";
         }
+
+        /// <summary>Removes a key that is still in the file but no longer bound (BepInEx keeps such "orphaned" entries).</summary>
+        private static bool TryRemoveOrphan(ConfigFile file, string section, string key, out string value)
+        {
+            value = null;
+            try
+            {
+                var property = typeof(ConfigFile).GetProperty("OrphanedEntries", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                if (!(property?.GetValue(file) is System.Collections.Generic.Dictionary<ConfigDefinition, string> orphans))
+                    return false;
+                var definition = new ConfigDefinition(section, key);
+                if (!orphans.TryGetValue(definition, out value))
+                    return false;
+                orphans.Remove(definition);
+                file.Save();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Read by BepInEx ConfigurationManager (and compatible in-game editors) by type and field name; there is no
+    /// compile-time dependency on it.
+    /// </summary>
+    internal sealed class ConfigurationManagerAttributes
+    {
+        public bool? Browsable;
     }
 }

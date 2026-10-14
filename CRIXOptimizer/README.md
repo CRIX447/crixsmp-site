@@ -21,9 +21,11 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
 
 ## New in 1.1.0
 
-- **It now changes things on URP.** Gorilla Tag PC appears to use Unity's Universal Render Pipeline, which ignored most
-  1.0.0 graphics settings. Render scale, MSAA, shadow distance/cascades, additional lights and soft shadows now go
+- **It now changes things on URP.** Gorilla Tag PC runs Unity 6 (6000.1) with the Universal Render Pipeline, which
+  ignored most 1.0.0 graphics settings. Render scale, MSAA, shadow distance/cascades and additional lights now go
   through the URP asset (details in [CHANGELOG.md](CHANGELOG.md)).
+- **HighRefresh profile for 120/144 Hz headsets**: keeps resolution and cuts per-frame CPU work, which is what limits
+  frame rate at 120 Hz. Optional: switch off the game's second (desktop) camera while you are not streaming.
 - **Adaptive quality is on by default** and also reduces CPU load in busy lobbies (distant cosmetics, cosmetic update
   rates). It undoes resolution drops that do not help.
 - **Stronger presets.** Existing profile files are upgraded, and any value you edited yourself is kept.
@@ -45,7 +47,7 @@ claim is made. What CRIX does provide is listed below, with what each part can a
 | **Game stutter fixes** (from Potassium) | Spreads room-join scoreboard creation and scoreboard refreshes over frames; creates the remote-rig pool over several frames; defers Shared Blocks start-up until you enter that zone; skips redundant entity scans in inactive zones; handles the forced GC on room leave (keep / skip / incremental); skips forced unused-asset sweeps; speeds up the custom-map sanitizer. | on |
 | **Visual update throttles** (from Potassium, reworked) | Voice-reactive cosmetics, cosmetic proximity checks and texture transitions update at a set rate (30/s by default). CRIX staggers instances across frames, so the remaining work is spread evenly instead of arriving in spikes. | on |
 | **Distant cosmetic culling** (from Potassium) | Tightens the game's own remote-player cosmetic culling distances/counts. Local rendering only. | on |
-| **Graphics settings** (new) | Per-profile engine settings through documented Unity APIs: VR render scale, shadow quality/distance/resolution/cascades, LOD bias, pixel lights, reflection probes, soft particles, particle raycast budget, skin weights, camera HDR, XR occlusion mesh, desktop mirror mode, MSAA cap (performance presets only) and texture mip limit (off by default). Under URP, render scale, MSAA, shadow distance/cascades, additional lights and soft shadows are set on the URP asset. Most values are **limits**, never more expensive than the game's own value. | on |
+| **Graphics settings** (new) | Per-profile engine settings through documented Unity APIs: VR render scale, shadow quality/distance/resolution/cascades, LOD bias, pixel lights, reflection probes, soft particles, particle raycast budget, skin weights, camera HDR, XR occlusion mesh, desktop mirror mode, MSAA cap (performance presets only) and texture mip limit (off by default). Under URP, render scale, MSAA, shadow distance/cascades and additional lights are set on the URP asset (its render scale also applies to the desktop window's camera). Most values are **limits**, never more expensive than the game's own value. Gorilla Tag bakes most of its lighting, so the shadow and light limits usually change little; render scale and the CPU-side settings matter most. | on |
 | **Frame pacing** (new) | Async upload time slice, background loading priority, incremental GC time slice: fewer hitches while maps and cosmetics load. | on (per profile) |
 | **Adaptive quality** (new) | Holds a target frame rate (headset refresh rate by default) by stepping distant cosmetic detail, cosmetic update rates, shadow distance, LOD bias, lights and render scale down, then back up, with hysteresis, cooldown and back-off. Tells GPU-bound from CPU-bound using runtime-reported GPU time, or by checking whether a resolution drop actually helped. Does nothing while the target is held. | on |
 | **Auto streaming mode** (1.1) | Switches to OBSStreaming / DiscordCall while you record or stream and back afterwards. OBS state is read through OBS's WebSocket (read-only, localhost), Streamlabs through its local API (read-only); Discord by process. | on |
@@ -56,9 +58,10 @@ claim is made. What CRIX does provide is listed below, with what each part can a
 | **Environment detection** (new) | Read-only detection of Virtual Desktop, OBS/Streamlabs, Discord, Spotify, SteamVR, Quest Link (process names) and ReShade / OBS game-capture / Discord / Steam / RTSS hooks (game folder and the game's own loaded DLLs). Sakuraa Client detection and a camera inventory (extra cameras such as spectator cams and their pixel load). Optional auto profile selection. | detection on, auto-select **off** |
 
 CRIX **never** changes gameplay, physics, player movement, networking or multiplayer behaviour, never writes the
-game's saved settings (PlayerPrefs), and never reads, injects into, modifies, re-prioritises or terminates other
-programs (Virtual Desktop, OBS, Streamlabs, Discord, Spotify, ReShade, SteamVR, Sakuraa, other mods). The OBS and
-Streamlabs connections are read-only status queries on 127.0.0.1.
+game's saved settings (PlayerPrefs), and never injects into, modifies, re-prioritises or terminates other programs
+(Virtual Desktop, OBS, Streamlabs, Discord, Spotify, ReShade, SteamVR, Sakuraa, other mods). What it reads from them:
+process names, which DLLs are loaded in the game, other mods' plugin names and Harmony patch lists, the cameras in
+the scene, and (read-only, on 127.0.0.1) OBS's and Streamlabs' live/recording state.
 
 ## Profiles
 
@@ -116,8 +119,13 @@ Switching profile applies immediately, with no restart. The full table of built-
   MSAA actually in use.
 - **Desktop mirror mode** uses Unity's XR mirror API. Some runtimes or game cameras may ignore it.
 - **Built-in-pipeline settings** (shadow quality/resolution, pixel lights, soft particles) are skipped automatically
-  if the game uses URP/HDRP; the URP asset's own properties are used where it has public setters. URP ignores render
-  scales within 0.05 of 1.0, so very small render-scale changes do nothing (the system report shows the check).
+  if the game uses URP/HDRP; the URP asset's own properties are used where it has public setters (soft shadows have
+  none, so they are not changed). URP ignores render scales within 0.05 of 1.0, so very small render-scale changes do
+  nothing (the system report shows the check). Under URP the render scale also sets the resolution of the desktop
+  window's camera, which is what OBS records; the streaming profiles therefore never let adaptive mode lower it.
+- **Compiled against Unity 2021.3 reference assemblies; the game runs Unity 6000.1.9f1.** Every Unity member CRIX uses
+  was checked against Unity's published 6000.1.9f1 source (`tools/check_unity_api.py`); three obsolete-but-present
+  fallbacks are used only when the newer API is missing. Not yet run in the real game.
 - **GTFX (Sakuraa Client's shaders) cannot be optimised by CRIX.** It is closed, injected by Sakuraa's launcher, and
   its settings belong to Sakuraa. Use GTFX's lighter presets in Sakuraa while streaming. CRIX reduces the game's own
   load around it and reports extra cameras (e.g. a spectator camera) and their pixel load.

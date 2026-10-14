@@ -34,6 +34,10 @@ Files containing code derived from Potassium (each carries a notice in its heade
 | `Configuration/OptimizationSettings.cs`, `Configuration/SettingCatalog.cs` (stutter-fix defaults and descriptions) | `Plugin.cs` |
 
 All modifications are listed in [CHANGELOG.md](CHANGELOG.md) (GPL-3.0 section 5a). The Potassium logo is not used.
+Every other source file, including everything added in 1.1.0 (`Streaming/ObsWebSocketClient.cs`,
+`Streaming/StreamlabsStatusClient.cs`, `Core/MiniJson.cs`, `Core/CaptureState.cs`, `Adaptive/ResolutionProbe.cs`,
+`GPU/DesktopCameraModule.cs`, `Diagnostics/CameraInventory.cs`, `Compatibility/SakuraaSupport.cs`,
+`Configuration/ProfilePresetsV1.cs`, `tools/check_unity_api.py`), is original CRIX code under the same license.
 Potassium's README asks contributors not to submit large AI-written changes without understanding them. CRIX is a
 separate project, not a contribution to Potassium.
 
@@ -45,10 +49,12 @@ separate project, not a contribution to Potassium.
 | [HarmonyX](https://github.com/BepInEx/HarmonyX) | MIT | Runtime patching library shipped with BepInEx. Compile-time reference only. Not redistributed. |
 | [MonoMod](https://github.com/MonoMod/MonoMod), [Mono.Cecil](https://github.com/jbevain/cecil) | MIT | HarmonyX dependencies, used only to run the test suite and `tools/RefCheck`. Not redistributed. |
 | Unity engine module assemblies (`UnityEngine.Modules` NuGet package 2021.3.33, or the game's own `Managed` folder) | Unity's terms | Compile-time references only. Never redistributed. |
+| [UnityCsReference](https://github.com/Unity-Technologies/UnityCsReference) (Unity's published C# source) | Unity Reference-Only License | Read by `tools/check_unity_api.py` to check API names against the game's Unity version (6000.1.9f1). Not copied into CRIX and not redistributed. |
+| OBS Studio's obs-websocket protocol, Streamlabs Desktop's local API | (protocols) | CRIX implements its own read-only clients from the public protocol documentation; no code from either project is included. |
 | Gorilla Tag | Proprietary (Another Axiom) | **No game files are included or required to build.** The test suite uses an original stand-in assembly written for testing; it contains no game code. |
 
 ## Trademarks
 
-Gorilla Tag is a trademark of Another Axiom. Virtual Desktop, OBS Studio, Discord, ReShade, SteamVR and Meta Quest are
-trademarks of their respective owners. They are named only to describe compatibility. CRIX OPTIMIZER is not affiliated
+Gorilla Tag is a trademark of Another Axiom. Virtual Desktop, OBS Studio, Streamlabs, Discord, Spotify, ReShade,
+SteamVR, Meta Quest and Sakuraa are trademarks of their respective owners. They are named only to describe compatibility. CRIX OPTIMIZER is not affiliated
 with or endorsed by any of them.

@@ -25,8 +25,11 @@ recording and to `DiscordCall` while Discord runs, then back to your profile 20 
 
 **What CRIX does:** reduces game-side GPU and CPU work (shadow distance ≤ 30 m, ≤ 2 shadow cascades, ≤ 1
 additional/pixel light, no realtime reflections, soft particles off, cosmetic visual updates at 24/s, distant
-cosmetics culled a little sooner), keeps 20% GPU headroom for adaptive mode, smooths frame pacing during loads (1 ms
-upload slice, lower background-loading priority) and applies Potassium's stutter fixes. It does **not** change the desktop mirror, so the image OBS captures stays the same. It warns if the
+cosmetics culled a little sooner), smooths frame pacing during loads (1 ms upload slice, lower background-loading
+priority) and applies Potassium's stutter fixes. When the VR runtime reports GPU time, adaptive mode keeps 20 % of
+the GPU budget free for OBS. It does **not** change the desktop mirror, and adaptive mode may not lower the render
+scale in this profile: under URP that scale also sets the resolution of the desktop camera OBS records, so the
+captured image keeps its resolution. It warns if the
 dashboard is visible while OBS's game-capture hook is loaded (the dashboard would appear on stream).
 
 **What CRIX cannot do:** fix encoder overload, upload bandwidth, dropped network frames, capture-card problems or OBS
@@ -48,7 +51,8 @@ administrator (OBS documents that this gives its rendering higher GPU priority).
 
 1. Profile `OBSStreaming` (or `VirtualDesktop` + preset `Streaming` when you also play over Virtual Desktop).
 2. Dashboard **off** while live (F8). Alerts still go to the log.
-3. Adaptive quality is on by default (`[Adaptive] Mode = On`); `[Adaptive] MinimumQualityLevel = -4` lets it go further in heavy scenes.
+3. Adaptive quality is on by default (`[Adaptive] Mode = On`, down to `MinimumQualityLevel = -6`). To keep visuals
+   closer to the profile while live, raise the floor, e.g. `MinimumQualityLevel = -3`.
 4. Record a benchmark (F6) with OBS idle and with OBS recording, and compare (see [BENCHMARKING.md](BENCHMARKING.md)).
 
 ---
@@ -59,7 +63,8 @@ Works the same whether or not Discord is installed. CRIX does not touch calls, a
 
 **What CRIX does:** modest game-side reductions, so the GPU encoder used for video/screen share and the CPU used for
 voice processing have more room: shadow distance ≤ 35 m, ≤ 2 shadow cascades, ≤ 2 pixel/additional lights, no
-realtime reflections, soft particles off, cosmetic visual updates at 24/s, smoother loading, 10% GPU headroom. If Discord's in-game overlay DLL is loaded into the game, CRIX
+realtime reflections, soft particles off, cosmetic visual updates at 24/s, smoother loading, and 10 % GPU headroom
+for adaptive mode when the VR runtime reports GPU time. If Discord's in-game overlay DLL is loaded into the game, CRIX
 mentions it: overlays hook the game's graphics presentation and can add frame-time spikes.
 
 Discord-side options worth testing (all in Discord's own settings; names vary by version): hardware acceleration,
@@ -80,7 +85,8 @@ headroom. Nothing in Spotify is read or changed.
 Sakuraa Client is a commercial Gorilla Tag client with camera/casting features. GTFX is its own closed shader/effects
 system, injected by Sakuraa's launcher. CRIX:
 
-- detects Sakuraa (its assemblies, plugin GUIDs and Harmony patches) and lists it in the log and system report;
+- detects Sakuraa (assemblies, plugin GUIDs and Harmony patch owners whose name contains "Sakuraa") and lists it in
+  the log and system report;
 - lists every extra camera (spectator/shoulder camera, minimap, tablet, replay viewer) with its resolution and
   derived pixel load relative to one VR eye, and points out a large desktop camera while you stream;
 - reduces the game's own load around Sakuraa as usual.
@@ -89,8 +95,7 @@ CRIX does **not** change Sakuraa, GTFX or Sakuraa's cameras (that would be chang
 GTFX cheaper, choose a lighter GTFX preset inside Sakuraa while streaming. Sakuraa sets Unity's
 `targetFrameRate`/`vSyncCount`; VR runtimes ignore those, and CRIX does not manage them.
 
-Use the official client. Rebuilt "recovered" copies of Sakuraa shared on GitHub were reported to bundle a hidden extra
-library; CRIX warns when it sees a plugin GUID used by such copies.
+Download Sakuraa only from its official source; CRIX does not check where a copy came from.
 
 ---
 

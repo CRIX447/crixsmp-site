@@ -45,6 +45,7 @@ namespace CRIXOptimizer.Configuration
         /// <summary>Make sure the XR occlusion (hidden-area) mesh is used, so pixels outside the lenses are not shaded.</summary>
         public bool EnsureOcclusionMesh;
         public DesktopMirrorMode DesktopMirror;
+        public DesktopCameraMode DesktopCamera;
 
         // ---------------- Frame pacing / loading (CPU) ----------------
         /// <summary>Main-thread milliseconds per frame for async texture/mesh uploads (1-33). -1 = unchanged.</summary>
