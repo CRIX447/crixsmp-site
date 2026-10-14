@@ -16,16 +16,18 @@ are claimed.
   the **public properties of the active URP asset** (each only if the property exists and is public). Every 5 s it
   checks the XR display's render-target scale (what URP writes) and warns if it does not match.
 - **Adaptive quality was off by default.** It is now on (new key `[Adaptive] Mode = On`; the 1.0.0 key
-  `[Adaptive] Enabled` is removed from the file and the log says so). It only acts when the frame rate is below target.
+  `[Adaptive] Enabled` is removed from the file and the log says so). It acts only when the frame rate drops below target or, when the VR runtime reports GPU time, when the GPU uses more than the profile's AdaptiveGpuHeadroomPercent share of the frame.
 - **CPU-bound lobbies.** Lowering resolution does not help when the CPU is the bottleneck (full lobbies, many
   cosmetics). Adaptive mode now also reduces distant remote-player cosmetic detail and cosmetic update rates, and
   checks whether a resolution drop really made frames faster. If it did not, resolution is restored and only
-  CPU-side reductions are used; the next check waits 3 min, then 6, 12 ... up to 30 min while it keeps failing. A
-  frame rate locked at half the refresh rate (reprojection) before and after counts as inconclusive, not CPU-bound.
+  CPU-side reductions are used; the next check waits 3 min, then 6, 12 ... up to 30 min while it keeps failing. If
+  frames stay locked at half the refresh rate (reprojection) before and after, the drop is undone too and resolution
+  is kept for the same time, but this is shown as a half-rate lock, not as CPU-bound.
 - **Mild presets.** Balanced only capped shadow distance. Presets are stronger now (table in docs/PROFILES.md).
   Existing profile files are upgraded automatically: values that still equal the 1.0.0 default get the 1.1.0
   default, and any value you edited is kept (`[Meta] PresetRevision`, in both config files).
-- **No visible summary.** The log prints "CRIX status: ..." once XR is up: profile, active patches, engine settings
+- **No visible summary.** The log prints "CRIX status: ..." about 5 s after start and again when the headset becomes
+  active: profile, active patches, engine settings
   actually changed (old -> new), adaptive state, desktop camera. It warns with the reason when nothing is being
   changed. The dashboard and system report show the same summary. Settings applied at the game's own value no
   longer count as "changed".
@@ -71,12 +73,12 @@ are claimed.
 - **Camera inventory.** Lists every active camera (VR, desktop window, render textures) with resolution and a
   derived pixel load relative to one VR eye (system report, dashboard), and points out a large desktop camera.
 - **URP asset report.** The game's URP asset values at start-up (render scale, MSAA, shadows, HDR, opaque/depth
-  texture copies) go into the log and system report; the log notes when another mod has turned on the opaque/depth
-  copies (extra GPU work on every camera). Read-only.
+  texture copies) go into the log and system report; the log notes when the URP asset has the opaque/depth copies on
+  (some mod menus turn them on; extra GPU work on every camera). Read-only.
 - System report: "What CRIX is doing", render-scale lever and check, URP values, Sakuraa, cameras, desktop camera,
   headset refresh rate, streaming state, base vs running profile.
 - `tools/check_unity_api.py`: checks every Unity member the DLL uses against Unity's published C# source for a given
-  version (all 162 references are declared in 6000.1.9f1; three obsolete-but-present fallbacks).
+  version (every reference is declared in 6000.1.9f1 and 6000.2.9f1; obsolete-but-present members only as fallbacks).
 
 ### Changed
 
@@ -106,8 +108,21 @@ are claimed.
 - **Lag spikes from resolution changes.** Every render-scale change reallocates the VR eye textures (a visible
   hitch). Adaptive mode now lowers resolution at most once a minute, undoes a drop at once when frames do not get
   faster or stay locked at half the refresh rate (reprojection), and HighRefresh does not change resolution at all.
-- **Hitch log.** Frames over 70 ms are logged with what was going on (garbage collection, map load, a CRIX change)
-  and counted in the system report, so "lag spikes" can be traced.
+- **Hitch log.** The first 15 frames over 70 ms are logged with what was going on (garbage collection, map load, a
+  CRIX change or CRIX's own work); later ones are summarised once a minute, and all are counted by cause in the
+  system report, so "lag spikes" can be traced.
+- **Eye-resolution cap** (`MaxEyeMegapixels`, megapixels per eye; Balanced and DiscordCall 8, VirtualDesktop 7,
+  VirtualDesktop.Quality 10, HighRefresh 6, MaximumPerformance and VirtualDesktop.Performance 5; off in OBSStreaming,
+  VirtualDesktop.Streaming, ReShadeCompatible, MultiMod). When the VR runtime asks for far more pixels per eye than
+  that (seen in a user report: about 37 MP per eye, 8x a Quest 3 default), CRIX lowers the game's render scale to fit
+  (not below 0.35) and logs it. Under URP this also lowers the desktop window's resolution, hence off in the
+  streaming profiles. Measured once when the headset starts, while CRIX is not changing the scale.
+- **Setup advice** (log and system report): headset below 70 Hz (or below 110 Hz with HighRefresh), runtime eye size
+  above 12 MP, NVIDIA overlay/Instant Replay hooked in while streaming to a headset, other optimiser mods installed.
+- **Respecting other mods:** only an explicit profile switch (or `ReapplyProfileNow`) takes back a setting the game or
+  another mod changed; Ctrl+F5, editing profile values and F10 resume leave it alone.
+- Preset revision 3 upgrades files written by 1.1.0 preview builds (HighRefresh, OBSStreaming and
+  VirtualDesktop.Streaming no longer let adaptive mode change resolution) and keeps edited values.
 - OBS: the replay buffer and virtual camera count as capturing (read-only `GetReplayBufferStatus` /
   `GetVirtualCamStatus`); Streamlabs is polled every 2 s and its replay buffer is read too.
 - Desktop camera: left alone once the game or another mod turns it back on (until the profile is re-applied); the

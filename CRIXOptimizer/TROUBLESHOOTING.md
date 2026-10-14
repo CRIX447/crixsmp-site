@@ -37,7 +37,8 @@ if you really want both (not recommended).
 
 CRIX noticed that something else changed a value it manages (another mod, the game's own graphics options, or a
 quality-level change). By default CRIX respects that and stops managing the setting. To force CRIX's value:
-`[Actions] ReapplyProfileNow = true`, or switch profile. `[Compatibility] ExternalChangePolicy = Reapply` makes this
+`[Actions] ReapplyProfileNow = true`, or switch to another profile and back. Reloading the config (Ctrl+F5), editing
+profile values and resuming after F10 keep respecting the other change. `[Compatibility] ExternalChangePolicy = Reapply` makes this
 permanent, but it can make two mods fight over a value. Use it only if you know nothing else manages that setting.
 
 ## Visual problems
@@ -49,7 +50,7 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 | Desktop window black or different view | `DesktopMirror` set to `None`/another mode. Set it to `Unchanged`. |
 | Colours/brightness changed | `CameraHdr = Off` (MaximumPerformance). Set it to `Unchanged`. |
 | ReShade depth effects broken or flickering | Use the `ReShadeCompatible` profile, and keep `[Compatibility] ReShadeGuard = Auto` (or `On`). Avoid adaptive render-scale changes. |
-| MSAA setting has no effect | Some VR runtimes only apply MSAA when the XR session starts. Restart the game. The dashboard shows the eye-texture MSAA actually in use. `MsaaSamples` is a cap: CRIX never raises MSAA. |
+| MSAA setting has no effect | `MsaaSamples` is a cap: CRIX never raises MSAA, so it changes nothing if the game already uses less (Gorilla Tag's URP asset uses 1). With the built-in pipeline some runtimes only apply MSAA when the XR session starts (restart the game). The dashboard shows the eye-texture MSAA actually in use. |
 | Cosmetic effects update less smoothly | Visual throttles (voice-reactive, proximity, texture transitions). Raise the rates or set them to `0` (unthrottled). |
 | Distant players' cosmetics disappear | Distant cosmetic culling. Raise `CosmeticMaximumDistance`/`CosmeticMaximumCount` or set `ReduceDistantCosmetics = false`. |
 
@@ -75,14 +76,20 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 
 ## Lag spikes / stuck below 60 FPS
 
+0. **Read the `Setup:` lines** in `system-report.txt` (also in the log). They point out a headset set to 60 Hz, a VR
+   app asking for a huge eye resolution, NVIDIA Instant Replay competing with the headset stream for the GPU's video
+   encoder, and other optimiser mods. In one report a VR app asked for about 37 megapixels per eye (8x a Quest 3 at
+   default settings): no mod can make an RTX 4060 render that at 72-90 FPS. Lower the resolution / quality preset in
+   the VR app; CRIX's `MaxEyeMegapixels` cap limits the damage until then.
+
 1. **Half-rate lock.** At 120 Hz, a game that misses frames is locked to 60 FPS by reprojection (Virtual Desktop SSW,
    Meta ASW, SteamVR motion smoothing); at 90 Hz to 45. Set the headset to **90 Hz** (or 72/80) first. To see the
    real frame rate while testing, turn reprojection off (Virtual Desktop: *Streaming* tab, *SSW* = Disabled; Quest
    Link: Oculus Debug Tool, *Asynchronous Spacewarp* = Disabled; SteamVR: *Video*, *Motion Smoothing* off).
 2. **Is CRIX involved?** Press **F10** in game (CRIX restores everything and steps aside) and play a minute. If the
    spikes are the same, they do not come from CRIX. Press F10 again to resume.
-3. **The hitch log.** CRIX logs every frame over 70 ms in `BepInEx/LogOutput.log` (`Hitch: one frame took ... ms
-   (reason)`) and counts them in `system-report.txt` (`Big hitches`). The reason says whether a garbage collection
+3. **The hitch log.** CRIX logs the first 15 frames over 70 ms in `BepInEx/LogOutput.log` (`Hitch: one frame took
+   ... ms (reason)`), then a summary once a minute, and counts them all in `system-report.txt` (`Big hitches`). The reason says whether a garbage collection
    ran, a map was loading, or CRIX had just changed a setting.
 4. **Resolution changes are hitches.** Each render-scale change reallocates the VR eye textures. Adaptive mode lowers
    resolution at most once a minute, undoes it at once when it does not help, and does not change it at all in the
@@ -96,8 +103,9 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 
 ## Not reaching 120 FPS
 
-- Is the headset really at 120 Hz? The dashboard and `system-report.txt` (`Headset refresh rate`) show what the VR
-  runtime reports; the frame rate cannot exceed it. See INSTALLATION.md, "Aiming for 120 FPS".
+- Is the headset really at 120 Hz? The dashboard and `system-report.txt` (`Headset refresh rate`) show the rate and
+  where it came from (`XR display subsystem` = the VR runtime; `monitor` = the runtime reported none); the frame rate
+  cannot exceed the headset's rate. See INSTALLATION.md, "Aiming for 120 FPS".
 - Use the `HighRefresh` profile and keep adaptive quality on.
 - `CPU-bound` on the dashboard means the processor, not the graphics card, is the limit. Lowering resolution will not
   help; fewer players/cosmetics in view, `DesktopCamera = OffWhenNotStreaming` and the PC-side checks (RAM speed in
@@ -113,9 +121,9 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 | Symptom | Cause / fix |
 |---|---|
 | Dashboard says `OBS WebSocket not connected` | OBS's WebSocket server is off. OBS: Tools → WebSocket Server Settings → Enable WebSocket server (port 4455). |
-| `OBS WebSocket requires a password` / `rejected the password` | Copy the password from OBS (Show Connect Info) into `[Streaming] ObsWebSocketPassword`, then Ctrl+F5. CRIX retries only every 5 minutes after a password problem. |
-| Profile is always `DiscordCall` | Discord is running. Discord's call state cannot be read without injecting into Discord. Set `[Streaming] DiscordProfile = Balanced` or `Trigger = WhenRecordingOrLive`. |
-| Profile switches while OBS is open but idle | Without the WebSocket, CRIX treats "OBS running" as streaming. Enable the WebSocket, or set `Trigger = WhenRecordingOrLive`. |
+| `OBS WebSocket requires a password` / `rejected the password` | Copy the password from OBS (Show Connect Info) into `[Streaming] ObsWebSocketPassword`, then Ctrl+F5. After a password problem CRIX retries about once a minute. |
+| Profile is always `DiscordCall` | Discord is running. Discord's call state cannot be read without injecting into Discord. Set `[Streaming] DiscordProfile = Balanced` or `Trigger = WhenRecordingOrLive` (Discord's overlay DLL in the game still counts then). |
+| Profile switches while OBS is open but idle | Without the WebSocket, CRIX treats "OBS running" as streaming (OBS's game-capture DLL too). Enable the WebSocket; `Trigger = WhenRecordingOrLive` alone still reacts to the capture DLL. |
 | Do not want any automatic switching | `[Streaming] AutoStreamingMode = false`. |
 
 ## Sakuraa Client / GTFX

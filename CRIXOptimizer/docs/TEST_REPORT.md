@@ -1,19 +1,26 @@
-# Test report: CRIX OPTIMIZER 1.0.0
+# Test report: CRIX OPTIMIZER 1.1.0
 
-Date: 2026-10-12. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21) and
+Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21) and
 `release/logs/tests-extra-bepinex.log` (BepInEx 5.4.23.5).
 
 ## Summary
 
 | Run | Runtime | BepInEx | HarmonyX | Result |
 |---|---|---|---|---|
-| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **87 passed, 0 failed** |
-| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **87 passed, 0 failed** |
+| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **131 passed, 0 failed** |
+| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **131 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
-| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 217 type / 803 member refs resolve |
+| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 249 type / 947 member refs resolve |
+| - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 166 Unity member references declared |
 
-**Nothing was tested inside Gorilla Tag**, and no headset, GPU or companion app was available. The "Not tested"
-section below lists what that leaves open.
+**In the real game (field report, not a test run by the developers):** a user ran a 1.1.0 preview build on Gorilla
+Tag 1.1.147 (Unity 6000.2.9f1, BepInEx 5.4.23.5, Windows 11, Ryzen 5 5500, RTX 4060, Quest via a Meta/OpenXR runtime)
+and sent the system report. It shows CRIX loading, detecting URP, changing the URP asset's render scale (0.95 -> 0.85)
+and confirming that the VR eye textures followed ("eye textures at 0.85 as intended"), changing the additional-light
+limit and the upload slice, deferring its stutter patches to an installed Potassium, auto streaming mode switching to
+DiscordCall while Discord ran, and the camera inventory finding the game's "Shoulder Camera". The same report showed the
+VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye-resolution cap and setup advice in
+1.1.0. No benchmark or frame-rate improvement is claimed from it.
 
 ## How the tests are built
 
@@ -26,7 +33,7 @@ section below lists what that leaves open.
   engine calls those methods directly and they cannot be inlined.
 - Pure logic (`Core/`, `Adaptive/`, configuration) is tested directly.
 
-## What was tested (87 tests)
+## What was tested (131 tests)
 
 | Area | Tests | What they establish |
 |---|---|---|
@@ -35,7 +42,7 @@ section below lists what that leaves open.
 | Trend / degradation | 5 | memory-growth slope exact on linear data, ~0 on noise; alerts need sustained drops, recover with hysteresis, respect cooldown; 85 vs 90 FPS is not an alert at 10 % threshold |
 | Benchmark maths | 2 | both 1% low definitions, p99 nearest rank, over-budget %, hitches, invalid-sample handling |
 | Companion apps | 3 | exact process/module name classification (no substring false positives), profile suggestion priority |
-| Settings ledger | 8 | original captured once and restored; external change detected, respected, never overwritten on restore; re-arm adopts the external value; engine clamping recorded and not mistaken for drift; failing accessors become "Failed" without throwing; Reapply policy; restore report counts |
+| Settings ledger | 9 | only values that differ from the game's count as "changed"; original captured once and restored; external change detected, respected, never overwritten on restore; re-arm adopts the external value; engine clamping recorded and not mistaken for drift; failing accessors become "Failed" without throwing; Reapply policy; restore report counts |
 | Status / logging | 2 | status board versioning and counts; once-only logger |
 | Adaptive controller | 14 | stays at baseline when on target; steps down only after the sustain time; short dips ignored; cooldown/settle limit change rate; minimum level respected; probes up after a stable period without GPU timing; **failed probes back off exponentially**; GPU headroom allows step-up, a nearly full GPU blocks it; GPU-headroom target steps down before frames drop; CPU-bound detection; manual/freeze; tightened bounds enforced; sensitivity changes tolerance |
 | Quality ladder | 6 | level 0 = baseline; cheapest reductions first; cost never increases with lower levels; CPU-bound keeps resolution; disallowed levers untouched; upward levels raise render scale only, up to the maximum; never raises a baseline that is below the minimum |
@@ -45,6 +52,15 @@ section below lists what that leaves open.
 | Throttle patches | 5 | voice reactors run exactly every 3rd frame at 90 FPS / 30 per s, smoothed reactors never throttled; staggering vs Potassium-style timers (below); texture transitions throttle and toggle live; suspend passes everything through; 45 FPS reprojection disables throttling |
 | Stutter patches | 11 | inactive entity managers skip scans, toggle live; room-leave GC: both `GC.Collect` overloads redirected, Skip / GameDefault (a collection really happens) / Incremental / fallback; timed asset unloads skipped and re-enabled live; **SafeLookups sanitizer returns identical verdicts and layer handling for 500 random objects, and follows runtime allow-list changes**; scoreboard refresh one per frame with duplicate requests merged; queued refreshes flushed when disabled; scoreboard creation waits for the room and runs once per frame; Shared Blocks deferred until the zone is active and **no manager lost**; released immediately when disabled live; rig pool: 4 immediately, none while in a room, on-demand rig for the 5th player, completes to the game's 19 one per frame, every rig initialised once, post-spawn events raised; cosmetic culling applies, updates live and restores the game's values |
 | Accessors | 2 | compiled delegates reach private/static fields, properties and methods (including enum-constant predicates) on Mono; missing or incompatible members return null |
+| MiniJson | 3 | parsing of objects, arrays, escapes, numbers; malformed input rejected; serialisation round-trip |
+| Capture state | 6 | Auto uses OBS's exact live/recording state when connected and falls back to "app running"; OBS outranks Discord; strict trigger; hold time before dropping back; stale capture/overlay DLLs ignored once their app was seen and closed, kept when the app was never visible (OBS as administrator) |
+| OBS WebSocket client (integration, fake OBS server over TCP) | 10 | v5 handshake and SHA-256 authentication; password missing/rejected (close 4009); events and polled state; only the four read-only status requests are ever sent; non-local hosts refused; **a ping no longer stalls polling**; fragmented messages with an interleaved ping are reassembled; "kicked" (close 4011) stays visible; replay buffer counts as capture; auth formula matches the protocol |
+| Streamlabs client | 6 | live/reconnecting/recording/transitional states; "busy"/error answers count as not connected; dual-output displays combined; replay buffer read; transitions logged once; real TCP poll sends only `StreamingService.getModel` |
+| Resolution probe | 3 | ineffective drop detected; effective drop accepted with settle samples ignored; half-rate (reprojection) lock reported as inconclusive |
+| CPU levers / eye resolution | 4 | adaptive cosmetic/update-rate levers scale the profile without changing it and keep disabled throttles disabled; eye megapixels measured from the report's real numbers (4992x5376 at 0.85 -> 37 MP); cap computes the largest render scale within the limit, never below 0.35, off at 0 |
+| Desktop camera | 2 | game member found by name; waits safely (nothing managed) while the game is not ready; reports "unavailable" when the member is missing |
+| Sakuraa / Spotify detection | 4 | detection by Harmony owner and plugin GUID, advice only when detected, state cleared on refresh; Spotify classified, described, never switches profile |
+| Preset upgrades (real BepInEx ConfigFile, real 1.0.0 profiles file as fixture) | 5 | frozen 1.0.0 presets match the shipped 1.0.0 file; upgrade from 1.0.0 keeps user edits and applies new defaults; upgrade from the 1.1.0 previews (revision 2) applies only the later changes; fresh installs need no upgrade; reset to defaults does not re-run the upgrade |
 
 ### Scheduling simulation (synthetic, not a game benchmark)
 
@@ -74,9 +90,9 @@ peak is measurable in Gorilla Tag depends on how expensive these updates are in 
 
 | Item | Risk / what to check first |
 |---|---|
-| Loading in Gorilla Tag with BepInEx | Expect `CRIX OPTIMIZER 1.0.0 loaded`. Run `tools/RefCheck` against the install. |
+| Loading in Gorilla Tag with BepInEx | Seen working in one field report of a 1.1.0 preview (see Summary). Expect `CRIX OPTIMIZER 1.1.0 loaded`. |
 | Real game member shapes | The stand-in models Potassium 1.0.0's usage (game build of Sept 2026). If the current build differs, affected patches report `Unavailable` (they do not crash). Check `system-report.txt` → *Module and patch status*. |
-| Unity version of the current build | Compiled against the 2021.3 API, and every API used exists through 2022.3. On a much newer Unity, guarded calls fall back or report unavailable. |
+| Unity version of the current build | Gorilla Tag runs Unity 6 (6000.2.9f1 in the field report). Compiled against the 2021.3 API; every Unity member used is declared in 6000.1.9f1 and 6000.2.9f1 (`tools/check_unity_api.py`, names only, not binary signatures). |
 | Engine settings at runtime | Unity APIs used as documented, but not executed here: render scale, shadows, LOD, MSAA (may need a restart in VR), mirror mode (runtime dependent), occlusion mesh, camera HDR, async upload, GC slice. |
 | XR runtime statistics | Provider dependent (Oculus/OpenXR/OpenVR/VDXR); timing units are auto-detected (seconds vs ms); unverified on real runtimes. |
 | FrameTimingManager / ProfilerRecorder counters in a release build | Shown as `n/a` if unavailable; unverified. |
@@ -85,6 +101,8 @@ peak is measurable in Gorilla Tag depends on how expensive these updates are in 
 | Process/module enumeration on Windows Mono | Wrapped in try/catch; detection shows "none detected" if unsupported. |
 | `Expression.Compile` in Unity's Mono fork | Verified on Mono 6.8; a reflection fallback exists. |
 | Any performance effect (all eight benchmark configurations) | **Unmeasured.** Use docs/BENCHMARKING.md. |
+| Desktop camera switch, XR mirror, LIV/Sakuraa take-over detection | Logic tested without Unity; the in-game behaviour (what the window shows, the LIV camera's CinemachineBrain signal) is unverified. |
+| OBS WebSocket / Streamlabs against the real applications | Tested against protocol-faithful fake servers only. |
 | Interaction with other real mods, ReShade, OBS hooks, Virtual Desktop | Unverified beyond the logic tests. |
 
 ## Outstanding issues and known limitations
@@ -95,8 +113,9 @@ peak is measurable in Gorilla Tag depends on how expensive these updates are in 
 - Inherited from Potassium: throttled texture transitions may animate more slowly if the game advances them per call
   rather than by elapsed time. Set `TextureTransitionRate = 0` to disable.
 - The adaptive engine changes render scale by recreating eye textures. Each change can cause a one-off hitch, which
-  is why it is rate-limited (cooldown, settle time, back-off) and disabled under the ReShade guard.
-- `TextureMipLimit`/`MsaaSamples` re-upload/recreate resources when changed. They are off in every preset.
+  is why it is rate-limited (at most one drop a minute, undone when it does not help), off in HighRefresh and the
+  streaming profiles, and disabled under the ReShade guard.
+- `TextureMipLimit` re-uploads textures when changed; it is off in every preset. `MsaaSamples` is a cap (never raised); MaximumPerformance, HighRefresh and VirtualDesktop.Performance cap it at 2x, which changes nothing when the game already uses less (the field report showed MSAA 1).
 
 ## Suggested in-game smoke test (for someone with the hardware)
 

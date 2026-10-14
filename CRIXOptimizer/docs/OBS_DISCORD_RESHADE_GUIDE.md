@@ -9,7 +9,9 @@ Streamlabs' live/recording state through their own local APIs on 127.0.0.1.
 
 With `[Streaming] AutoStreamingMode = true` (default), CRIX switches to `OBSStreaming` while OBS/Streamlabs is live or
 recording and to `DiscordCall` while Discord runs, then back to your profile 20 s after the signal ends. Your own
-`[General] Profile` setting is not changed. Setup of the OBS WebSocket (needed to know when OBS is actually live):
+`[General] Profile` setting is not changed. It only switches away from `Balanced`, `OBSStreaming` and `DiscordCall`;
+`VirtualDesktop` moves to its Streaming variant; `MaximumPerformance`, `HighRefresh`, `ReShadeCompatible`, `MultiMod`
+and `Custom` are kept as you chose them. Setup of the OBS WebSocket (needed to know when OBS is actually live):
 [INSTALLATION.md](../INSTALLATION.md#auto-streaming-mode-obs-streamlabs-discord).
 
 | Signal | How CRIX reads it | What it can see |

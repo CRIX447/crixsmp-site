@@ -61,8 +61,13 @@ Set `[General] Profile` in `com.crix.crixoptimizer.cfg`, or press **F9** in game
 | `Custom` | Your own values, in the `[Custom]` section of the main config. |
 
 On top of every profile, **adaptive quality** (on by default) lowers distant cosmetic detail, cosmetic update rates,
-shadow distance, LOD bias, lights and, when it is shown to help, render scale, but only while the frame rate is below
-target, and it raises them again afterwards. `[Adaptive] Mode = Off` keeps exactly the profile's values.
+shadow distance, LOD bias, lights and, when it is shown to help, render scale (at most one resolution drop a minute),
+but only when the frame rate drops below target or, when the VR runtime reports GPU time, when the GPU uses more than the profile's AdaptiveGpuHeadroomPercent share of the frame, and it raises them again afterwards. `[Adaptive] Mode = Off` keeps exactly the profile's values.
+
+Most profiles also cap the **eye resolution** (`MaxEyeMegapixels`, e.g. 8 megapixels per eye in Balanced). VR apps
+decide how many pixels the game renders per eye; if yours asks for far more than the headset shows (very high quality
+presets do), CRIX lowers the game's render scale to the cap and says so in the log. The better fix is to lower the
+setting in your VR app; the log tells you where.
 
 Changes apply immediately; no restart is needed. With the [BepInEx ConfigurationManager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
 plugin installed you can also edit everything in game. Edits made directly to the `.cfg` files are picked up after
@@ -120,7 +125,7 @@ No mod can promise a frame rate: it depends on the headset, the lobby, the map a
 On by default (`[Streaming] AutoStreamingMode`). While you record or stream, CRIX runs the `OBSStreaming` profile
 (or `DiscordCall` for Discord) and returns to your own profile 20 s after it ends (`HoldSeconds`). The dashboard and
 log show `auto: OBS live` (or similar) while it is active. It only replaces `Balanced`, `OBSStreaming` and
-`DiscordCall`; `VirtualDesktop` switches to its Streaming variant; `MaximumPerformance`, `ReShadeCompatible`,
+`DiscordCall`; `VirtualDesktop` switches to its Streaming variant; `MaximumPerformance`, `HighRefresh`, `ReShadeCompatible`,
 `MultiMod` and `Custom` are kept as you chose them.
 
 **OBS Studio (28 or newer): turn on its WebSocket server so CRIX knows when you are actually live or recording.**
@@ -138,14 +143,16 @@ log show `auto: OBS live` (or similar) while it is active. It only replaces `Bal
 
 CRIX connects to `127.0.0.1` only and only asks OBS for its streaming/recording state. It cannot start, stop or
 change anything in OBS. Without the WebSocket, CRIX treats "OBS is running" as streaming (OBS renders its preview
-even when idle). If the password is wrong, the log says so and CRIX only retries every 5 minutes.
+even when idle). If the password is wrong, the log says so once and CRIX retries about once a minute (Ctrl+F5 after
+editing the password reconnects at once).
 
 **Streamlabs Desktop:** nothing to set up. While Streamlabs runs, CRIX reads its live/recording state from
 Streamlabs' local API (127.0.0.1:28194), read-only.
 
 **Discord:** Discord's call / Go Live state cannot be read without injecting into Discord, which CRIX never does.
 While Discord runs, CRIX uses `DiscordCall`. If you keep Discord open all the time and do not want that, set
-`[Streaming] DiscordProfile = Balanced` or `[Streaming] Trigger = WhenRecordingOrLive`.
+`[Streaming] DiscordProfile = Balanced` or `[Streaming] Trigger = WhenRecordingOrLive` (that trigger still reacts to
+OBS's game-capture DLL and Discord's overlay DLL when they are in the game, so also set up the OBS WebSocket).
 
 ## Check that it is working
 

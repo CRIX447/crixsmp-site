@@ -1,14 +1,14 @@
-# Build report: CRIX OPTIMIZER 1.0.0
+# Build report: CRIX OPTIMIZER 1.1.0
 
-Date: 2026-10-12. Raw logs: `release/logs/` (also inside the release ZIP under `logs/`).
+Date: 2026-10-14. Raw logs: `release/logs/` (also inside the release ZIP under `logs/`).
 
 ## Result
 
 | | |
 |---|---|
 | Output | `bin/Release/CRIXOptimizer.dll` (copied to `release/CRIXOptimizer.dll` and into the ZIP) |
-| Size | 206,336 bytes |
-| SHA-256 | `4d18c14bcbacb787849981126117d3c0c6aa600152ea3b7f5323d78026b66e00` |
+| Size | 290,816 bytes |
+| SHA-256 | `b9ac5daecf90d290d96f012168981733949b4c679cce874ccc87e37cc6b13557` |
 | Warnings / errors | **0 / 0** |
 | Target | .NET Standard 2.1, AnyCPU, Release, deterministic (`ContinuousIntegrationBuild=true`) |
 | Assembly references | `netstandard 2.1`, `BepInEx 5.4.21`, `0Harmony 2.9.0`, `UnityEngine.CoreModule`, `.IMGUIModule`, `.TextRenderingModule`, `.XRModule`, `.VRModule`, `.SubsystemsModule`. **No `Assembly-CSharp`**: no game code is referenced. |
@@ -55,20 +55,35 @@ Every type and member reference in the DLL was resolved with Mono.Cecil against 
 
 | Reference set | Type refs | Member refs | Result |
 |---|---|---|---|
-| BepInEx 5.4.21 + HarmonyX 2.9.0 + Unity 2021.3.33 modules + Mono 4.5 BCL | 217 | 803 | all resolve |
-| BepInEx 5.4.23.5 (built from the `v5-lts` branch, commit `f4c1b1103a32884b7440d9681c60cc5d619f284f`) + same Unity modules | 217 | 803 | all resolve |
+| BepInEx 5.4.21 + HarmonyX 2.9.0 + Unity 2021.3.33 modules + Mono 4.5 BCL | 249 | 947 | all resolve |
+| BepInEx 5.4.23.5 (built from the `v5-lts` branch, commit `f4c1b1103a32884b7440d9681c60cc5d619f284f`) + same Unity modules | 249 | 947 | all resolve |
 
-**Not verified:** the exact Unity version of the current Gorilla Tag build. Running `tools/RefCheck` against a real
-install's `Gorilla Tag_Data/Managed` and `BepInEx/core` folders is the recommended first check (see BUILDING.md).
+## Unity 6 API check (`tools/check_unity_api.py`)
+
+Gorilla Tag runs Unity 6 (a user's system report from a 1.1.0 preview shows Unity 6000.2.9f1; the official custom-map
+project pins 6000.1.9f1). Unity's reference assemblies for Unity 6 are not on nuget.org, so every Unity member the DLL
+references (listed with `monodis`) was compared with Unity's published C# source (UnityCsReference) at both versions:
+
+| Unity source | Unity member references | Result |
+|---|---|---|
+| UnityCsReference tag `6000.1.9f1` | 166 | all declared |
+| UnityCsReference tag `6000.2.9f1` (`release/logs/unity-api-check.log`) | 166 | all declared |
+
+Obsolete but still present (used only as fallbacks): `QualitySettings.masterTextureLimit` (when
+`globalTextureMipmapLimit` is missing), `GraphicsSettings.renderPipelineAsset` (when `currentRenderPipeline` fails) and
+`Resolution.refreshRate` (desktop-monitor fallback when the VR runtime reports no refresh rate). The script's
+`AddComponent` line refers to the obsolete string overload; CRIX uses the generic `AddComponent<T>()`.
+This checks names, not binary signatures. Running `tools/RefCheck` against a real install's
+`Gorilla Tag_Data/Managed` and `BepInEx/core` folders remains the strongest offline check (see BUILDING.md).
 
 ## Release package
 
-`release/CRIXOptimizer-1.0.0.zip` contains:
+`release/CRIXOptimizer-1.1.0.zip` contains:
 
 - `install/BepInEx/plugins/CRIXOptimizer/CRIXOptimizer.dll` (+ README, LICENSE): drop into the game folder
 - `source/`: complete corresponding source (GPL-3.0 §6), excluding generated `bin/`, `obj/`, `lib/`
 - `README.md`, `INSTALLATION.md`, `BUILDING.md`, `TROUBLESHOOTING.md`, `LICENSES.md`, `CHANGELOG.md`, `LICENSE`, `docs/`
-- `logs/`: build, test, doc-generation and reference-check logs
+- `logs/`: build, test, doc-generation, reference-check and Unity API check logs
 - `SHA256SUMS.txt`: checksums of every file in the package
 
 No game files, no BepInEx/Harmony binaries and no Unity assemblies are included.

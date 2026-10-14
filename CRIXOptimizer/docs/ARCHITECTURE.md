@@ -11,7 +11,9 @@ Plugin (BepInEx entry, thin)
      │     under URP: public properties of the active URP asset (render scale, MSAA, shadows, lights)
      ├─ AdaptiveController + QualityLadder ── level → lever values → GraphicsSettingsModule.Apply
      │     + CPU levers (cosmetic detail, update rates) → EffectiveSettings → game patches
-     │     ResolutionProbe ── did lowering resolution help? if not: CPU-bound for 3 min
+     │     ResolutionProbe ── did lowering resolution help? if not: undo, keep resolution 3-30 min
+     │     (CPU-bound, or half-rate lock); at most one adaptive resolution drop per minute
+     │     EyeResolution ── MaxEyeMegapixels cap on the runtime's eye size
      ├─ CaptureStateMachine ◄── ObsWebSocketClient / StreamlabsStatusClient (worker threads, read-only,
      │     127.0.0.1) + process/hook detection ──► effective profile (auto streaming mode)
      ├─ FrameTimeMonitor (FrameStatistics), GpuTimingProbe (XRRuntimeInfo), MemoryMonitor (TrendAnalyzer)

@@ -144,7 +144,7 @@ namespace CRIXOptimizer.Configuration
 
             AdaptiveModeSetting = file.Bind("Adaptive", "Mode", AdaptiveMode.On,
                 "Adaptive quality: when the frame rate drops below target, CRIX lowers (and later restores) distant cosmetic detail, cosmetic update rates, shadow distance, LOD bias, pixel lights and render scale. " +
-                "It does nothing while the game holds its target. Lowering resolution is undone automatically if it does not help (CPU-bound). Never touches gameplay, physics or networking. (Replaces the 1.0.0 'Enabled' key.)");
+                "It acts only when the frame rate drops below target or, when the VR runtime reports GPU time, when the GPU uses more than the profile's AdaptiveGpuHeadroomPercent share of the frame. Resolution is lowered at most once a minute and the drop is undone if it does not help. Never touches gameplay, physics or networking. (Replaces the 1.0.0 'Enabled' key.)");
             AdaptiveTargetFps = file.Bind("Adaptive", "TargetFps", 0f,
                 new ConfigDescription("Target frame rate. 0 = headset refresh rate reported by the VR runtime (desktop: monitor refresh).", new AcceptableValueRange<float>(0f, 360f)));
             AdaptiveSensitivity = file.Bind("Adaptive", "Sensitivity", 0.5f,

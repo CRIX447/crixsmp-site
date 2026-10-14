@@ -14,9 +14,13 @@ Desktop. CRIX also cannot read Virtual Desktop's latency or bitrate statistics; 
 What CRIX does for Virtual Desktop users:
 
 - **Leaves GPU headroom for the video encoder.** The encoder (NVENC/AMF/QuickSync) runs on the same GPU and shares
-  memory bandwidth with the game. The `VirtualDesktop` profiles cap shadow distance, shadow cascades, pixel/additional
-  lights and realtime reflections. With adaptive mode on (the default since 1.1) and runtime GPU timing available,
-  they target 10-20 % GPU headroom (`AdaptiveGpuHeadroomPercent`).
+  memory bandwidth with the game. The Balanced, Performance and Streaming variants cap shadow distance, shadow
+  cascades, pixel/additional lights and realtime reflections (Quality keeps the game's visuals), and all except
+  Streaming cap the eye resolution (`MaxEyeMegapixels`). With adaptive mode on (the default since 1.1) and runtime GPU
+  timing available, they keep 5-20 % GPU headroom depending on the variant (`AdaptiveGpuHeadroomPercent`).
+- **Eye resolution.** Virtual Desktop's *VR Graphics Quality* decides how many pixels the game renders per eye. The
+  highest presets can ask for far more than an RTX 4060-class GPU can draw at 72-90 FPS; CRIX's cap limits that and
+  the log tells you when to pick a lower preset.
 - **Steadier frame pacing.** A frame the game delivers late shows up as a stutter in the stream. Smaller async-upload
   slices, lower background-loading priority and Potassium's stutter fixes target the spikes during map/cosmetic loads
   and room joins.
@@ -34,7 +38,7 @@ Set `[General] Profile = VirtualDesktop` and `[General] VirtualDesktopPreset`:
 | Preset | Intent | Notable values (all editable) |
 |---|---|---|
 | `Balanced` | Default for wireless play | shadow distance ≤ 40 m, ≤ 2 shadow cascades, ≤ 2 lights, no realtime reflections, LeftEye mirror, 1 ms upload slice |
-| `Performance` | Weaker GPU, or encoder/compositor struggling | render scale 0.85, hard shadows ≤ 25 m, 1 cascade, MSAA ≤ 2x, LOD bias ≤ 0.75, 1 light, 20/s cosmetic updates |
+| `Performance` | Weaker GPU, or encoder/compositor struggling | render scale 0.85, eye cap 5 MP, shadows ≤ 25 m, 1 cascade, MSAA ≤ 2x, LOD bias ≤ 0.75, 1 light, 20/s cosmetic updates |
 | `Quality` | Strong GPU; keep the game's visuals | only stutter fixes, occlusion mesh, LeftEye mirror and smoother loading |
 | `Streaming` | Virtual Desktop **and** OBS at the same time | shadows ≤ 30 m, 1 light, 24/s cosmetic updates, 20 % GPU headroom; the desktop mirror is left alone so OBS captures what it expects |
 
