@@ -73,6 +73,13 @@ namespace CRIXOptimizer.GPU
         public string RenderScaleCheck { get; private set; } = "not checked yet";
         private int renderScaleMismatches;
 
+        /// <summary>Megapixels one eye would have at render scale 1.0, measured while CRIX did not manage the render scale.</summary>
+        public double EyeMegapixelsAtScale1 { get; private set; }
+        /// <summary>Description of the eye-resolution cap when it is lowering the render scale, else "".</summary>
+        public string EyeCapNote { get; private set; } = "";
+        /// <summary>The last Apply kept the render scale above what the adaptive level asked for (rate limit).</summary>
+        public bool RenderScaleHeld { get; private set; }
+
         /// <summary>Lever values the profile resolved to (before adaptive changes). Adaptive mode scales from these.</summary>
         public QualityLevers ProfileLevers { get; private set; }
         public QualityLevers AppliedLevers { get; private set; }
@@ -293,10 +300,27 @@ namespace CRIXOptimizer.GPU
                 var levers = new QualityLevers();
                 float gameScale = 0f, gameShadow = 0f, gameLod = 0f;
                 int gameLights = 0;
+                EyeCapNote = "";
                 if (vr && renderScale != null && renderScale.TryGetBaseline(out gameScale))
                 {
                     levers.HasRenderScale = true;
                     levers.RenderScale = s.RenderScale > 0f ? s.RenderScale : gameScale;
+                    // Measure the runtime's eye size only while CRIX is not changing the scale, so its own changes
+                    // never feed back into the measurement.
+                    if (renderScale.State != SettingState.Applied)
+                    {
+                        float current = xr.EyeTextureScale > 0.05f ? xr.EyeTextureScale : gameScale;
+                        double mp = EyeResolution.MegapixelsAtScale1(xr.EyeTextureWidth, xr.EyeTextureHeight, current);
+                        if (mp > 0)
+                            EyeMegapixelsAtScale1 = mp;
+                    }
+                    float capScale = EyeResolution.MaxScaleFor(EyeMegapixelsAtScale1, s.MaxEyeMegapixels);
+                    if (capScale < levers.RenderScale - 0.001f)
+                    {
+                        EyeCapNote = $"the VR runtime asks for {EyeMegapixelsAtScale1:0.0} MP per eye at render scale 1.0; capped to {s.MaxEyeMegapixels:0.#} MP " +
+                                     $"(render scale {capScale:0.00} instead of {levers.RenderScale:0.00})";
+                        levers.RenderScale = capScale;
+                    }
                 }
                 if (shadowDistance != null && shadowDistance.TryGetBaseline(out gameShadow))
                 {
@@ -320,7 +344,8 @@ namespace CRIXOptimizer.GPU
 
                 QualityLevers target = adaptiveLevel == 0 ? levers : QualityLadder.Compute(levers, adaptiveLevel, ladder, cpuBound);
                 QualityLevers previous = AppliedLevers;
-                if (holdRenderScaleDrop && target.HasRenderScale && previous.HasRenderScale && target.RenderScale < previous.RenderScale - 0.001f)
+                RenderScaleHeld = holdRenderScaleDrop && target.HasRenderScale && previous.HasRenderScale && target.RenderScale < previous.RenderScale - 0.001f;
+                if (RenderScaleHeld)
                     target.RenderScale = previous.RenderScale;
                 AppliedLevers = target;
 

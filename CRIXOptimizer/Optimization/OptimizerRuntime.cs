@@ -105,12 +105,15 @@ namespace CRIXOptimizer.Optimization
         private bool spotifyRunning;
         private bool obsWasRunning;
         private bool obsSeen, discordSeen;
+        private string lastUserProfileKey = "";
+        private string UserProfileKey() => cfg.Profile.Value + "/" + cfg.VirtualDesktopVariant.Value;
         private int sakuraaChecks;
 
         // big-hitch log (diagnostics for "lag spikes")
         private const float BigHitchMs = 70f;
         private float lastSceneLoadTime = -1e9f;
         private float lastGraphicsApplyTime = -1e9f;
+        private float lastUpdateMs;
         private int hitchesLogged, hitchesUnlogged;
         private float nextHitchSummary;
         public int BigHitches { get; private set; }
@@ -119,6 +122,7 @@ namespace CRIXOptimizer.Optimization
         public int BigHitchesAfterCrixChange { get; private set; }
         private float nextCameraInventory;
         private bool vrWasActive;
+        private bool statusLogPending;
         private int environmentScans;
         private float alertVisibleUntil;
         private float lastDeferredUnload = -1e9f;
@@ -129,6 +133,8 @@ namespace CRIXOptimizer.Optimization
         private int adaptiveFrameCount;
         private double adaptiveEmaMs;
         private float cpuSuspectedUntil = -1f;
+        /// <summary>Until then frames were seen locked at half the refresh rate whatever the resolution; resolution is kept.</summary>
+        private float reprojectionLockedUntil = -1f;
         private float cpuSuspectSeconds = 180f;
         private float lastRenderScaleDrop = -1e9f;
         /// <summary>Minimum seconds between two adaptive resolution drops (each one reallocates the eye textures).</summary>
@@ -198,6 +204,7 @@ namespace CRIXOptimizer.Optimization
             if (profiles.MigratedEntries > 0)
                 log.Info($"Upgraded {profiles.MigratedEntries} profile value(s) to the {ModInfo.Version} defaults. Values you had changed yourself were kept.");
             ResolveProfile();
+            lastUserProfileKey = UserProfileKey();
             // With the master switch off nothing is patched now; patches are applied when CRIX is enabled.
             Guard("Game patches", () => GamePatches?.Initialize(ActiveSettings, Groups(), PotassiumInstalled, cfg.WhenPotassiumInstalled.Value, cfg.Enabled.Value));
             ApplyAll("startup");
@@ -254,6 +261,7 @@ namespace CRIXOptimizer.Optimization
             if (shutDown)
                 return;
             long start = Stopwatch.GetTimestamp();
+            long writesAtStart = SettingWrites.Count;
             float dt = Time.unscaledDeltaTime;
             float now = Time.unscaledTime;
 
@@ -296,8 +304,13 @@ namespace CRIXOptimizer.Optimization
                 ticksAccumulated += dashboard.TicksSpent;
                 dashboard.TicksSpent = 0;
             }
-            ticksAccumulated += Stopwatch.GetTimestamp() - start;
+            long spent = Stopwatch.GetTimestamp() - start;
+            ticksAccumulated += spent;
             framesAccumulated++;
+            // For the hitch log: did CRIX write engine settings this frame, and how long did its own work take?
+            if (SettingWrites.Count != writesAtStart)
+                lastGraphicsApplyTime = now;
+            lastUpdateMs = (float)(spent * TicksToMs);
         }
 
         /// <summary>
@@ -323,6 +336,11 @@ namespace CRIXOptimizer.Optimization
             {
                 BigHitchesAfterCrixChange++;
                 cause = "CRIX had just changed graphics settings";
+            }
+            else if (lastUpdateMs > 30f)
+            {
+                BigHitchesAfterCrixChange++;
+                cause = $"CRIX's own work took {lastUpdateMs:0} ms in the previous frame";
             }
             else
             {
@@ -379,9 +397,12 @@ namespace CRIXOptimizer.Optimization
                 {
                     vrWasActive = Xr.IsVrActive;
                     if (vrWasActive && lateApplied)
+                    {
                         MarkDirty();
+                        statusLogPending = true; // log what CRIX changes once the headset's settings are applied
+                    }
                 }
-                CheckRefreshRate();
+                Guard("Setup advice", UpdateSetupAdvice);
                 if (Graphics != null && !Suspended && cfg.Enabled.Value)
                 {
                     Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
@@ -547,7 +568,8 @@ namespace CRIXOptimizer.Optimization
         }
 
         /// <summary>Pushes the active profile into every module. Safe to call repeatedly; only differing values are written.</summary>
-        private void ApplyAll(string reason)
+        /// <param name="explicitChange">The user changed the profile or its values: apply resolution at once, without the adaptive rate limit.</param>
+        private void ApplyAll(string reason, bool explicitChange = false)
         {
             bool active = cfg.Enabled.Value && !Suspended;
             long writesBefore = SettingWrites.Count;
@@ -574,7 +596,13 @@ namespace CRIXOptimizer.Optimization
                 try
                 {
                     int level = active && cfg.AdaptiveEnabled ? Adaptive.Level : 0;
-                    Graphics.Apply(active ? ActiveSettings : null, active && cfg.GraphicsSettings.Value, active && cfg.FramePacingSettings.Value, level, Ladder, CpuBoundSuspected);
+                    bool hadScale = Graphics.AppliedLevers.HasRenderScale;
+                    float scaleBefore = Graphics.AppliedLevers.RenderScale;
+                    bool hold = !explicitChange && Time.unscaledTime - lastRenderScaleDrop < RenderScaleDropIntervalSeconds;
+                    Graphics.Apply(active ? ActiveSettings : null, active && cfg.GraphicsSettings.Value, active && cfg.FramePacingSettings.Value, level, Ladder, KeepResolution, hold);
+                    // A resolution drop caused by the adaptive level (not by the user's own profile choice) is rate-limited and checked like any other.
+                    if (!explicitChange && active && level < 0)
+                        NoteRenderScaleChange(hadScale, scaleBefore, Time.unscaledTime);
                 }
                 catch (Exception e)
                 {
@@ -650,8 +678,8 @@ namespace CRIXOptimizer.Optimization
             }
             else
             {
-                Ledger.RearmAll();
-                ApplyAll(reason);
+                // No re-arm: settings the game or another mod changed meanwhile stay theirs.
+                ApplyAll(reason, explicitChange: true);
                 log.Info($"CRIX OPTIMIZER resumed ({reason}).");
             }
         }
@@ -719,12 +747,18 @@ namespace CRIXOptimizer.Optimization
             }
 
             string previousSection = ActiveSection;
-            ResolveProfile(logNotes: rearm);
+            bool valuesEdited = rearm;
+            // Only an explicit profile switch takes settings back from the game or other mods. Reloading the config
+            // (Ctrl+F5), editing profile values or resuming after F10 respects changes made by others.
+            string key = UserProfileKey();
+            rearm = key != lastUserProfileKey;
+            lastUserProfileKey = key;
+            ResolveProfile(logNotes: valuesEdited);
             if (rearm)
                 Ledger.RearmAll(); // the user chose a profile: apply it even to settings changed externally before
             if (!cfg.AdaptiveEnabled)
                 Adaptive.Reset();
-            ApplyAll(rearm ? "profile changed" : "config changed");
+            ApplyAll(rearm ? "profile changed" : valuesEdited ? "profile values changed" : "config changed", explicitChange: rearm || valuesEdited);
             if (rearm)
                 log.Info($"Profile applied: {ActiveSection}");
             else if (previousSection != ActiveSection)
@@ -733,6 +767,11 @@ namespace CRIXOptimizer.Optimization
                     : $"Auto streaming mode ended -> back to profile {ActiveSection}.");
             EnsureObsClient();
             EnsureStreamlabsClient();
+            if (statusLogPending)
+            {
+                statusLogPending = false;
+                LogChangesSummary();
+            }
         }
 
         private void RunAction(string key)
@@ -876,10 +915,14 @@ namespace CRIXOptimizer.Optimization
                 if (probe == ProbeResult.Ineffective || probe == ProbeResult.Inconclusive)
                 {
                     // Either way the lower resolution bought nothing measurable: undo it rather than keep a blurrier
-                    // image (and avoid further drops, each of which is a hitch).
-                    cpuSuspectedUntil = now + cpuSuspectSeconds;
+                    // image (and avoid further drops, each of which is a hitch). Only "Ineffective" means CPU-bound;
+                    // "Inconclusive" (half-rate lock before and after) says nothing about the bottleneck.
+                    if (probe == ProbeResult.Ineffective)
+                        cpuSuspectedUntil = now + cpuSuspectSeconds;
+                    else
+                        reprojectionLockedUntil = now + cpuSuspectSeconds;
                     log.Info(probe == ProbeResult.Inconclusive
-                        ? $"Adaptive quality: frames stayed locked at half the refresh rate (reprojection) after lowering resolution. Resolution is restored and CPU-side reductions are used instead (rechecked in {cpuSuspectSeconds / 60f:0} min)."
+                        ? $"Adaptive quality: frames stayed locked at half the refresh rate (reprojection) after lowering resolution, so the drop is undone. That does not tell whether the CPU or the GPU is the limit; resolution is kept and other reductions are used (rechecked in {cpuSuspectSeconds / 60f:0} min)."
                         : $"Adaptive quality: lowering resolution did not make frames faster ({resolutionProbe.LastImprovement * 100:0.#}% change). " +
                           $"The bottleneck looks CPU-side (busy lobby, cosmetics), so resolution is restored and CPU-side reductions are used instead (rechecked in {cpuSuspectSeconds / 60f:0} min).");
                     // Each failed recheck costs two eye-texture reallocations, so recheck less often each time.
@@ -890,10 +933,12 @@ namespace CRIXOptimizer.Optimization
                 if (probe == ProbeResult.Effective)
                     cpuSuspectSeconds = 180f;
 
-                bool cpuBefore = CpuBoundSuspected;
-                // The probe's 3-minute verdict ends here; the change in CPU-bound state is handled below.
+                bool cpuBefore = KeepResolution;
+                // The probe's verdict ends here; the change is handled below like any other.
                 if (cpuSuspectedUntil > 0f && now >= cpuSuspectedUntil)
                     cpuSuspectedUntil = -1f;
+                if (reprojectionLockedUntil > 0f && now >= reprojectionLockedUntil)
+                    reprojectionLockedUntil = -1f;
 
                 AdaptiveDecision decision = Adaptive.Evaluate(new AdaptiveSample
                 {
@@ -902,8 +947,10 @@ namespace CRIXOptimizer.Optimization
                     TargetMs = 1000.0 / TargetFps,
                     GpuMs = Gpu.HasGpuTime ? Gpu.AverageGpuMs : double.NaN,
                 });
-                bool cpuNow = CpuBoundSuspected;
-                if (!decision.Changed && !(cpuNow != cpuBefore && Adaptive.Level < 0))
+                bool cpuNow = KeepResolution;
+                // A drop held back by the rate limit is applied once the minute is over.
+                bool heldDropDue = GraphicsUsable && Graphics.RenderScaleHeld && now - lastRenderScaleDrop >= RenderScaleDropIntervalSeconds;
+                if (!decision.Changed && !heldDropDue && !(cpuNow != cpuBefore && Adaptive.Level < 0))
                     return;
 
                 bool graphicsOk = GraphicsUsable;
@@ -912,17 +959,13 @@ namespace CRIXOptimizer.Optimization
                 ApplyAdaptiveLevel();
 
                 // Any resolution drop (a step down, or the CPU-bound verdict ending) is checked by the probe.
-                bool loweredResolution = hadScale && GraphicsUsable && Graphics.AppliedLevers.HasRenderScale && Graphics.AppliedLevers.RenderScale < scaleBefore - 0.001f;
-                if (loweredResolution)
-                    lastRenderScaleDrop = now;
-                if (loweredResolution && !Gpu.HasGpuTime)
-                    resolutionProbe.Begin(now, adaptiveEmaMs, Xr.RefreshRate > 1f ? 1000.0 / Xr.RefreshRate : 1000.0 / TargetFps);
-                else if (decision.Changed)
+                if (!NoteRenderScaleChange(hadScale, scaleBefore, now) && decision.Changed)
                     resolutionProbe.Cancel();
                 if (decision.Changed)
                 {
                     log.Info($"Adaptive quality: level {Adaptive.Level} ({decision.Reason}); frame {frameMs:0.0} ms vs target {1000.0 / TargetFps:0.0} ms" +
-                             (Gpu.HasGpuTime ? $", GPU {Gpu.AverageGpuMs:0.0} ms" : "") + (cpuNow ? " (CPU-bound: resolution kept)" : ""));
+                             (Gpu.HasGpuTime ? $", GPU {Gpu.AverageGpuMs:0.0} ms" : "") +
+                             (CpuBoundSuspected ? " (CPU-bound: resolution kept)" : ReprojectionLocked ? " (half-rate lock: resolution kept)" : ""));
                 }
             }
             catch (Exception e)
@@ -942,11 +985,36 @@ namespace CRIXOptimizer.Optimization
         /// </summary>
         public bool CpuBoundSuspected => Adaptive.LastJudgedCpuBound || cpuSuspectedUntil > 0f;
 
+        /// <summary>A resolution drop recently left frames locked at half the refresh rate (cause unknown).</summary>
+        public bool ReprojectionLocked => reprojectionLockedUntil > 0f;
+
+        /// <summary>Adaptive mode keeps the resolution (CPU-bound, or a drop did not get frames off a half-rate lock).</summary>
+        private bool KeepResolution => CpuBoundSuspected || ReprojectionLocked;
+
+        /// <summary>
+        /// Records an adaptive resolution drop (rate limit) and starts the probe that checks it helped.
+        /// Returns true when the render scale went down.
+        /// </summary>
+        private bool NoteRenderScaleChange(bool hadScale, float scaleBefore, float now)
+        {
+            bool lowered = hadScale && GraphicsUsable && Graphics.AppliedLevers.HasRenderScale && Graphics.AppliedLevers.RenderScale < scaleBefore - 0.001f;
+            if (!lowered)
+                return false;
+            lastRenderScaleDrop = now;
+            if (!Gpu.HasGpuTime)
+            {
+                // Only a refresh rate the VR runtime reported can tell a half-rate lock apart.
+                bool runtimeRate = Xr.RefreshRateSource == "XR display subsystem" || Xr.RefreshRateSource == "XRDevice";
+                resolutionProbe.Begin(now, adaptiveEmaMs, runtimeRate && Xr.RefreshRate > 1f ? 1000.0 / Xr.RefreshRate : 0);
+            }
+            return true;
+        }
+
         private void RecomputeEffective()
         {
             int level = AdaptiveActive ? Adaptive.Level : 0;
             EffectiveSettings = level < 0 && ActiveSettings != null
-                ? QualityLadder.ApplyCpuLevers(ActiveSettings, QualityLadder.Compute(default, level, Ladder, CpuBoundSuspected))
+                ? QualityLadder.ApplyCpuLevers(ActiveSettings, QualityLadder.Compute(default, level, Ladder, KeepResolution))
                 : ActiveSettings;
         }
 
@@ -960,7 +1028,7 @@ namespace CRIXOptimizer.Optimization
                 try
                 {
                     bool hold = Time.unscaledTime - lastRenderScaleDrop < RenderScaleDropIntervalSeconds;
-                    Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, AdaptiveActive ? Adaptive.Level : 0, Ladder, CpuBoundSuspected, hold);
+                    Graphics.Apply(ActiveSettings, cfg.GraphicsSettings.Value, cfg.FramePacingSettings.Value, AdaptiveActive ? Adaptive.Level : 0, Ladder, KeepResolution, hold);
                 }
                 catch (Exception e)
                 {
@@ -1078,6 +1146,7 @@ namespace CRIXOptimizer.Optimization
                 }
                 log.Info($"Compatibility scan: {Plugins.Count} BepInEx plugin(s) loaded, {Footprint.PatchedMethods} method(s) patched by Harmony, {Footprint.Overlaps.Count} overlap(s) with CRIX.");
             });
+            Guard("Setup advice", UpdateSetupAdvice);
             if (Graphics != null && Graphics.UsesUrpAsset)
             {
                 Guard("Graphics settings", Graphics.RefreshUrpAssetValues);
@@ -1247,6 +1316,8 @@ namespace CRIXOptimizer.Optimization
             sb.Append(". Adaptive quality ").Append(AdaptiveActive ? $"on (level {Adaptive.Level}, target {TargetFps:0} FPS)" : "off").Append('.');
             if (DesktopCamera != null && ActiveSettings != null && ActiveSettings.DesktopCamera != DesktopCameraMode.Unchanged)
                 sb.Append(" Desktop camera: ").Append(DesktopCamera.Status).Append('.');
+            if (Graphics != null && Graphics.EyeCapNote.Length > 0)
+                sb.Append(" Eye resolution cap: ").Append(Graphics.EyeCapNote).Append('.');
             return sb.ToString();
         }
 
@@ -1265,21 +1336,67 @@ namespace CRIXOptimizer.Optimization
             }
         }
 
+        /// <summary>Setup problems CRIX can see but not change (VR runtime settings, other apps and mods). Main thread.</summary>
+        public readonly List<string> SetupAdvice = new List<string>();
+        private string lastEyeCapNote = "";
+
+        /// <summary>Rebuilds SetupAdvice (every 5 s and after the compatibility scan) and logs each new line once.</summary>
+        private void UpdateSetupAdvice()
+        {
+            SetupAdvice.Clear();
+            string runtime = (Xr.OpenXRRuntimeName + " " + Xr.DeviceName).ToLowerInvariant();
+            bool vd = runtime.Contains("virtualdesktop") || runtime.Contains("vdxr") || VirtualDesktop.Detected != VirtualDesktopSupport.Path.NotDetected;
+            bool link = !vd && (runtime.Contains("oculus") || runtime.Contains("meta") || (Apps & CompanionApp.MetaQuestLink) != 0);
+            bool steamvr = runtime.Contains("openvr") || runtime.Contains("steamvr");
+            string where = vd ? "in Virtual Desktop (VR Graphics Quality and VR Frame Rate)"
+                : link ? "in the Meta Quest Link app (Devices > Graphics Preferences: Render resolution and Refresh rate) and in the Oculus Debug Tool (Pixel Density 0 = default)"
+                : steamvr ? "in SteamVR (Settings > Video: resolution and refresh rate)"
+                : "in your VR app (Virtual Desktop, Meta Quest Link or SteamVR)";
+
+            bool runtimeRate = Xr.RefreshRateSource == "XR display subsystem" || Xr.RefreshRateSource == "XRDevice";
+            if (Xr.IsVrActive && runtimeRate && Xr.RefreshRate > 1f && Xr.RefreshRate < 70f)
+                SetupAdvice.Add($"The headset runs at {Xr.RefreshRate:0} Hz, so the game can never exceed {Xr.RefreshRate:0} FPS. Set 72, 80 or 90 Hz {where}.");
+            else if (Xr.IsVrActive && runtimeRate && ActiveSection == "HighRefresh" && Xr.RefreshRate > 1f && Xr.RefreshRate < 110f)
+                SetupAdvice.Add($"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. " + RefreshRateAdvice);
+
+            double mp = Graphics?.EyeMegapixelsAtScale1 ?? 0;
+            if (Xr.IsVrActive && mp > 12)
+                SetupAdvice.Add($"The VR runtime asks the game to render {mp:0} megapixels per eye at render scale 1.0 (a Quest 3 at default settings renders about {EyeResolution.Quest3DefaultMegapixels:0.0}). " +
+                                $"That is far more than the headset can show and the main reason for a low frame rate on most GPUs. Lower the resolution {where}. " +
+                                "Until then CRIX caps what the game renders (MaxEyeMegapixels in the profile).");
+
+            if ((Hooks & GraphicsHook.NvidiaOverlay) != 0 && (vd || link))
+                SetupAdvice.Add("NVIDIA's overlay/capture (GeForce Experience / NVIDIA app: Instant Replay, recording) is hooked into the game. Instant Replay records all the time with the GPU's video encoder, " +
+                                "which Virtual Desktop and Quest Link also use to stream to the headset. Turn Instant Replay off while playing in VR.");
+
+            var optimizers = new List<string>();
+            if (PotassiumInstalled)
+                optimizers.Add("Potassium");
+            foreach (PluginInventory.Entry p in Plugins)
+                if (p.Guid != null && p.Guid != ModInfo.Guid && p.Guid != ModInfo.PotassiumGuid &&
+                    (p.Guid.IndexOf("optimi", StringComparison.OrdinalIgnoreCase) >= 0 || (p.Name ?? "").IndexOf("optimi", StringComparison.OrdinalIgnoreCase) >= 0))
+                    optimizers.Add(p.Name ?? p.Guid);
+            if (optimizers.Count > 0)
+                SetupAdvice.Add("Other optimisation mods are installed (" + string.Join(", ", optimizers.ToArray()) + "). They patch overlapping parts of the game and may change the same settings" +
+                                (PotassiumInstalled ? " (CRIX already contains Potassium's fixes and currently leaves them to Potassium)" : "") +
+                                ". If you have problems, test with only one optimiser.");
+
+            foreach (string line in SetupAdvice)
+                once.Info("setup:" + line, line);
+
+            string cap = Graphics?.EyeCapNote ?? "";
+            if (cap != lastEyeCapNote)
+            {
+                lastEyeCapNote = cap;
+                if (cap.Length > 0)
+                    log.Info("Eye resolution cap: " + cap + ".");
+            }
+        }
+
         internal const string RefreshRateAdvice =
             "VR frame rates are capped at the headset refresh rate. For 120 FPS set 120 Hz in your VR runtime: Virtual Desktop (VR Frame Rate), " +
             "Meta Quest Link/Air Link (Meta Quest Link app > Devices > Graphics Preferences > Refresh rate) or SteamVR (per-application video settings). " +
             "120 Hz also makes Gorilla Tag run its physics 120 times a second, so it needs more CPU than 90 Hz.";
-
-        /// <summary>Points out when the HighRefresh profile runs on a headset set below 120 Hz (once per rate).</summary>
-        private void CheckRefreshRate()
-        {
-            // Only a rate the VR runtime itself reported (not the desktop monitor fallback).
-            bool fromRuntime = Xr.RefreshRateSource == "XR display subsystem" || Xr.RefreshRateSource == "XRDevice";
-            if (ActiveSection != "HighRefresh" || !Xr.IsVrActive || !fromRuntime || Xr.RefreshRate <= 1f || Xr.RefreshRate >= 110f)
-                return;
-            once.Info("hz:" + Mathf.RoundToInt(Xr.RefreshRate),
-                $"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. " + RefreshRateAdvice);
-        }
 
         // ================================================================== streaming / recording awareness
 

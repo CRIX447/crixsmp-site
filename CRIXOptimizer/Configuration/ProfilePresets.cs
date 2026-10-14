@@ -74,6 +74,7 @@ namespace CRIXOptimizer.Configuration
         /// </summary>
         public static OptimizationSettings Balanced() => new OptimizationSettings
         {
+            MaxEyeMegapixels = 8f,
             ShadowDistanceLimit = 50f,
             ShadowCascadesLimit = 2,
             PixelLightLimit = 2,
@@ -86,6 +87,7 @@ namespace CRIXOptimizer.Configuration
         /// <summary>Prioritises lower rendering workload over visuals. Noticeably softer image.</summary>
         public static OptimizationSettings MaximumPerformance() => new OptimizationSettings
         {
+            MaxEyeMegapixels = 5f,
             RenderScale = 0.8f,
             ShadowQuality = ShadowQualityLimit.HardOnly,
             ShadowDistanceLimit = 25f,
@@ -120,6 +122,7 @@ namespace CRIXOptimizer.Configuration
         /// </summary>
         public static OptimizationSettings HighRefresh() => new OptimizationSettings
         {
+            MaxEyeMegapixels = 6f,
             ShadowDistanceLimit = 20f,
             ShadowCascadesLimit = 1,
             MsaaSamples = 2,
@@ -148,6 +151,7 @@ namespace CRIXOptimizer.Configuration
         /// <summary>Wireless PCVR via Virtual Desktop, balanced: leaves GPU time for the video encoder and keeps loads smooth.</summary>
         public static OptimizationSettings VirtualDesktopBalanced() => new OptimizationSettings
         {
+            MaxEyeMegapixels = 7f,
             ShadowDistanceLimit = 40f,
             ShadowCascadesLimit = 2,
             PixelLightLimit = 2,
@@ -161,6 +165,7 @@ namespace CRIXOptimizer.Configuration
 
         public static OptimizationSettings VirtualDesktopPerformance() => new OptimizationSettings
         {
+            MaxEyeMegapixels = 5f,
             RenderScale = 0.85f,
             ShadowQuality = ShadowQualityLimit.HardOnly,
             ShadowDistanceLimit = 25f,
@@ -185,6 +190,7 @@ namespace CRIXOptimizer.Configuration
         /// <summary>Keeps the game's visuals; only stutter fixes, occlusion mesh, single-eye mirror and smoother loading.</summary>
         public static OptimizationSettings VirtualDesktopQuality() => new OptimizationSettings
         {
+            MaxEyeMegapixels = 10f,
             EnsureOcclusionMesh = true,
             DesktopMirror = DesktopMirrorMode.LeftEye,
             AsyncUploadTimeSliceMs = 1,
@@ -240,6 +246,7 @@ namespace CRIXOptimizer.Configuration
         /// <summary>Voice/video calls and screen sharing: modest game-side reductions.</summary>
         public static OptimizationSettings DiscordCall() => new OptimizationSettings
         {
+            MaxEyeMegapixels = 8f,
             ShadowDistanceLimit = 35f,
             ShadowCascadesLimit = 2,
             PixelLightLimit = 2,

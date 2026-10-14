@@ -738,6 +738,33 @@ namespace CRIXOptimizer.Tests
         }
     }
 
+    public sealed class EyeResolutionTests
+    {
+        [Test]
+        public void MeasuresMegapixelsAtScaleOne()
+        {
+            // The user's report: 4992x5376 per eye at render scale 0.85.
+            double mp = EyeResolution.MegapixelsAtScale1(4992, 5376, 0.85f);
+            Assert.Near(37.1, mp, 0.1);
+            Assert.Equal(0.0, EyeResolution.MegapixelsAtScale1(0, 5376, 0.85f), "no headset");
+        }
+
+        [Test]
+        public void CapsRenderScaleToTheMegapixelLimit()
+        {
+            double mp = EyeResolution.MegapixelsAtScale1(4992, 5376, 0.85f);
+            float scale = EyeResolution.MaxScaleFor(mp, 8f);
+            Assert.Near(0.46, scale, 0.005);
+            double rendered = mp * scale * scale;
+            Assert.True(rendered <= 8.0, "within the cap: " + rendered);
+            Assert.True(rendered > 7.0, "not lower than needed: " + rendered);
+            // A normal Quest 3 eye (4.6 MP) is below the cap: no change.
+            Assert.True(EyeResolution.MaxScaleFor(EyeResolution.Quest3DefaultMegapixels, 8f) > 1f);
+            Assert.Equal(float.MaxValue, EyeResolution.MaxScaleFor(mp, 0f), "0 = no cap");
+            Assert.Equal(EyeResolution.MinimumScale, EyeResolution.MaxScaleFor(400, 1f), "never below the floor");
+        }
+    }
+
     public sealed class SpotifyDetectionTests
     {
         [Test]

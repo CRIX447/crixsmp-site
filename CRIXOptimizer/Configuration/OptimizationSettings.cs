@@ -19,6 +19,8 @@ namespace CRIXOptimizer.Configuration
         // ---------------- Rendering (GPU) ----------------
         /// <summary>XR eye-texture resolution scale. 0 = unchanged. Absolute value (can raise quality).</summary>
         public float RenderScale;
+        /// <summary>Upper limit for one eye's rendered pixels in megapixels (render scale is lowered to fit). 0 = no limit.</summary>
+        public float MaxEyeMegapixels;
         public ShadowQualityLimit ShadowQuality;
         /// <summary>Maximum shadow distance in metres. -1 = unchanged.</summary>
         public float ShadowDistanceLimit = -1f;
@@ -100,6 +102,12 @@ namespace CRIXOptimizer.Configuration
                 RenderScale = fixedValue;
             }
 
+            if (MaxEyeMegapixels != 0f && (MaxEyeMegapixels < 1f || MaxEyeMegapixels > 50f || float.IsNaN(MaxEyeMegapixels)))
+            {
+                float fixedValue = float.IsNaN(MaxEyeMegapixels) || MaxEyeMegapixels < 0f ? 0f : Clamp(MaxEyeMegapixels, 1f, 50f);
+                notes.Add($"MaxEyeMegapixels {MaxEyeMegapixels} out of range 1-50 (0 = no limit); using {fixedValue}");
+                MaxEyeMegapixels = fixedValue;
+            }
             ShadowDistanceLimit = NormalizeOptional(ShadowDistanceLimit, 0f, 1000f, "ShadowDistanceLimit", notes);
             LodBiasLimit = NormalizeOptional(LodBiasLimit, 0.1f, 10f, "LodBiasLimit", notes);
             IncrementalGcSliceMs = NormalizeOptional(IncrementalGcSliceMs, 0.25f, 20f, "IncrementalGcSliceMs", notes);

@@ -288,6 +288,45 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void UpgradeFromPreviewRevision2AppliesOnlyTheLaterDefaultChanges()
+        {
+            string dir = TempDir();
+            string profilesPath = Path.Combine(dir, "profiles.cfg");
+            string mainPath = Path.Combine(dir, "main.cfg");
+            // A 1.1.0 preview build wrote revision 2 with HighRefresh allowed to change resolution.
+            var p1 = new ConfigFile(profilesPath, true);
+            var m1 = new ConfigFile(mainPath, true);
+            new ProfileStore(p1, m1);
+            p1.Bind("Meta", "PresetRevision", 0).Value = 2;
+            m1.Bind("Meta", "PresetRevision", 0).Value = 2;
+            p1.Bind("HighRefresh", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), false).Value = true;
+            p1.Bind("OBSStreaming", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), false).Value = true;
+            p1.Bind("Balanced", nameof(OptimizationSettings.ShadowDistanceLimit), 50f).Value = 42f; // user edit
+            p1.Save();
+            m1.Save();
+
+            var store = new ProfileStore(new ConfigFile(profilesPath, true), new ConfigFile(mainPath, true));
+            Assert.Equal(2, store.MigratedEntries, "only the two revision-3 changes");
+            Assert.False(store.Resolve("HighRefresh").AdaptiveMayChangeRenderScale);
+            Assert.False(store.Resolve("OBSStreaming").AdaptiveMayChangeRenderScale);
+            Assert.Equal(42f, store.Resolve("Balanced").ShadowDistanceLimit, "user edit kept");
+            Assert.Equal(8f, store.Resolve("Balanced").MaxEyeMegapixels, "new field gets its default");
+        }
+
+        [Test]
+        public void ResetToDefaultsDoesNotRearmTheUpgrade()
+        {
+            string dir = TempDir();
+            var profilesFile = new ConfigFile(Path.Combine(dir, "profiles.cfg"), true);
+            var main = new ConfigFile(Path.Combine(dir, "main.cfg"), true);
+            var store = new ProfileStore(profilesFile, main);
+            main.Bind("Meta", "PresetRevision", 0).Value = 0; // what resetting every main-config entry does
+            store.ResetAllToDefaults();
+            Assert.Equal(ProfileStore.CurrentPresetRevision, main.Bind("Meta", "PresetRevision", 0).Value);
+            Assert.Equal(ProfileStore.CurrentPresetRevision, profilesFile.Bind("Meta", "PresetRevision", 0).Value);
+        }
+
+        [Test]
         public void FreshInstallNeedsNoMigration()
         {
             string dir = TempDir();

@@ -58,6 +58,8 @@ namespace CRIXOptimizer.UI
             sb.Append("   dropped ").Append(rt.Gpu.DroppedFramesSinceReset >= 0 ? rt.Gpu.DroppedFramesSinceReset.ToString(Inv) + " [R]" : "n/a");
             if (rt.CpuBoundSuspected && rt.AdaptiveActive)
                 sb.Append("   <color=#ffd060>").Append(rt.Adaptive.LastJudgedCpuBound ? "CPU-bound [D]" : "CPU-bound (suspected) [D]").Append("</color>");
+            else if (rt.ReprojectionLocked && rt.AdaptiveActive)
+                sb.Append("   <color=#ffd060>half-rate lock (reprojection) [D]</color>");
             sb.Append('\n');
 
             sb.Append("XR ").Append(rt.Xr.DescribeRuntime());
@@ -65,7 +67,8 @@ namespace CRIXOptimizer.UI
                 sb.Append("  ").Append(rt.Xr.EyeTextureWidth).Append('x').Append(rt.Xr.EyeTextureHeight)
                   .Append(" x").Append(F2(rt.Xr.EyeTextureScale)).Append(" MSAA ").Append(rt.Xr.EyeTextureMsaa)
                   .Append(' ').Append(rt.Xr.StereoMode);
-            sb.Append("  ").Append(F0(rt.Xr.RefreshRate)).Append(" Hz [R]\n");
+            bool runtimeRate = rt.Xr.RefreshRateSource == "XR display subsystem" || rt.Xr.RefreshRateSource == "XRDevice";
+            sb.Append("  ").Append(F0(rt.Xr.RefreshRate)).Append(runtimeRate ? " Hz [R]\n" : " Hz [R: " + rt.Xr.RefreshRateSource + "]\n");
 
             // Memory
             MemoryMonitor m = rt.MemoryStats;
@@ -142,7 +145,8 @@ namespace CRIXOptimizer.UI
                     : status != null && status.AuthenticationRequired ? "OBS WebSocket needs password"
                     : status != null && status.AuthenticationFailed ? "OBS password rejected" : "OBS WebSocket not connected";
             else
-                obs = status.Streaming && status.Recording ? "OBS live+recording" : status.Streaming ? "OBS live" : status.Recording ? "OBS recording" : "OBS idle";
+                obs = status.Streaming && status.Recording ? "OBS live+recording" : status.Streaming ? "OBS live" : status.Recording ? "OBS recording"
+                    : status.ReplayBuffer ? "OBS replay buffer" : status.VirtualCam ? "OBS virtual camera" : "OBS idle";
             if (rt.Streamlabs != null)
             {
                 Streaming.ObsStatus sl = rt.Streamlabs.Status;
@@ -150,6 +154,7 @@ namespace CRIXOptimizer.UI
                     : sl.Streaming && sl.Recording ? " | Streamlabs live+recording"
                     : sl.Streaming ? " | Streamlabs live"
                     : sl.Recording ? " | Streamlabs recording"
+                    : sl.ReplayBuffer ? " | Streamlabs replay buffer"
                     : " | Streamlabs idle";
             }
             string active = rt.Capture.Active == CaptureKind.None ? "no streaming load" : rt.Capture.Reason;

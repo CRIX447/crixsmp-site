@@ -56,6 +56,7 @@ namespace CRIXOptimizer.Diagnostics
             AppendLines(sb, "Advice", rt.Discord.Advice);
             AppendLines(sb, "Advice", rt.ReShade.Advice);
             AppendLines(sb, "Advice", rt.Sakuraa.Advice);
+            AppendLines(sb, "Setup", rt.SetupAdvice);
             if ((rt.Apps & CompanionApp.Spotify) != 0)
                 sb.Append("Advice: ").Append(OptimizerRuntime.SpotifyAdvice).Append('\n');
             sb.Append('\n');
@@ -141,6 +142,8 @@ namespace CRIXOptimizer.Diagnostics
             Line(sb, "VRAM capacity (driver)", MemoryMonitor.VramCapacity());
             Line(sb, "XR", rt.Xr.DescribeRuntime());
             Line(sb, "XR eye texture", rt.Xr.IsVrActive ? $"{rt.Xr.EyeTextureWidth}x{rt.Xr.EyeTextureHeight} scale {rt.Xr.EyeTextureScale.ToString("0.00", Inv)} MSAA {rt.Xr.EyeTextureMsaa} {rt.Xr.StereoMode}" : "n/a");
+            Line(sb, "Eye size requested by the VR runtime [D]", rt.Graphics != null && rt.Graphics.EyeMegapixelsAtScale1 > 0
+                ? rt.Graphics.EyeMegapixelsAtScale1.ToString("0.0", Inv) + " MP per eye at render scale 1.0" : "n/a");
             Line(sb, "Refresh rate", rt.Xr.RefreshRate.ToString("0.#", Inv) + " Hz (" + rt.Xr.RefreshRateSource + ")");
             Line(sb, "Plugins loaded", rt.Plugins.Count.ToString(Inv));
             Line(sb, "Companion apps", CompanionApps.Describe(rt.Apps));

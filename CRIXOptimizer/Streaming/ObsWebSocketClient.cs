@@ -31,7 +31,7 @@ namespace CRIXOptimizer.Streaming
         public string LastError = "";
 
         public bool LiveOrRecording => Connected && (Streaming || Recording);
-        public bool OtherOutput => ReplayBuffer || VirtualCam;
+        public bool OtherOutput => Connected && (ReplayBuffer || VirtualCam);
 
         public ObsStatus With(Action<ObsStatus> change)
         {
@@ -154,6 +154,8 @@ namespace CRIXOptimizer.Streaming
                         s.Connected = false;
                         s.Streaming = false;
                         s.Recording = false;
+                        s.ReplayBuffer = false;
+                        s.VirtualCam = false;
                         s.LastError = message;
                     });
                     if (wasConnected)
@@ -270,7 +272,7 @@ namespace CRIXOptimizer.Streaming
                         if (lastCloseCode == 4011)
                         {
                             // The user kicked this client in OBS; the protocol says not to reconnect.
-                            status = status.With(s => { s.Connected = false; s.Streaming = false; s.Recording = false; s.Kicked = true; s.LastError = "disconnected by the user in OBS"; });
+                            status = status.With(s => { s.Connected = false; s.Streaming = false; s.Recording = false; s.ReplayBuffer = false; s.VirtualCam = false; s.Kicked = true; s.LastError = "disconnected by the user in OBS"; });
                             log.Info("OBS WebSocket: disconnected from OBS's settings; CRIX will not reconnect until the game restarts or the setting changes.");
                             stopping = true;
                             return;

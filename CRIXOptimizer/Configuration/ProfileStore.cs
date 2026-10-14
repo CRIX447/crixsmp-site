@@ -31,8 +31,19 @@ namespace CRIXOptimizer.Configuration
 
         private readonly Dictionary<string, List<Binding>> sections = new Dictionary<string, List<Binding>>(StringComparer.Ordinal);
 
-        /// <summary>Revision of the built-in preset values. 1 = CRIX 1.0.0, 2 = CRIX 1.1.0.</summary>
-        public const int CurrentPresetRevision = 2;
+        /// <summary>Revision of the built-in preset values. 1 = CRIX 1.0.0, 2 = 1.1.0 previews, 3 = CRIX 1.1.0.</summary>
+        public const int CurrentPresetRevision = 3;
+
+        /// <summary>
+        /// Default changes between revision 2 (1.1.0 preview builds) and 3. Only entries that still hold the old value
+        /// are changed. New fields need no entry: BepInEx gives a missing key its (new) default.
+        /// </summary>
+        private static readonly (string Section, string Field, object From, object To)[] Revision3Changes =
+        {
+            ("HighRefresh", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), true, false),
+            ("OBSStreaming", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), true, false),
+            ("VirtualDesktop.Streaming", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), true, false),
+        };
 
         public ConfigFile ProfilesFile { get; }
         private ConfigEntry<int> profilesRevision;
@@ -86,19 +97,36 @@ namespace CRIXOptimizer.Configuration
                 bool isCustom = section.Key == "Custom";
                 if (isCustom ? !migrateCustom : !migrateProfiles)
                     continue;
-                // Sections added after 1.0.0 have no older defaults to upgrade from.
-                if (!ProfilePresetsV1.HasSection(section.Key))
-                    continue;
-                OptimizationSettings oldDefaults = ProfilePresetsV1.ForSection(section.Key);
-                OptimizationSettings newDefaults = ProfilePresets.ForSection(section.Key);
-                foreach (Binding binding in section.Value)
+                int from = isCustom ? mainRevision.Value : profilesRevision.Value;
+                if (from < 2)
                 {
-                    object oldValue = binding.Field.GetValue(oldDefaults);
-                    object newValue = binding.Field.GetValue(newDefaults);
-                    if (Equals(oldValue, newValue) || !Equals(binding.Entry.BoxedValue, oldValue))
+                    // 1.0.0 file: compare with the frozen 1.0.0 presets. Sections added later have nothing to upgrade.
+                    if (!ProfilePresetsV1.HasSection(section.Key))
                         continue;
-                    binding.Entry.BoxedValue = newValue;
-                    changed++;
+                    OptimizationSettings oldDefaults = ProfilePresetsV1.ForSection(section.Key);
+                    OptimizationSettings newDefaults = ProfilePresets.ForSection(section.Key);
+                    foreach (Binding binding in section.Value)
+                    {
+                        object oldValue = binding.Field.GetValue(oldDefaults);
+                        object newValue = binding.Field.GetValue(newDefaults);
+                        if (Equals(oldValue, newValue) || !Equals(binding.Entry.BoxedValue, oldValue))
+                            continue;
+                        binding.Entry.BoxedValue = newValue;
+                        changed++;
+                    }
+                }
+                else
+                {
+                    foreach (var change in Revision3Changes)
+                    {
+                        if (change.Section != section.Key)
+                            continue;
+                        Binding binding = section.Value.Find(b => b.Field.Name == change.Field);
+                        if (binding == null || !Equals(binding.Entry.BoxedValue, change.From))
+                            continue;
+                        binding.Entry.BoxedValue = change.To;
+                        changed++;
+                    }
                 }
             }
             MigratedEntries = changed;

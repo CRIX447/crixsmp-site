@@ -29,11 +29,13 @@ namespace CRIXOptimizer.VirtualDesktop
         }
 
         public Path Detected { get; private set; }
+        private string runtimeName = "";
         public readonly List<string> Advice = new List<string>();
 
         public void Update(CompanionApp apps, string openXrRuntimeName, string xrDeviceName, ProfileKind profile)
         {
             bool streamer = (apps & CompanionApp.VirtualDesktop) != 0;
+            runtimeName = openXrRuntimeName ?? "";
             bool vdRuntime = Mentions(openXrRuntimeName, "VirtualDesktop") || Mentions(openXrRuntimeName, "Virtual Desktop") || Mentions(openXrRuntimeName, "VDXR");
 
             if (vdRuntime)
@@ -59,7 +61,7 @@ namespace CRIXOptimizer.VirtualDesktop
         {
             switch (Detected)
             {
-                case Path.VirtualDesktopOpenXR: return "Virtual Desktop (its OpenXR runtime is active)";
+                case Path.VirtualDesktopOpenXR: return "Virtual Desktop (active OpenXR runtime: " + runtimeName + ")";
                 case Path.ViaSteamVR: return "Virtual Desktop streamer running, game via SteamVR";
                 case Path.Running: return "Virtual Desktop streamer running";
                 default: return "not detected";
