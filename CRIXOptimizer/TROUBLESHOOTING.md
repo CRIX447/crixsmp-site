@@ -149,7 +149,10 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
   the headset's ReShade (`ReShadeVR.ini`) set `PerformanceMode=1` there while the game is closed.
 - The log and system report list the usually expensive effects in your active preset (ambient occlusion, global
   illumination, reflections, depth of field, motion blur, ...). `[Actions] CreateLightReShadePreset = true` writes
-  `<preset>.CRIX-light.ini` without them; select it in the ReShade overlay. Your own preset is not changed.
+  `<preset>.CRIX-light.ini` without them. Your own preset is not changed. For the desktop window, select the copy in
+  the ReShade overlay (Home key). For the headset's ReShade, close the game and set the `PresetPath=` line under
+  `[GENERAL]` in `ReShadeVR.ini` to the copy (the log prints the exact line), or pick it in the SteamVR dashboard's
+  ReShade tab if you play through SteamVR.
 - Depth effects broken: see *Visual problems* above.
 
 ## Spotify

@@ -61,13 +61,12 @@ namespace CRIXOptimizer.GPU
         private bool active;
         private int activeFrame = -10;
         private double typicalFrameTime;
-        private int frameTimeOutliers;
+        private bool respace = true;
         private int stepFrame = -10;
         private int missedEndEvents;
         private int reinstalls;
         private string stoppedReason;
         private bool uninstallPending;
-        private int discovered;
         private string status = "off";
 
         public float MaxFps { get; private set; }
@@ -94,8 +93,12 @@ namespace CRIXOptimizer.GPU
             exclusions = (exclusionList ?? "").ToLowerInvariant().Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < exclusions.Length; i++)
                 exclusions[i] = exclusions[i].Trim();
-            managed.RemoveAll(m => IsExcluded(m.Name));
-            MaxFps = maxFps > 0f ? maxFps : 0f;
+            if (managed.RemoveAll(m => IsExcluded(m.Name)) > 0)
+                respace = true;
+            float newMax = maxFps > 0f ? maxFps : 0f;
+            if (newMax != MaxFps)
+                respace = true;
+            MaxFps = newMax;
             if (MaxFps <= 0f)
             {
                 Uninstall();
@@ -151,7 +154,8 @@ namespace CRIXOptimizer.GPU
                 if (!installed)
                     return;
             }
-            managed.RemoveAll(m => !UnityObjects.IsAlive(m.Camera));
+            if (managed.RemoveAll(m => !UnityObjects.IsAlive(m.Camera)) > 0)
+                respace = true;
             CheckStepRuns();
             if (stoppedReason != null || !installed)
                 return; // stopped or the re-install failed: do not refill the list or overwrite the status
@@ -159,7 +163,6 @@ namespace CRIXOptimizer.GPU
             if (buffer.Length < count)
                 buffer = new Camera[Math.Max(count, buffer.Length * 2)];
             count = Camera.GetAllCameras(buffer);
-            double now = Time.unscaledTimeAsDouble;
             for (int i = 0; i < count; i++)
             {
                 Camera cam = buffer[i];
@@ -172,9 +175,9 @@ namespace CRIXOptimizer.GPU
                 string name = SafeName(cam);
                 if (IsExcluded(name))
                     continue;
-                // Phases by discovery order (golden-ratio spacing), so cameras a mod creates together are spread out.
-                double phase = RenderRateSchedule.PhaseFor(discovered++);
-                managed.Add(new Managed { Camera = cam, Name = name, Phase = phase, Due = RenderRateSchedule.InitialDue(now, 1.0 / MaxFps, phase) });
+                // Phases and due times are (re)assigned evenly over the period at the next step (Respace).
+                managed.Add(new Managed { Camera = cam, Name = name });
+                respace = true;
                 log.Debug("Extra camera limited: " + name);
             }
             UpdateStatus();
@@ -207,14 +210,16 @@ namespace CRIXOptimizer.GPU
                 if (skipped.Count > 0)
                     RestoreSkipped(); // not expected (the step after rendering restores); never carry it over
                 stepFrame = Time.frameCount;
-                // Kept up to date every frame; a hitch frame does not inflate it (see SmoothFrameTime).
-                typicalFrameTime = RenderRateSchedule.SmoothFrameTime(typicalFrameTime, ref frameTimeOutliers, Time.unscaledDeltaTime);
+                // The plan uses the typical frame time from before this frame (a hitch frame must not widen its own
+                // budget); it is updated every frame, also when nothing is limited.
+                double frameTime = Time.unscaledDeltaTime;
+                double typicalBefore = typicalFrameTime;
+                typicalFrameTime = RenderRateSchedule.SmoothFrameTime(typicalFrameTime, frameTime);
                 // Only while CRIX's own Update ran this frame and allows it (fail-open when CRIX stops).
                 if (stoppedReason != null || !active || activeFrame != stepFrame || managed.Count == 0 || MaxFps <= 0f)
                     return;
                 double now = Time.unscaledTimeAsDouble;
                 double period = 1.0 / MaxFps;
-                double frameTime = typicalFrameTime;
                 for (int i = managed.Count - 1; i >= 0; i--)
                 {
                     Managed m = managed[i];
@@ -222,16 +227,28 @@ namespace CRIXOptimizer.GPU
                     if (!UnityObjects.IsAlive(cam))
                     {
                         managed.RemoveAt(i);
+                        respace = true;
                         continue;
                     }
                     if (cam.targetTexture == null)
                     {
                         // It draws to the screen now (e.g. a camera handed back after a takeover): not ours to limit.
                         managed.RemoveAt(i);
+                        respace = true;
                         log.Info($"Extra camera '{m.Name}' no longer renders into a texture; CRIX stopped limiting it.");
                     }
                 }
                 int count = managed.Count;
+                if (respace)
+                {
+                    // Evenly spread over the period whenever the set of cameras or the limit changes.
+                    for (int i = 0; i < count; i++)
+                    {
+                        managed[i].Phase = RenderRateSchedule.EvenPhase(i, count);
+                        managed[i].Due = RenderRateSchedule.InitialDue(now, period, managed[i].Phase);
+                    }
+                    respace = false;
+                }
                 if (dues.Length < count)
                 {
                     dues = new double[count * 2];
@@ -245,7 +262,7 @@ namespace CRIXOptimizer.GPU
                     phases[i] = managed[i].Phase;
                     eligible[i] = managed[i].Camera.enabled; // switched off by its owner: not ours to decide
                 }
-                RenderRateSchedule.Plan(dues, phases, eligible, render, count, now, period, frameTime);
+                RenderRateSchedule.Plan(dues, phases, eligible, render, count, now, period, frameTime, typicalBefore);
                 for (int i = 0; i < count; i++)
                 {
                     Managed m = managed[i];

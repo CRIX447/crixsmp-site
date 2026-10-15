@@ -8,25 +8,22 @@ namespace CRIXOptimizer.Core
     /// <summary>
     /// Time-based "at most N renders per second" schedule for a group of cameras (no Unity dependency, unit tested).
     ///
-    /// Each camera has a due time. It may render on the first frame at or after it (within half a frame); the due
-    /// time then advances by exactly one period, so a camera renders at most rate x seconds + 1 times over any stretch.
-    /// Due times lie on a fixed grid per camera, (k + phase) x period on the absolute clock, so cameras with different
-    /// phases keep apart for good. After a hitch a camera renders once and moves to its next grid point (no catch-up
-    /// burst, and cameras that were overdue together do not stay locked together). Per frame at most
-    /// ceil(cameras x rate x frame time) cameras render, earliest due first, so cameras do not pile up in the same
-    /// frame; a due camera over that budget simply renders next frame (its due time is not moved). When the game runs
-    /// slower than the rate the budget covers every camera, so each renders every frame.
+    /// Each camera has a due time on its own grid, (k + phase) x period on the absolute clock, with the phases spread
+    /// evenly over the period (i / n), so the cameras' renders stay apart. A camera may render on the first frame at or
+    /// after its due time (within half a frame); the due time then advances by exactly one period, so a camera renders
+    /// at most rate x seconds + 1 times over any stretch. After a hitch it renders once and moves to its next grid point
+    /// at least a period away (no catch-up burst). Per frame at most about cameras x rate x frame time cameras render,
+    /// earliest due first, so cameras take turns; the frame time used is the real one (long frames get more renders,
+    /// keeping the rate), but at most twice the typical one, so a hitch frame renders at most about two frames' worth. A due
+    /// camera over the budget renders next frame (its due time is not moved). When the game runs slower than the rate,
+    /// every camera renders every frame.
     /// </summary>
     internal static class RenderRateSchedule
     {
-        private const double GoldenRatioFraction = 0.6180339887498949;
-
-        /// <summary>Phase in [0, 1) for the n-th limited camera: golden-ratio spacing spreads any number of cameras
-        /// over the period (0, 0.62, 0.24, 0.85, ...), whatever their instance IDs.</summary>
-        public static double PhaseFor(int index)
+        /// <summary>Evenly spaced phase in [0, 1) for camera <paramref name="index"/> of <paramref name="count"/>.</summary>
+        public static double EvenPhase(int index, int count)
         {
-            double phase = index * GoldenRatioFraction;
-            return phase - Math.Floor(phase);
+            return count <= 0 ? 0 : (double)index / count;
         }
 
         /// <summary>First due time: the camera's first grid point at or after now.</summary>
@@ -46,48 +43,40 @@ namespace CRIXOptimizer.Core
             return t;
         }
 
-        /// <summary>How many of <paramref name="cameras"/> may render in one frame of length <paramref name="frameTime"/>.</summary>
+        /// <summary>How many of <paramref name="cameras"/> may render in a frame of length <paramref name="frameTime"/>:
+        /// the expected number rounded up, with a 0.1 tolerance so normal frame-time jitter does not add a slot.</summary>
         public static int FrameBudget(int cameras, double rate, double frameTime)
         {
             if (cameras <= 0)
                 return 0;
             if (rate <= 0 || frameTime <= 0)
                 return 1;
-            double share = cameras * rate * frameTime;
-            return share >= cameras ? cameras : Math.Max(1, (int)Math.Ceiling(share - 1e-9));
+            int budget = (int)Math.Ceiling(cameras * rate * frameTime - 0.1);
+            return Math.Min(cameras, Math.Max(1, budget));
         }
 
         /// <summary>
-        /// Typical frame time for the budget: a slow average of frame times that ignores single hitch frames (more
-        /// than twice the typical value) and only follows a real slowdown once it lasts ten frames.
+        /// Typical frame time: a slow average in which one frame counts for at most three typical frames, so a single
+        /// hitch barely moves it and a load screen cannot make it jump; a lasting change is followed within a few
+        /// dozen frames.
         /// </summary>
-        public static double SmoothFrameTime(double typical, ref int outliers, double frameTime)
+        public static double SmoothFrameTime(double typical, double frameTime)
         {
             if (frameTime <= 0)
                 return typical;
             if (typical <= 0)
-            {
-                outliers = 0;
                 return frameTime;
-            }
-            if (frameTime > typical * 2)
-            {
-                if (++outliers < 10)
-                    return typical;
-                outliers = 0;
-                return frameTime;
-            }
-            outliers = 0;
-            return typical + (frameTime - typical) * 0.1;
+            return typical + (Math.Min(frameTime, typical * 3) - typical) * 0.1;
         }
 
         /// <summary>
         /// Decides which cameras render this frame. Only entries with <paramref name="eligible"/> set take part (a
-        /// camera its owner switched off is not eligible). <paramref name="frameTime"/> is the typical frame time
-        /// (SmoothFrameTime), not the last frame's, so one hitch frame does not let every camera render at once. Sets
-        /// <paramref name="render"/>, advances the due time of each camera that renders, and returns how many render.
+        /// camera its owner switched off is not eligible). <paramref name="frameTime"/> is the frame that just passed,
+        /// <paramref name="typicalFrameTime"/> the SmoothFrameTime value from before it. Sets <paramref name="render"/>, advances the
+        /// due time of each camera that renders, and returns how many render.
         /// </summary>
-        public static int Plan(double[] due, double[] phase, bool[] eligible, bool[] render, int count, double now, double period, double frameTime)
+        public static int Plan(double[] due, double[] phase, bool[] eligible, bool[] render, int count, double now, double period,
+                               double frameTime, double typicalFrameTime)
         {
             int candidates = 0;
             for (int i = 0; i < count; i++)
@@ -98,7 +87,11 @@ namespace CRIXOptimizer.Core
             }
             if (candidates == 0)
                 return 0;
-            if (period <= 0 || frameTime >= period)
+            // The shorter of the two: right after a load the average is still high while frames are fast again, and a
+            // single long frame says nothing about the next one.
+            double effective = frameTime > 0 && typicalFrameTime > 0 ? Math.Min(frameTime, typicalFrameTime)
+                : Math.Max(frameTime, typicalFrameTime);
+            if (period <= 0 || effective >= period)
             {
                 // No limit, or the game is slower than the limit: every camera renders every frame.
                 for (int i = 0; i < count; i++)
@@ -109,8 +102,9 @@ namespace CRIXOptimizer.Core
                 }
                 return candidates;
             }
-            int budget = FrameBudget(candidates, 1.0 / period, frameTime);
-            double slack = frameTime > 0 && frameTime < period ? frameTime * 0.5 : 0;
+            double budgetTime = typicalFrameTime > 0 ? Math.Min(frameTime > 0 ? frameTime : typicalFrameTime, typicalFrameTime * 2) : frameTime;
+            int budget = FrameBudget(candidates, 1.0 / period, budgetTime);
+            double slack = effective > 0 ? effective * 0.5 : 0;
             int rendered = 0;
             while (rendered < budget)
             {

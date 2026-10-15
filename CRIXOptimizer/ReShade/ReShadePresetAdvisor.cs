@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Ini = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>>>;
 
 namespace CRIXOptimizer.ReShade
 {
@@ -84,10 +85,15 @@ namespace CRIXOptimizer.ReShade
         /// <summary>ReShade's base folder (the game folder unless [INSTALL] BasePath or RESHADE_BASE_PATH_OVERRIDE move it).</summary>
         public string BasePath { get; private set; } = "";
         public string IniPath { get; private set; } = "";
-        /// <summary>The headset runtime first when ReShadeVR.ini exists, then the desktop window.</summary>
+        /// <summary>The headset runtime first when ReShadeVR.ini exists, then the desktop window. A runtime switched off
+        /// with [GENERAL] Disable in its own file is left out (ReShade does not create it).</summary>
         public readonly List<RuntimeConfig> Runtimes = new List<RuntimeConfig>();
         public readonly List<string> Advice = new List<string>();
         public string Error { get; private set; } = "";
+        /// <summary>A headset is active but there is no ReShadeVR.ini yet: if ReShade also runs in the headset, it uses
+        /// ReShade.ini's values until it saves its own file when the game closes.</summary>
+        public bool VrWithoutOwnConfig { get; private set; }
+        private readonly List<string> disabledNotes = new List<string>();
 
         /// <summary>The runtime that matters most in VR: the headset's when ReShadeVR.ini exists, else the desktop's.</summary>
         public RuntimeConfig Primary => Runtimes.Count == 0 ? null : Runtimes.Find(r => r.IsVr) ?? Runtimes[0];
@@ -105,15 +111,17 @@ namespace CRIXOptimizer.ReShade
         }
 
         /// <summary>Reads ReShade's configuration (and the active presets) the way ReShade itself resolves them.
-        /// Read-only. Safe to call off the game thread.</summary>
-        public void Analyze(string gameRoot)
+        /// Read-only. Safe to call off the game thread. <paramref name="vrActive"/>: a headset is in use.</summary>
+        public void Analyze(string gameRoot, bool vrActive = false)
         {
             Found = false;
             Runtimes.Clear();
             Advice.Clear();
+            disabledNotes.Clear();
             Error = "";
             BasePath = "";
             IniPath = "";
+            VrWithoutOwnConfig = false;
             try
             {
                 if (string.IsNullOrEmpty(gameRoot))
@@ -126,11 +134,24 @@ namespace CRIXOptimizer.ReShade
                 if (!hasIni && !hasVrIni)
                     return;
                 Found = true;
-                Dictionary<string, Dictionary<string, string>> global = hasIni ? ParseIni(File.ReadAllText(IniPath)) : ParseIni("");
+                Ini global = hasIni ? ParseIni(File.ReadAllText(IniPath)) : ParseIni("");
                 if (hasVrIni)
-                    Runtimes.Add(ResolveRuntime("headset", "ReShadeVR.ini", true, ParseIni(File.ReadAllText(vrIniPath)), global));
+                {
+                    Ini vr = ParseIni(File.ReadAllText(vrIniPath));
+                    // ReShade's create_effect_runtime reads Disable from the runtime's own file only (no fallback).
+                    if (ParseBool(FirstElement(Value(vr, "GENERAL", "Disable"))))
+                        disabledNotes.Add("ReShade (headset): switched off with [GENERAL] Disable in ReShadeVR.ini, so it does not run in the headset.");
+                    else
+                        Runtimes.Add(ResolveRuntime("headset", "ReShadeVR.ini", true, vr, global));
+                }
                 if (hasIni)
-                    Runtimes.Add(ResolveRuntime("desktop window", "ReShade.ini", false, global, null));
+                {
+                    if (ParseBool(FirstElement(Value(global, "GENERAL", "Disable"))))
+                        disabledNotes.Add("ReShade (desktop window): switched off with [GENERAL] Disable in ReShade.ini.");
+                    else
+                        Runtimes.Add(ResolveRuntime("desktop window", "ReShade.ini", false, global, null));
+                }
+                VrWithoutOwnConfig = vrActive && !hasVrIni;
                 BuildAdvice();
             }
             catch (Exception e)
@@ -139,18 +160,17 @@ namespace CRIXOptimizer.ReShade
             }
         }
 
-        private RuntimeConfig ResolveRuntime(string label, string file, bool isVr,
-            Dictionary<string, Dictionary<string, string>> local, Dictionary<string, Dictionary<string, string>> global)
+        private RuntimeConfig ResolveRuntime(string label, string file, bool isVr, Ini local, Ini global)
         {
             // ReShade's config_get: the runtime's own file first, the global ReShade.ini when the key is missing.
-            string Get(string key) => Value(local, "GENERAL", key) ?? (global != null ? Value(global, "GENERAL", key) : null);
+            List<string> Get(string key) => Value(local, "GENERAL", key) ?? (global != null ? Value(global, "GENERAL", key) : null);
 
             var rt = new RuntimeConfig { Label = label, ConfigFile = file, IsVr = isVr };
             string performance = FirstElement(Get("PerformanceMode"));
             if (performance != null)
-                rt.PerformanceMode = performance.Trim() == "1" || performance.Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
+                rt.PerformanceMode = ParseBool(performance);
 
-            // ReShade's load_config: a valid start-up preset wins, then PresetPath, then <base>\ReShadePreset.ini.
+            // ReShade's load_config: a valid start-up preset wins, then PresetPath, then <base>\\ReShadePreset.ini.
             string startup = FirstElement(Get("StartupPresetPath"));
             string current = FirstElement(Get("PresetPath"));
             if (!string.IsNullOrEmpty(startup) && ResolvePresetPath(BasePath, startup, out string full))
@@ -174,6 +194,24 @@ namespace CRIXOptimizer.ReShade
             return rt;
         }
 
+        /// <summary>ReShade's bool: a leading non-zero integer, or exactly "true", "True" or "TRUE".</summary>
+        internal static bool ParseBool(string element)
+        {
+            if (string.IsNullOrEmpty(element))
+                return false;
+            if (element == "true" || element == "True" || element == "TRUE")
+                return true;
+            int i = 0;
+            while (i < element.Length && char.IsWhiteSpace(element[i]))
+                i++;
+            if (i < element.Length && (element[i] == '+' || element[i] == '-'))
+                i++;
+            for (; i < element.Length && element[i] >= '0' && element[i] <= '9'; i++)
+                if (element[i] != '0')
+                    return true;
+            return false;
+        }
+
         /// <summary>ReShade's resolve_preset_path: .ini/.txt only; a file that does not exist yet is valid (new
         /// preset); an existing file must have a Techniques key in its root section.</summary>
         internal static bool ResolvePresetPath(string basePath, string value, out string full)
@@ -190,8 +228,7 @@ namespace CRIXOptimizer.ReShade
                 return false;
             if (!File.Exists(full))
                 return true;
-            Dictionary<string, Dictionary<string, string>> preset = ParseIni(File.ReadAllText(full));
-            return preset[""].ContainsKey("Techniques");
+            return ParseIni(File.ReadAllText(full))[""].ContainsKey("Techniques");
         }
 
         private static string ResolveBasePath(string gameRoot)
@@ -236,7 +273,10 @@ namespace CRIXOptimizer.ReShade
         private static void ParseTechniques(string presetText, List<Technique> into)
         {
             into.Clear();
-            foreach (string element in SplitElements(Value(ParseIni(presetText), "", "Techniques")))
+            List<string> elements = Value(ParseIni(presetText), "", "Techniques");
+            if (elements == null)
+                return;
+            foreach (string element in elements)
             {
                 string entry = element.Trim();
                 if (entry.Length == 0)
@@ -253,12 +293,18 @@ namespace CRIXOptimizer.ReShade
             }
         }
 
+        private const string FirstVrSessionNote =
+            " If ReShade also runs in your headset, it uses these settings for now, but it saves its own ReShadeVR.ini when the game closes; " +
+            "the Home-key overlay only changes the desktop window's settings, so after that set the same values under [GENERAL] in ReShadeVR.ini.";
+
         internal void BuildAdvice()
         {
             Advice.Clear();
+            Advice.AddRange(disabledNotes);
             foreach (RuntimeConfig rt in Runtimes)
             {
                 string prefix = Runtimes.Count > 1 ? $"ReShade ({rt.Label}, {rt.ConfigFile})" : "ReShade";
+                string vrNote = !rt.IsVr && VrWithoutOwnConfig ? FirstVrSessionNote : "";
                 if (!rt.PresetExists)
                 {
                     Advice.Add($"{prefix}: the active preset {rt.PresetPath} does not exist, so no effects are loaded.");
@@ -270,7 +316,7 @@ namespace CRIXOptimizer.ReShade
                           "close the game and set PerformanceMode=1 under [GENERAL] in ReShadeVR.ini (or use the ReShade tab of the SteamVR dashboard if you play through SteamVR). " +
                           "It compiles the effects with fixed values and usually runs them noticeably faster."
                         : $"{prefix}: Performance Mode is off. Turn it on with the Performance Mode checkbox at the bottom of the Home tab " +
-                          "in the ReShade overlay (Home key) once your preset is set up: it compiles the effects with fixed values and usually runs them noticeably faster.");
+                          "in the ReShade overlay (Home key) once your preset is set up: it compiles the effects with fixed values and usually runs them noticeably faster." + vrNote);
                 var heavy = new List<string>();
                 foreach (Technique t in rt.Heavy)
                     heavy.Add(t.Name + " (" + t.HeavyReason + ")");
@@ -282,7 +328,7 @@ namespace CRIXOptimizer.ReShade
                         : " This preset is ReShade's start-up preset, loaded at every launch: make the copy the start-up preset too (ReShade overlay, Settings), or clear it.";
                     Advice.Add($"{prefix}: {rt.Enabled.Count} effect(s) enabled in {Path.GetFileName(rt.PresetPath)}; usually expensive ones: {string.Join(", ", heavy.ToArray())}. " +
                                $"They run every frame {where}. Disable them while you need frame rate, " +
-                               "or use [Actions] CreateLightReShadePreset = true to get a copy of your preset without them." + startupNote);
+                               "or use [Actions] CreateLightReShadePreset = true to get a copy of your preset without them." + startupNote + vrNote);
                 }
                 else if (rt.Enabled.Count > 0)
                 {
@@ -311,26 +357,42 @@ namespace CRIXOptimizer.ReShade
         }
 
         /// <summary>True when another runtime (headset or desktop window) uses the same preset file.</summary>
-        public bool IsShared(RuntimeConfig rt) =>
-            rt != null && Runtimes.FindAll(r => r.PresetExists && string.Equals(r.PresetPath, rt.PresetPath, StringComparison.OrdinalIgnoreCase)).Count > 1;
+        public bool IsShared(RuntimeConfig rt) => OthersUsing(rt).Count > 0;
+
+        private List<RuntimeConfig> OthersUsing(RuntimeConfig rt) =>
+            rt == null ? new List<RuntimeConfig>()
+                : Runtimes.FindAll(r => !ReferenceEquals(r, rt) && r.PresetExists && string.Equals(r.PresetPath, rt.PresetPath, StringComparison.OrdinalIgnoreCase));
 
         /// <summary>How to start using a light copy written for <paramref name="rt"/>. The headset's ReShade has no
-        /// Home-key overlay (ReShade gives the VR runtime no keyboard input; its overlay exists only in SteamVR).</summary>
+        /// Home-key overlay (ReShade gives the VR runtime no keyboard input; its overlay exists only in SteamVR).
+        /// Values to type into an ini file are escaped like ReShade writes them (a comma is written twice).</summary>
         public string HowToUse(RuntimeConfig rt, string copyPath)
         {
-            string rel = RelativeToBase(copyPath);
+            string value = RelativeToBase(copyPath).Replace(",", ",,");
             bool startup = rt.PresetSource == FromStartupPreset;
+            string how;
             if (rt.IsVr)
             {
-                string how = $"For the headset: close the game and set PresetPath={rel} under [GENERAL] in ReShadeVR.ini" +
-                             (startup ? $" (and StartupPresetPath={rel}, which is set)" : "") +
-                             ", or pick the copy in the ReShade tab of the SteamVR dashboard if you play through SteamVR.";
-                if (IsShared(rt))
-                    how += " The desktop window uses the same preset: select the copy there in the ReShade overlay (Home key).";
-                return how;
+                how = $"For the headset: close the game and set PresetPath={value} under [GENERAL] in ReShadeVR.ini" +
+                      (startup ? $" (and StartupPresetPath={value}, which is set)" : "") +
+                      ", or pick the copy in the ReShade tab of the SteamVR dashboard if you play through SteamVR.";
             }
-            return "Select the copy in the ReShade overlay (Home key)" +
-                   (startup ? "; your old preset is ReShade's start-up preset, so also make the copy the start-up preset (overlay, Settings) or clear it." : ".");
+            else
+            {
+                how = "Select the copy in the ReShade overlay (Home key)" +
+                      (startup ? "; your old preset is ReShade's start-up preset, so also make the copy the start-up preset (overlay, Settings) or clear it." : ".") +
+                      (VrWithoutOwnConfig ? FirstVrSessionNote : "");
+            }
+            foreach (RuntimeConfig other in OthersUsing(rt))
+            {
+                if (other.IsVr)
+                    continue; // candidates list the headset first, so a shared preset is explained from the headset's side
+                how += " The desktop window uses the same preset: select the copy there in the ReShade overlay (Home key)" +
+                       (other.PresetSource == FromStartupPreset
+                           ? "; it is also the desktop window's start-up preset, so make the copy the start-up preset too (overlay, Settings) or clear it."
+                           : ".");
+            }
+            return how;
         }
 
         private string RelativeToBase(string path)
@@ -405,13 +467,13 @@ namespace CRIXOptimizer.ReShade
         }
 
         /// <summary>Parses an ini file the way ReShade's ini_file::load does: comment lines start with ';', '/' or
-        /// '#'; a section name ends at ']'; a key repeated in a section adds its elements to the earlier value; an
-        /// empty value never clears an existing one. Values are raw (see SplitElements). Internal for tests.</summary>
-        internal static Dictionary<string, Dictionary<string, string>> ParseIni(string text)
+        /// '#'; a section name ends at ']'; values are split into elements (see SplitElements); a key repeated in a
+        /// section adds its elements to the earlier ones; an empty value adds none. Internal for tests.</summary>
+        internal static Ini ParseIni(string text)
         {
-            var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            var result = new Ini(StringComparer.OrdinalIgnoreCase);
             string section = "";
-            result[section] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            result[section] = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (string rawLine in (text ?? "").TrimStart('\uFEFF').Replace("\r\n", "\n").Split('\n'))
             {
                 string line = rawLine.Trim(' ', '\t', '\r', '\n');
@@ -422,17 +484,17 @@ namespace CRIXOptimizer.ReShade
                     int close = line.IndexOf(']');
                     section = (close >= 0 ? line.Substring(0, close) : line).Trim(' ', '\t', '[', ']');
                     if (!result.ContainsKey(section))
-                        result[section] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        result[section] = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
                     continue;
                 }
-                Dictionary<string, string> values = result[section];
+                Dictionary<string, List<string>> values = result[section];
                 int eq = line.IndexOf('=');
                 string key = eq >= 0 ? line.Substring(0, eq).Trim() : line;
                 string value = eq >= 0 ? line.Substring(eq + 1).Trim() : "";
-                if (!values.TryGetValue(key, out string existing))
-                    values[key] = value;
-                else if (value.Length > 0)
-                    values[key] = existing.Length > 0 ? existing + "," + value : value;
+                if (!values.TryGetValue(key, out List<string> elements))
+                    values[key] = elements = new List<string>();
+                if (value.Length > 0)
+                    elements.AddRange(SplitElements(value));
             }
             return result;
         }
@@ -465,16 +527,15 @@ namespace CRIXOptimizer.ReShade
             return result;
         }
 
-        /// <summary>The first element of a raw value (how ReShade reads a single path), or null when the key is missing.</summary>
-        internal static string FirstElement(string raw)
+        /// <summary>The first element (how ReShade reads a single path or flag), or null when the key is missing.</summary>
+        internal static string FirstElement(List<string> elements)
         {
-            if (raw == null)
+            if (elements == null)
                 return null;
-            List<string> elements = SplitElements(raw);
             return elements.Count > 0 ? elements[0] : "";
         }
 
-        private static string Value(Dictionary<string, Dictionary<string, string>> ini, string section, string key) =>
-            ini.TryGetValue(section, out Dictionary<string, string> values) && values.TryGetValue(key, out string value) ? value : null;
+        private static List<string> Value(Ini ini, string section, string key) =>
+            ini.TryGetValue(section, out Dictionary<string, List<string>> values) && values.TryGetValue(key, out List<string> value) ? value : null;
     }
 }

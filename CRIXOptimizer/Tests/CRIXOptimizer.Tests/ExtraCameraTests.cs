@@ -9,24 +9,46 @@ namespace CRIXOptimizer.Tests
 {
     public sealed class RenderRateScheduleTests
     {
-        /// <summary>Simulates <paramref name="seconds"/> of frames; returns the render times.</summary>
-        private static System.Collections.Generic.List<double> Run(double fps, double rate, double seconds, double phase = 0.37, Func<int, double> frameTime = null, double typicalFrameTime = 0)
+        /// <summary>
+        /// Runs the schedule like the limiter does: each frame the frame that just passed and SmoothFrameTime go into
+        /// Plan; cameras get even phases. <paramref name="frameTime"/> gives each frame's duration;
+        /// <paramref name="ownerOff"/> says whether a camera's owner has it switched off in a frame.
+        /// Returns per camera the render times, and per frame how many cameras rendered.
+        /// </summary>
+        private static (System.Collections.Generic.List<double>[] renders, int[] perFrame) Run(
+            int cameras, double rate, int frames, Func<int, double> frameTime, Func<int, int, bool> ownerOff = null)
         {
-            var renders = new System.Collections.Generic.List<double>();
-            double period = 1.0 / rate;
-            double now = 100.0;
-            var due = new[] { RenderRateSchedule.InitialDue(now, period, phase) };
-            var eligible = new[] { true };
-            var render = new bool[1];
-            // Like the limiter: the plan uses the typical (averaged) frame time, not the last frame's.
-            double typical = typicalFrameTime > 0 ? typicalFrameTime : 1.0 / fps;
-            for (int frame = 0; now < 100.0 + seconds; frame++)
+            double period = 1.0 / rate, now = 100.0, typical = 0, lastDt = 0;
+            var due = new double[cameras];
+            var phase = new double[cameras];
+            var eligible = new bool[cameras];
+            var render = new bool[cameras];
+            var renders = new System.Collections.Generic.List<double>[cameras];
+            for (int k = 0; k < cameras; k++)
             {
-                if (RenderRateSchedule.Plan(due, new[] { phase }, eligible, render, 1, now, period, typical) == 1)
-                    renders.Add(now);
-                now += frameTime != null ? frameTime(frame) : 1.0 / fps;
+                phase[k] = RenderRateSchedule.EvenPhase(k, cameras);
+                due[k] = RenderRateSchedule.InitialDue(now, period, phase[k]);
+                renders[k] = new System.Collections.Generic.List<double>();
             }
-            return renders;
+            var perFrame = new int[frames];
+            for (int f = 0; f < frames; f++)
+            {
+                for (int k = 0; k < cameras; k++)
+                    eligible[k] = ownerOff == null || !ownerOff(f, k);
+                perFrame[f] = RenderRateSchedule.Plan(due, phase, eligible, render, cameras, now, period, lastDt, typical);
+                typical = RenderRateSchedule.SmoothFrameTime(typical, lastDt); // like the limiter: after planning
+                for (int k = 0; k < cameras; k++)
+                {
+                    if (render[k])
+                    {
+                        Assert.True(eligible[k], "a camera its owner switched off is never planned");
+                        renders[k].Add(now);
+                    }
+                }
+                lastDt = frameTime(f);
+                now += lastDt;
+            }
+            return (renders, perFrame);
         }
 
         private static int MaxInAnyWindow(System.Collections.Generic.List<double> times, double window)
@@ -41,34 +63,51 @@ namespace CRIXOptimizer.Tests
             return best;
         }
 
+        private static Func<int, double> Steady(double fps) => f => 1.0 / fps;
+
+        /// <summary>Normal frame-time noise around a nominal rate (Box-Muller, fixed seed).</summary>
+        private static Func<int, double> Jittered(double fps, double sigmaSeconds, int seed)
+        {
+            var rng = new Random(seed);
+            return f =>
+            {
+                double u1 = 1.0 - rng.NextDouble(), u2 = rng.NextDouble();
+                double gauss = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2 * Math.PI * u2);
+                return Math.Max(0.001, 1.0 / fps + gauss * sigmaSeconds);
+            };
+        }
+
         [Test]
         public void RendersAtMostTheLimitAndCloseToIt()
         {
             foreach (var c in new (double fps, double rate)[] { (90, 30), (120, 30), (90, 60), (144, 100), (72, 30), (120, 45), (144, 2) })
             {
-                var r = Run(c.fps, c.rate, 10);
+                var r = Run(1, c.rate, (int)(c.fps * 10), Steady(c.fps)).renders[0];
                 Assert.True(r.Count <= c.rate * 10 + 1, $"{c.fps} fps / {c.rate}: {r.Count} renders in 10 s");
                 Assert.True(r.Count >= c.rate * 10 * 0.9, $"{c.fps} fps / {c.rate}: {r.Count} renders in 10 s (too few)");
                 Assert.True(MaxInAnyWindow(r, 1.0) <= c.rate + 1, $"{c.fps} fps / {c.rate}: per-second peak {MaxInAnyWindow(r, 1.0)}");
             }
             // The old frame-interval maths rendered every frame here (90/60 rounds down to 1) and 9/s at 144 fps / 2.
-            Assert.True(Run(90, 60, 10).Count <= 601, "60/s at 90 fps is limited");
-            Assert.True(Run(144, 2, 10).Count <= 21, "2/s at 144 fps is limited");
+            Assert.True(Run(1, 60, 900, Steady(90)).renders[0].Count <= 601, "60/s at 90 fps is limited");
+            Assert.True(Run(1, 2, 1440, Steady(144)).renders[0].Count <= 21, "2/s at 144 fps is limited");
         }
 
         [Test]
         public void SlowerGameRendersEveryFrame()
         {
-            var r = Run(45, 60, 10);
+            var r = Run(1, 60, 450, Steady(45)).renders[0];
             Assert.True(r.Count >= 449, $"45 fps under a 60/s limit renders every frame ({r.Count})");
+            var two = Run(2, 60, 450, Steady(45));
+            Assert.True(two.renders.All(x => x.Count >= 449), "every camera, every frame");
         }
 
         [Test]
         public void IrregularFramesAndHitchesNeverBurst()
         {
             var rng = new Random(7);
-            var r = Run(0, 30, 20, 0.5, f => f == 300 ? 1.5 : 0.005 + rng.NextDouble() * 0.012, typicalFrameTime: 0.011);
-            Assert.True(r.Count <= 30 * 20 + 1, $"{r.Count} renders in 20 s");
+            var r = Run(1, 30, 1800, f => f == 300 ? 1.5 : 0.005 + rng.NextDouble() * 0.012).renders[0];
+            double seconds = r[r.Count - 1] - r[0];
+            Assert.True(r.Count <= 30 * seconds + 2, $"{r.Count} renders in {seconds:0.0} s");
             Assert.True(MaxInAnyWindow(r, 1.0) <= 31, "no catch-up burst after a 1.5 s hitch");
             Assert.True(MaxInAnyWindow(r, 1.0 / 30) <= 2, $"at most 2 renders within one period ({MaxInAnyWindow(r, 1.0 / 30)})");
             int hitch = Enumerable.Range(1, r.Count - 1).First(i => r[i] - r[i - 1] > 1.0); // first render after the 1.5 s gap
@@ -76,131 +115,95 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
-        public void CamerasFoundTogetherRenderInDifferentFrames()
+        public void CamerasTakeTurnsWithJitterAndAfterAHitch()
         {
-            // Three cameras a mod creates together (found in the same scan), 90 fps, 30/s each, with a 0.2 s hitch
-            // and a stretch where the owner switched one camera off: never two renders in one frame.
-            const double rate = 30, fps = 90;
-            double period = 1.0 / rate, now = 50.0, dt = 1.0 / fps;
-            var due = new double[3];
-            var eligible = new bool[3];
-            var render = new bool[3];
-            var phases = new double[3];
+            // Three cameras at 30/s or two at 45/s on a 90 Hz headset: one render per frame is exactly what the rate
+            // needs. With 0.3 ms frame-time noise, a 0.2 s hitch and one camera switched off by its owner for a while,
+            // frames with two renders stay rare.
+            foreach (var c in new (int cameras, double rate)[] { (3, 30), (2, 45) })
+            {
+                foreach (double fps in new[] { 90.0, 89.5 })
+                {
+                    var (renders, perFrame) = Run(c.cameras, c.rate, 2700,
+                        f => f == 900 ? 0.2 : Jittered(fps, 0.0003, 11)(f), (f, k) => k == 1 && f >= 1500 && f < 1570);
+                    int doubles = perFrame.Where((n, f) => f > 60 && n >= 2).Count();
+                    Assert.True(doubles <= 2700 * 0.02, $"{c.cameras} x {c.rate}/s at {fps} fps: {doubles} frames with two renders");
+                    Assert.True(perFrame.Max() <= 2, $"{c.cameras} x {c.rate}/s: {perFrame.Max()} renders in one frame");
+                    for (int k = 0; k < c.cameras; k++)
+                    {
+                        double perSecond = renders[k].Count / (2700 / fps);
+                        Assert.True(perSecond <= c.rate + 0.5 && perSecond >= c.rate * (k == 1 ? 0.85 : 0.9),
+                            $"{c.cameras} x {c.rate}/s at {fps} fps: camera {k} rendered {perSecond:0.0}/s");
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void FrequentLongFramesKeepTheRate()
+        {
+            // 90 Hz where every 7th frame takes three vsyncs (the game at about 69 fps): the per-frame budget follows
+            // the real frame time, so three cameras at 30/s still get close to 30 renders a second.
+            var (renders, _) = Run(3, 30, 2100, f => f % 7 == 3 ? 3.0 / 90 : 1.0 / 90);
+            double seconds = 2100 * (6 + 3) / 7.0 / 90;
             for (int k = 0; k < 3; k++)
             {
-                phases[k] = RenderRateSchedule.PhaseFor(k);
-                due[k] = RenderRateSchedule.InitialDue(now, period, phases[k]);
-            }
-            var counts = new int[3];
-            double lastDt = dt;
-            for (int frame = 0; frame < 900; frame++)
-            {
-                for (int k = 0; k < 3; k++)
-                    eligible[k] = !(k == 1 && frame >= 400 && frame < 470); // owner switched camera 1 off for a while
-                int rendered = RenderRateSchedule.Plan(due, phases, eligible, render, 3, now, period, dt); // typical frame time
-                for (int k = 0; k < 3; k++)
-                    if (render[k])
-                        counts[k]++;
-                Assert.False(render[1] && !eligible[1], "a camera its owner switched off is never planned");
-                Assert.True(rendered <= 1, $"frame {frame}: {rendered} cameras rendered together");
-                lastDt = frame == 300 ? 0.2 : dt;
-                now += lastDt;
-            }
-            Assert.True(counts[0] >= 280 && counts[0] <= 301, $"camera 0 rendered {counts[0]} times in ~10 s");
-            Assert.True(counts[2] >= 280 && counts[2] <= 301, $"camera 2 rendered {counts[2]} times in ~10 s");
-            Assert.True(counts[1] >= 260 && counts[1] <= 301, $"camera 1 rendered {counts[1]} times (off for 70 frames)");
-        }
-
-        /// <summary>Like the limiter: frame times from a game at <paramref name="fps"/> with one hitch, the typical
-        /// frame time from SmoothFrameTime; returns renders per frame before and after the hitch.</summary>
-        private static (int[] before, int[] after) Simulate(int cameras, double rate, double fps, double hitchSeconds)
-        {
-            double period = 1.0 / rate, now = 10.0, typical = 0;
-            int outliers = 0;
-            var due = new double[cameras];
-            var phases = new double[cameras];
-            var eligible = new bool[cameras];
-            var render = new bool[cameras];
-            for (int k = 0; k < cameras; k++)
-            {
-                phases[k] = RenderRateSchedule.PhaseFor(k);
-                due[k] = RenderRateSchedule.InitialDue(now, period, phases[k]);
-                eligible[k] = true;
-            }
-            var before = new int[cameras + 1];
-            var after = new int[cameras + 1];
-            const int hitchFrame = 900, frames = 2700;
-            for (int frame = 0; frame < frames; frame++)
-            {
-                double dt = frame == hitchFrame ? hitchSeconds : 1.0 / fps;
-                now += dt;
-                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, dt);
-                int n = RenderRateSchedule.Plan(due, phases, eligible, render, cameras, now, period, typical);
-                if (frame > 60 && frame < hitchFrame)
-                    before[n]++;
-                else if (frame > hitchFrame + 60)
-                    after[n]++;
-                if (frame == hitchFrame)
-                    Assert.True(n <= RenderRateSchedule.FrameBudget(cameras, rate, 1.0 / fps), $"hitch frame rendered {n} cameras");
-            }
-            return (before, after);
-        }
-
-        [Test]
-        public void CamerasStaySpreadAfterAHitchWithABudgetAboveOne()
-        {
-            // 89.5 fps (a 90 Hz headset just missing some frames): the budget is 2 for 2 x 45/s and 3 x 30/s.
-            foreach (var c in new (int cameras, double rate)[] { (2, 45), (3, 30) })
-            {
-                var (before, after) = Simulate(c.cameras, c.rate, 89.5, 0.6);
-                int budget = RenderRateSchedule.FrameBudget(c.cameras, c.rate, 1 / 89.5);
-                for (int n = budget + 1; n <= c.cameras; n++)
-                    Assert.Equal(0, after[n], $"{c.cameras} x {c.rate}/s: frames with {n} renders after the hitch");
-                double pairsBefore = (double)before.Skip(2).Sum() / before.Sum();
-                double pairsAfter = (double)after.Skip(2).Sum() / after.Sum();
-                Assert.True(pairsAfter <= pairsBefore + 0.05,
-                    $"{c.cameras} x {c.rate}/s: frames with 2+ renders {pairsBefore:P0} before the hitch, {pairsAfter:P0} after (cameras locked together)");
+                double perSecond = renders[k].Count / seconds;
+                Assert.True(perSecond >= 27 && perSecond <= 30.5, $"camera {k}: {perSecond:0.0}/s");
             }
         }
 
         [Test]
-        public void TypicalFrameTimeIgnoresHitchesButFollowsASlowdown()
+        public void NoBurstAfterALoadScreen()
+        {
+            // 15 frames of 200 ms (a map load), then 90 fps again: the typical frame time must not keep every camera
+            // rendering every frame.
+            var (renders, perFrame) = Run(3, 30, 400, f => f >= 100 && f < 115 ? 0.2 : 1.0 / 90);
+            for (int f = 116; f < 140; f++)
+                Assert.True(perFrame[f] <= 2, $"frame {f}: {perFrame[f]} cameras");
+            double end = 100.0 + Enumerable.Range(0, 116).Sum(f => f >= 100 && f < 115 ? 0.2 : 1.0 / 90);
+            foreach (var r in renders)
+                Assert.True(r.Count(t => t >= end && t < end + 0.25) <= 30 * 0.25 + 2, "at most the limit right after the load");
+        }
+
+        [Test]
+        public void TypicalFrameTimeBarelyMovesOnAHitchButFollowsASlowdown()
         {
             double typical = 0;
-            int outliers = 0;
             for (int i = 0; i < 200; i++)
-                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 1.0 / 90);
+                typical = RenderRateSchedule.SmoothFrameTime(typical, 1.0 / 90);
             Assert.Near(1.0 / 90, typical, 1e-6);
-            typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 0.6);
-            Assert.Near(1.0 / 90, typical, 1e-6, "a single hitch frame is ignored");
-            for (int i = 0; i < 9; i++)
-                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 1.0 / 90);
-            for (int i = 0; i < 12; i++)
-                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 1.0 / 30);
-            Assert.True(typical > 1.0 / 40, $"a lasting drop to 30 fps is followed ({1 / typical:0} fps)");
+            typical = RenderRateSchedule.SmoothFrameTime(typical, 0.6);
+            Assert.True(typical <= 1.25 / 90, $"a single hitch frame moves it at most 20 % ({typical * 1000:0.0} ms)");
+            for (int i = 0; i < 40; i++)
+                typical = RenderRateSchedule.SmoothFrameTime(typical, 1.0 / 30);
+            Assert.True(typical > 1.0 / 32, $"a lasting drop to 30 fps is followed ({1 / typical:0} fps)");
         }
 
         [Test]
         public void FrameBudget()
         {
             Assert.Equal(1, RenderRateSchedule.FrameBudget(3, 30, 1.0 / 90), "3 x 30/s at 90 fps: one per frame");
+            Assert.Equal(1, RenderRateSchedule.FrameBudget(3, 30, 1.0 / 89.5), "jitter just above 1/90 does not add a slot");
             Assert.Equal(2, RenderRateSchedule.FrameBudget(4, 30, 1.0 / 90));
             Assert.Equal(1, RenderRateSchedule.FrameBudget(1, 30, 1.0 / 120));
-            Assert.Equal(3, RenderRateSchedule.FrameBudget(3, 60, 1.0 / 45), "game slower than the rate: all cameras");
+            Assert.Equal(3, RenderRateSchedule.FrameBudget(3, 30, 3.0 / 90), "a three-vsync frame may render all three");
+            Assert.Equal(3, RenderRateSchedule.FrameBudget(3, 60, 1.0 / 45), "never more than the cameras");
             Assert.Equal(0, RenderRateSchedule.FrameBudget(0, 30, 1.0 / 90));
             Assert.Equal(1, RenderRateSchedule.FrameBudget(5, 30, 0), "unknown frame time: one");
         }
 
         [Test]
-        public void PhasesSpreadAnyNumberOfCameras()
+        public void GridAndPhases()
         {
-            for (int n = 2; n <= 8; n++)
-            {
-                var p = Enumerable.Range(0, n).Select(RenderRateSchedule.PhaseFor).OrderBy(x => x).ToList();
-                double minGap = Enumerable.Range(0, n).Min(i => (i + 1 < n ? p[i + 1] : p[0] + 1) - p[i]);
-                Assert.True(p.All(x => x >= 0 && x < 1), "phase within one period");
-                Assert.True(minGap > 0.3 / n, $"{n} cameras: smallest gap {minGap:0.000} of a period");
-            }
+            Assert.Equal(0.0, RenderRateSchedule.EvenPhase(0, 3));
+            Assert.Near(1.0 / 3, RenderRateSchedule.EvenPhase(1, 3), 1e-12);
+            double p = 1.0 / 30;
+            double t = RenderRateSchedule.NextOnGrid(100.0, p, 0.25, false);
+            Assert.True(t >= 100.0 && t < 100.0 + p, "next grid point within one period");
+            Assert.Near(0.25, (t / p) - Math.Floor(t / p), 1e-6, "on the camera's phase");
+            double g = (Math.Floor(100.0 / p) + 0.25) * p;
+            Assert.True(RenderRateSchedule.NextOnGrid(g, p, 0.25, true) > g, "strictly after");
         }
     }
 

@@ -2,8 +2,8 @@
 
 CRIX only changes Gorilla Tag. It **never** changes OBS, Streamlabs, Discord, Spotify, Sakuraa or ReShade settings,
 never injects into them, never changes process priorities and never terminates anything. Its interaction with them
-is read-only: whether their process runs, whether their DLL is loaded into the game process, ReShade's `ReShade.ini`
-and active preset (read, never written), and (1.1) OBS's and Streamlabs' live/recording state through their own
+is read-only: whether their process runs, whether their DLL is loaded into the game process, ReShade's `ReShade.ini`,
+`ReShadeVR.ini` and active presets (read, never written), and (1.1) OBS's and Streamlabs' live/recording state through their own
 local APIs on 127.0.0.1. Two options act only when you turn them on: `[Performance] ExtraCameraMaxFps` (limits
 cameras that render into textures, including other mods' cameras, see Sakuraa below) and
 `[Actions] CreateLightReShadePreset` (writes a new preset file next to yours, see ReShade below).
@@ -171,8 +171,9 @@ ReShade's cost is the effects in the active preset. In VR each effect that is ap
 every eye at the eye resolution, which is much more work than on a flat monitor (CRIX's eye-resolution cap,
 `MaxEyeMegapixels`, therefore also makes ReShade cheaper).
 
-When ReShade is detected, CRIX reads `ReShade.ini` in the game folder (`PerformanceMode`, `PresetPath`) and the
-active preset's enabled effects (read-only) and logs advice, also shown in the system report:
+When ReShade is detected, CRIX reads `ReShade.ini` and `ReShadeVR.ini` in ReShade's folder (normally the game folder)
+and the active presets' enabled effects (read-only, following ReShade's own rules) and logs advice, also shown in the
+system report:
 
 - **Performance Mode off:** for the desktop window, turn it on at the bottom of the *Home* tab of the ReShade overlay
   (Home key). The headset's ReShade is not controlled by that overlay (ReShade gives it no keyboard input; it has an
@@ -182,7 +183,10 @@ active preset's enabled effects (read-only) and logs advice, also shown in the s
 - **Headset and desktop window:** ReShade 6 keeps the headset's settings in `ReShadeVR.ini` (anything it does not set
   comes from `ReShade.ini`) and the desktop window's in `ReShade.ini`. CRIX reads both, resolves the active preset the
   way ReShade does (start-up preset first, then the last used preset, then `ReShadePreset.ini`) and reports each one;
-  the headset's preset is the one that matters for VR frame rate.
+  the headset's preset is the one that matters for VR frame rate. A runtime switched off with `[GENERAL] Disable=1` in
+  its own file is reported as off. Before your first VR session with ReShade 6 there is no `ReShadeVR.ini` yet: the
+  headset then uses `ReShade.ini`'s values, and the log reminds you that changes in the Home-key overlay reach only the
+  desktop window once ReShade has saved its own `ReShadeVR.ini`.
 - **Usually expensive effects** are listed by kind: global illumination (RTGI and similar), ambient occlusion (MXAO,
   SSAO, HBAO, ...), screen-space reflections, depth of field/bokeh, motion blur, large-radius local contrast
   (Clarity), god rays/volumetric light, and the DisplayDepth debug view (only for setup). This is a name-based
@@ -192,7 +196,8 @@ active preset's enabled effects (read-only) and logs advice, also shown in the s
   and desktop), `<preset>.CRIX-light.ini` next to it, with the listed effects switched off and every effect setting
   kept. Your presets, `ReShade.ini` and `ReShadeVR.ini` are not changed. Desktop window: select the copy in the
   preset list at the top of the ReShade overlay (Home key); select your own preset to go back. Headset: close the game
-  and set `PresetPath=.\<name>.CRIX-light.ini` under `[GENERAL]` in `ReShadeVR.ini` (the log prints the exact line), or
+  and change the `PresetPath=` line under `[GENERAL]` in `ReShadeVR.ini` to the copy (the log prints the exact line,
+  with any comma in the name written twice, as ReShade does), or
   pick it in the SteamVR dashboard's ReShade tab when playing through SteamVR. If your preset is set as a start-up
   preset (`StartupPresetPath`), point that at the copy too or ReShade loads the old one at the next launch. Running it
   again overwrites only the `.CRIX-light.ini` copy. If the copy cannot be written (for example it is read-only), the

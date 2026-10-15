@@ -987,6 +987,92 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void BoolsDisableAndRepeatedKeysLikeReShade()
+        {
+            foreach (string t in new[] { "1", "2", "-1", " 1", "1abc", "true", "True", "TRUE" })
+                Assert.True(ReShade.ReShadePresetAdvisor.ParseBool(t), "true: '" + t + "'");
+            foreach (string f in new[] { "0", "", "tRue", "false", "yes", "00", "abc" })
+                Assert.False(ReShade.ReShadePresetAdvisor.ParseBool(f), "false: '" + f + "'");
+
+            string game = TempGame();
+            try
+            {
+                Write(game, "ReShade.ini", "[GENERAL]\nPresetPath=.\\P.ini\n");
+                Write(game, "ReShadeVR.ini", "[GENERAL]\nDisable=1\nPresetPath=.\\P.ini\n");
+                // The earlier Techniques value ends with a comma: ReShade appends elements, it does not join text.
+                Write(game, "P.ini", "Techniques=A@a.fx,\nTechniques=MXAO@qUINT_mxao.fx\n");
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game, true);
+                Assert.Equal(1, a.Runtimes.Count, "the headset runtime is switched off in its own file");
+                Assert.False(a.Primary.IsVr);
+                Assert.True(a.Advice.Any(l => l.Contains("Disable") && l.Contains("headset")), string.Join(" | ", a.Advice));
+                Assert.Equal(2, a.Enabled.Count, string.Join(",", a.Enabled.Select(t => t.Entry)));
+                Assert.Equal("MXAO", a.Enabled[1].Name);
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
+        public void HeadsetInstructionsAreValidIniLines()
+        {
+            string game = TempGame();
+            try
+            {
+                // A preset name with a comma: the printed ReShadeVR.ini line must be escaped the way ReShade writes it,
+                // or ReShade would read only ".\Clean" and fall back to ReShadePreset.ini.
+                Write(game, "ReShade.ini", "[GENERAL]\nStartupPresetPath=.\\Clean,, Sharp.ini\nPresetPath=.\\Clean,, Sharp.ini\n");
+                Write(game, "ReShadeVR.ini", "[GENERAL]\nStartupPresetPath=\nPresetPath=.\\Clean,, Sharp.ini\n");
+                Write(game, "Clean, Sharp.ini", Preset);
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game, true);
+                Assert.Equal(2, a.Runtimes.Count);
+                Assert.Equal(ReShade.ReShadePresetAdvisor.FromPresetPath, a.Primary.PresetSource, "an empty StartupPresetPath in ReShadeVR.ini wins over ReShade.ini's");
+                var candidates = a.LightPresetCandidates();
+                Assert.Equal(1, candidates.Count, "one shared preset, one copy");
+                string copy = a.WriteLightPreset(candidates[0]);
+                string how = a.HowToUse(candidates[0], copy);
+                string expected = "PresetPath=." + Path.DirectorySeparatorChar + "Clean,, Sharp.CRIX-light.ini";
+                Assert.True(how.Contains(expected), how);
+                Assert.True(how.Contains("desktop window's start-up preset"), "the shared desktop start-up preset is mentioned: " + how);
+
+                // Following the instruction (changing the PresetPath line of the existing file) makes the headset load
+                // the light copy. Without the empty StartupPresetPath line, ReShade would use ReShade.ini's start-up preset.
+                Write(game, "ReShadeVR.ini", "[GENERAL]\nStartupPresetPath=\n" + expected.Replace('/', '\\') + "\n");
+                a.Analyze(game, true);
+                Assert.Equal(copy, a.Primary.PresetPath);
+                Assert.False(a.Primary.Heavy.Any(), "the headset now loads the copy without expensive effects");
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
+        public void FirstVrSessionNoteOnlyWithAHeadset()
+        {
+            string game = TempGame();
+            try
+            {
+                Write(game, "ReShade.ini", "[GENERAL]\nPerformanceMode=0\nPresetPath=.\\P.ini\n");
+                Write(game, "P.ini", Preset);
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game, true);
+                Assert.True(a.VrWithoutOwnConfig);
+                Assert.True(a.Advice.Any(l => l.Contains("Performance Mode is off") && l.Contains("ReShadeVR.ini")), string.Join(" | ", a.Advice));
+                a.Analyze(game, false);
+                Assert.False(a.Advice.Any(l => l.Contains("ReShadeVR.ini")), "no headset: no note");
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
         public void FollowsReShadeBasePathOverride()
         {
             string game = TempGame();

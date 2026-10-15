@@ -832,7 +832,7 @@ namespace CRIXOptimizer.Optimization
         /// desktop), next to it. File-system errors are reported, never counted as a module fault.</summary>
         private void CreateLightReShadePresets()
         {
-            ReShadeAdvisor.Analyze(Paths.GameRootPath);
+            ReShadeAdvisor.Analyze(Paths.GameRootPath, Xr.IsVrActive);
             if (ReShadeAdvisor.Error.Length > 0)
             {
                 log.Warn("CreateLightReShadePreset: could not read the ReShade configuration: " + ReShadeAdvisor.Error + "; nothing written.");
@@ -1311,7 +1311,7 @@ namespace CRIXOptimizer.Optimization
 
                 if (ReShade.Detected && (reshadeAnalyses++ % 10) == 0)
                 {
-                    ReShadeAdvisor.Analyze(Paths.GameRootPath);
+                    ReShadeAdvisor.Analyze(Paths.GameRootPath, Xr.IsVrActive);
                     foreach (string line in ReShadeAdvisor.Advice)
                         once.Info("reshade-preset:" + line, line);
                 }

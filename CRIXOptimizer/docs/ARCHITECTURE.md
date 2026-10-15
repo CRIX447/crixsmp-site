@@ -19,7 +19,8 @@ Plugin (BepInEx entry, thin)
      ├─ FrameTimeMonitor (FrameStatistics), GpuTimingProbe (XRRuntimeInfo), MemoryMonitor (TrendAnalyzer)
      ├─ DegradationDetector (alerts), BenchmarkRecorder (BenchmarkMath, worker-thread writes)
      ├─ EnvironmentScanner (worker thread) ──► VirtualDesktop/Streaming/Discord/ReShade support (advice, guard)
-     │     ReShadePresetAdvisor ── reads ReShade.ini + active preset; writes only <preset>.CRIX-light.ini on request
+     │     ReShadePresetAdvisor ── reads ReShade.ini / ReShadeVR.ini + active presets like ReShade does;
+     │     writes only <preset>.CRIX-light.ini on request
      ├─ DesktopCameraModule, ExtraCameraLimiter (opt-in: render-texture cameras at most N renders/s; player-loop
      │     steps around FinishFrameRendering + beginContextRendering, RenderRateSchedule, PlayerLoopHook)
      ├─ PluginInventory, HarmonyFootprint (compatibility scan, once + on demand), SakuraaSupport, CameraInventory

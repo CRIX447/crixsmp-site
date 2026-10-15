@@ -73,9 +73,10 @@ are claimed.
   `ExtraCameraMaxFps` is set.
 - **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
   render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
-  (time-based on a fixed per-camera grid; earliest due first within a per-frame budget of cameras x rate x typical
-  frame time, where single hitch frames are ignored, so cameras take turns instead of rendering in the same frame,
-  also after a hitch; no catch-up burst; every frame when the game is slower than the limit). A player-loop step before Unity's
+  (time-based: each camera on its own grid with evenly spaced phases, re-spaced when cameras come and go; earliest
+  due first within a per-frame budget of cameras x rate x frame time, with the frame time capped at twice the typical
+  one, so cameras take turns instead of rendering in the same frame, long frames keep the rate and a hitch frame
+  renders at most about two frames' worth; no catch-up burst; every frame when the game is slower than the limit). A player-loop step before Unity's
   `FinishFrameRendering` switches off only the cameras that are on and not due; `RenderPipelineManager.
   beginContextRendering` (after Unity has built the frame's camera list) switches exactly those back on, so every
   script and rendering callback sees the camera as its mod set it (`endContextRendering` and a step after
@@ -88,13 +89,16 @@ are claimed.
   itself does (checked against ReShade's source): `ReShade.ini` for the desktop window and `ReShadeVR.ini` for the
   headset (ReShade 6, per-key fallback to `ReShade.ini`), `[INSTALL] BasePath`, the start-up preset before the last
   used preset and the `ReShadePreset.ini` default, escaped commas (`,,`) and comment lines. Logs and reports, per
-  runtime, whether Performance Mode is off and which enabled effects are usually expensive (global illumination,
+  runtime (a runtime switched off with `[GENERAL] Disable` is reported as off; ReShade's boolean and element rules,
+  including repeated keys, are followed), whether Performance Mode is off and which enabled effects are usually expensive (global illumination,
   ambient occlusion, screen-space reflections, depth of field, motion blur, Clarity, god rays/volumetrics,
   DisplayDepth), by name.
 - **`[Actions] CreateLightReShadePreset`**: writes `<preset>.CRIX-light.ini` next to each active preset that has such
   effects, with them removed from its `Techniques` line (effect settings and `TechniqueSorting` kept). The user's
   presets and ReShade's config files are never written. File errors are logged and never disable the action. For the
-  headset, the log gives the `ReShadeVR.ini` line to set (its ReShade has no Home-key overlay).
+  headset, the log gives the `ReShadeVR.ini` line to set (its ReShade has no Home-key overlay), escaped like ReShade
+  writes it; a shared preset that is the desktop window's start-up preset is pointed out; before the first VR session
+  (no `ReShadeVR.ini` yet) the desktop advice says that the headset will keep its own copy later.
 - The "CRIX status" summary and the system report include the extra-camera limit, and the "nothing is being changed"
   warning is not shown while it limits cameras.
 - **Camera inventory.** Lists every active camera (VR, desktop window, render textures) with resolution and a
