@@ -10,7 +10,9 @@ namespace CRIXOptimizer.Core
     ///
     /// Each camera has a due time. It may render on the first frame at or after it (within half a frame); the due
     /// time then advances by exactly one period, so a camera renders at most rate x seconds + 1 times over any stretch.
-    /// After a hitch it renders once and starts a new period (no catch-up burst). Per frame at most
+    /// Due times lie on a fixed grid per camera, (k + phase) x period on the absolute clock, so cameras with different
+    /// phases keep apart for good. After a hitch a camera renders once and moves to its next grid point (no catch-up
+    /// burst, and cameras that were overdue together do not stay locked together). Per frame at most
     /// ceil(cameras x rate x frame time) cameras render, earliest due first, so cameras do not pile up in the same
     /// frame; a due camera over that budget simply renders next frame (its due time is not moved). When the game runs
     /// slower than the rate the budget covers every camera, so each renders every frame.
@@ -27,10 +29,21 @@ namespace CRIXOptimizer.Core
             return phase - Math.Floor(phase);
         }
 
-        /// <summary>First due time: the camera's phase within one period from now.</summary>
+        /// <summary>First due time: the camera's first grid point at or after now.</summary>
         public static double InitialDue(double now, double period, double phase)
         {
-            return now + period * phase;
+            return NextOnGrid(now, period, phase, false);
+        }
+
+        /// <summary>The camera's grid point (k + phase) x period at or after (or, if <paramref name="strictlyAfter"/>,
+        /// after) <paramref name="time"/>.</summary>
+        public static double NextOnGrid(double time, double period, double phase, bool strictlyAfter)
+        {
+            double k = Math.Ceiling(time / period - phase);
+            double t = (k + phase) * period;
+            if (t < time || (strictlyAfter && t <= time))
+                t += period;
+            return t;
         }
 
         /// <summary>How many of <paramref name="cameras"/> may render in one frame of length <paramref name="frameTime"/>.</summary>
@@ -45,12 +58,36 @@ namespace CRIXOptimizer.Core
         }
 
         /// <summary>
+        /// Typical frame time for the budget: a slow average of frame times that ignores single hitch frames (more
+        /// than twice the typical value) and only follows a real slowdown once it lasts ten frames.
+        /// </summary>
+        public static double SmoothFrameTime(double typical, ref int outliers, double frameTime)
+        {
+            if (frameTime <= 0)
+                return typical;
+            if (typical <= 0)
+            {
+                outliers = 0;
+                return frameTime;
+            }
+            if (frameTime > typical * 2)
+            {
+                if (++outliers < 10)
+                    return typical;
+                outliers = 0;
+                return frameTime;
+            }
+            outliers = 0;
+            return typical + (frameTime - typical) * 0.1;
+        }
+
+        /// <summary>
         /// Decides which cameras render this frame. Only entries with <paramref name="eligible"/> set take part (a
-        /// camera its owner switched off is not eligible). <paramref name="frameTime"/> is the typical (averaged) frame
-        /// time, not the last frame's, so one hitch frame does not let every camera render at once. Sets
+        /// camera its owner switched off is not eligible). <paramref name="frameTime"/> is the typical frame time
+        /// (SmoothFrameTime), not the last frame's, so one hitch frame does not let every camera render at once. Sets
         /// <paramref name="render"/>, advances the due time of each camera that renders, and returns how many render.
         /// </summary>
-        public static int Plan(double[] due, bool[] eligible, bool[] render, int count, double now, double period, double frameTime)
+        public static int Plan(double[] due, double[] phase, bool[] eligible, bool[] render, int count, double now, double period, double frameTime)
         {
             int candidates = 0;
             for (int i = 0; i < count; i++)
@@ -61,10 +98,15 @@ namespace CRIXOptimizer.Core
             }
             if (candidates == 0)
                 return 0;
-            if (period <= 0)
+            if (period <= 0 || frameTime >= period)
             {
+                // No limit, or the game is slower than the limit: every camera renders every frame.
                 for (int i = 0; i < count; i++)
+                {
                     render[i] = eligible[i];
+                    if (eligible[i] && period > 0)
+                        due[i] = NextOnGrid(now, period, phase[i], true);
+                }
                 return candidates;
             }
             int budget = FrameBudget(candidates, 1.0 / period, frameTime);
@@ -83,9 +125,11 @@ namespace CRIXOptimizer.Core
                 render[best] = true;
                 rendered++;
                 due[best] += period;
-                // Fell behind (hitch, pause, owner had it off): start a new period now instead of catching up.
+                // Fell behind (hitch, pause, owner had it off): the camera's first grid point at least one period
+                // away instead of catching up, so cameras that were overdue together are spread out again and no
+                // camera renders twice in quick succession.
                 if (due[best] <= now)
-                    due[best] = now + period;
+                    due[best] = NextOnGrid(now + period, period, phase[best], false);
             }
             return rendered;
         }

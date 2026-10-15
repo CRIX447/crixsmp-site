@@ -22,7 +22,7 @@ namespace CRIXOptimizer.Tests
             double typical = typicalFrameTime > 0 ? typicalFrameTime : 1.0 / fps;
             for (int frame = 0; now < 100.0 + seconds; frame++)
             {
-                if (RenderRateSchedule.Plan(due, eligible, render, 1, now, period, typical) == 1)
+                if (RenderRateSchedule.Plan(due, new[] { phase }, eligible, render, 1, now, period, typical) == 1)
                     renders.Add(now);
                 now += frameTime != null ? frameTime(frame) : 1.0 / fps;
             }
@@ -85,15 +85,19 @@ namespace CRIXOptimizer.Tests
             var due = new double[3];
             var eligible = new bool[3];
             var render = new bool[3];
+            var phases = new double[3];
             for (int k = 0; k < 3; k++)
-                due[k] = RenderRateSchedule.InitialDue(now, period, RenderRateSchedule.PhaseFor(k));
+            {
+                phases[k] = RenderRateSchedule.PhaseFor(k);
+                due[k] = RenderRateSchedule.InitialDue(now, period, phases[k]);
+            }
             var counts = new int[3];
             double lastDt = dt;
             for (int frame = 0; frame < 900; frame++)
             {
                 for (int k = 0; k < 3; k++)
                     eligible[k] = !(k == 1 && frame >= 400 && frame < 470); // owner switched camera 1 off for a while
-                int rendered = RenderRateSchedule.Plan(due, eligible, render, 3, now, period, dt); // typical frame time
+                int rendered = RenderRateSchedule.Plan(due, phases, eligible, render, 3, now, period, dt); // typical frame time
                 for (int k = 0; k < 3; k++)
                     if (render[k])
                         counts[k]++;
@@ -105,6 +109,75 @@ namespace CRIXOptimizer.Tests
             Assert.True(counts[0] >= 280 && counts[0] <= 301, $"camera 0 rendered {counts[0]} times in ~10 s");
             Assert.True(counts[2] >= 280 && counts[2] <= 301, $"camera 2 rendered {counts[2]} times in ~10 s");
             Assert.True(counts[1] >= 260 && counts[1] <= 301, $"camera 1 rendered {counts[1]} times (off for 70 frames)");
+        }
+
+        /// <summary>Like the limiter: frame times from a game at <paramref name="fps"/> with one hitch, the typical
+        /// frame time from SmoothFrameTime; returns renders per frame before and after the hitch.</summary>
+        private static (int[] before, int[] after) Simulate(int cameras, double rate, double fps, double hitchSeconds)
+        {
+            double period = 1.0 / rate, now = 10.0, typical = 0;
+            int outliers = 0;
+            var due = new double[cameras];
+            var phases = new double[cameras];
+            var eligible = new bool[cameras];
+            var render = new bool[cameras];
+            for (int k = 0; k < cameras; k++)
+            {
+                phases[k] = RenderRateSchedule.PhaseFor(k);
+                due[k] = RenderRateSchedule.InitialDue(now, period, phases[k]);
+                eligible[k] = true;
+            }
+            var before = new int[cameras + 1];
+            var after = new int[cameras + 1];
+            const int hitchFrame = 900, frames = 2700;
+            for (int frame = 0; frame < frames; frame++)
+            {
+                double dt = frame == hitchFrame ? hitchSeconds : 1.0 / fps;
+                now += dt;
+                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, dt);
+                int n = RenderRateSchedule.Plan(due, phases, eligible, render, cameras, now, period, typical);
+                if (frame > 60 && frame < hitchFrame)
+                    before[n]++;
+                else if (frame > hitchFrame + 60)
+                    after[n]++;
+                if (frame == hitchFrame)
+                    Assert.True(n <= RenderRateSchedule.FrameBudget(cameras, rate, 1.0 / fps), $"hitch frame rendered {n} cameras");
+            }
+            return (before, after);
+        }
+
+        [Test]
+        public void CamerasStaySpreadAfterAHitchWithABudgetAboveOne()
+        {
+            // 89.5 fps (a 90 Hz headset just missing some frames): the budget is 2 for 2 x 45/s and 3 x 30/s.
+            foreach (var c in new (int cameras, double rate)[] { (2, 45), (3, 30) })
+            {
+                var (before, after) = Simulate(c.cameras, c.rate, 89.5, 0.6);
+                int budget = RenderRateSchedule.FrameBudget(c.cameras, c.rate, 1 / 89.5);
+                for (int n = budget + 1; n <= c.cameras; n++)
+                    Assert.Equal(0, after[n], $"{c.cameras} x {c.rate}/s: frames with {n} renders after the hitch");
+                double pairsBefore = (double)before.Skip(2).Sum() / before.Sum();
+                double pairsAfter = (double)after.Skip(2).Sum() / after.Sum();
+                Assert.True(pairsAfter <= pairsBefore + 0.05,
+                    $"{c.cameras} x {c.rate}/s: frames with 2+ renders {pairsBefore:P0} before the hitch, {pairsAfter:P0} after (cameras locked together)");
+            }
+        }
+
+        [Test]
+        public void TypicalFrameTimeIgnoresHitchesButFollowsASlowdown()
+        {
+            double typical = 0;
+            int outliers = 0;
+            for (int i = 0; i < 200; i++)
+                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 1.0 / 90);
+            Assert.Near(1.0 / 90, typical, 1e-6);
+            typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 0.6);
+            Assert.Near(1.0 / 90, typical, 1e-6, "a single hitch frame is ignored");
+            for (int i = 0; i < 9; i++)
+                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 1.0 / 90);
+            for (int i = 0; i < 12; i++)
+                typical = RenderRateSchedule.SmoothFrameTime(typical, ref outliers, 1.0 / 30);
+            Assert.True(typical > 1.0 / 40, $"a lasting drop to 30 fps is followed ({1 / typical:0} fps)");
         }
 
         [Test]

@@ -265,17 +265,21 @@ namespace CRIXOptimizer.ReShade
                     continue;
                 }
                 if (rt.PerformanceMode == false)
-                    Advice.Add($"{prefix}: Performance Mode is off. Turn it on with the Performance Mode checkbox at the bottom of the Home tab " +
-                               "in the ReShade overlay (Home key) once your preset is set up: it compiles the effects with fixed values and usually runs them noticeably faster.");
+                    Advice.Add(rt.IsVr
+                        ? $"{prefix}: Performance Mode is off. The Home-key overlay only controls the desktop window's ReShade, not the headset's: " +
+                          "close the game and set PerformanceMode=1 under [GENERAL] in ReShadeVR.ini (or use the ReShade tab of the SteamVR dashboard if you play through SteamVR). " +
+                          "It compiles the effects with fixed values and usually runs them noticeably faster."
+                        : $"{prefix}: Performance Mode is off. Turn it on with the Performance Mode checkbox at the bottom of the Home tab " +
+                          "in the ReShade overlay (Home key) once your preset is set up: it compiles the effects with fixed values and usually runs them noticeably faster.");
                 var heavy = new List<string>();
                 foreach (Technique t in rt.Heavy)
                     heavy.Add(t.Name + " (" + t.HeavyReason + ")");
                 string where = rt.IsVr ? "for each eye at the headset's resolution" : "at the desktop window's resolution";
                 if (heavy.Count > 0)
                 {
-                    string startupNote = rt.PresetSource == FromStartupPreset
-                        ? " This preset is ReShade's start-up preset, loaded at every launch: make the copy the start-up preset too (ReShade overlay, Settings), or clear it."
-                        : "";
+                    string startupNote = rt.PresetSource != FromStartupPreset ? ""
+                        : rt.IsVr ? " This preset is the headset's start-up preset (StartupPresetPath in ReShadeVR.ini), loaded at every launch: point it at the copy too, or clear it."
+                        : " This preset is ReShade's start-up preset, loaded at every launch: make the copy the start-up preset too (ReShade overlay, Settings), or clear it.";
                     Advice.Add($"{prefix}: {rt.Enabled.Count} effect(s) enabled in {Path.GetFileName(rt.PresetPath)}; usually expensive ones: {string.Join(", ", heavy.ToArray())}. " +
                                $"They run every frame {where}. Disable them while you need frame rate, " +
                                "or use [Actions] CreateLightReShadePreset = true to get a copy of your preset without them." + startupNote);
@@ -304,6 +308,37 @@ namespace CRIXOptimizer.ReShade
                     result.Add(rt);
             }
             return result;
+        }
+
+        /// <summary>True when another runtime (headset or desktop window) uses the same preset file.</summary>
+        public bool IsShared(RuntimeConfig rt) =>
+            rt != null && Runtimes.FindAll(r => r.PresetExists && string.Equals(r.PresetPath, rt.PresetPath, StringComparison.OrdinalIgnoreCase)).Count > 1;
+
+        /// <summary>How to start using a light copy written for <paramref name="rt"/>. The headset's ReShade has no
+        /// Home-key overlay (ReShade gives the VR runtime no keyboard input; its overlay exists only in SteamVR).</summary>
+        public string HowToUse(RuntimeConfig rt, string copyPath)
+        {
+            string rel = RelativeToBase(copyPath);
+            bool startup = rt.PresetSource == FromStartupPreset;
+            if (rt.IsVr)
+            {
+                string how = $"For the headset: close the game and set PresetPath={rel} under [GENERAL] in ReShadeVR.ini" +
+                             (startup ? $" (and StartupPresetPath={rel}, which is set)" : "") +
+                             ", or pick the copy in the ReShade tab of the SteamVR dashboard if you play through SteamVR.";
+                if (IsShared(rt))
+                    how += " The desktop window uses the same preset: select the copy there in the ReShade overlay (Home key).";
+                return how;
+            }
+            return "Select the copy in the ReShade overlay (Home key)" +
+                   (startup ? "; your old preset is ReShade's start-up preset, so also make the copy the start-up preset (overlay, Settings) or clear it." : ".");
+        }
+
+        private string RelativeToBase(string path)
+        {
+            string root = BasePath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return BasePath.Length > 0 && path.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+                ? "." + Path.DirectorySeparatorChar + path.Substring(root.Length)
+                : path;
         }
 
         /// <summary>

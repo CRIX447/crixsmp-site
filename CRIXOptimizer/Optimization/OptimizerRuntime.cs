@@ -301,7 +301,7 @@ namespace CRIXOptimizer.Optimization
             {
                 // Limiting only happens in frames where this call ran and allowed it, so a suspended, disabled or
                 // faulted CRIX never leaves a camera switched off.
-                try { ExtraCameras.Tick(!Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"), Frames.CurrentFps); } catch (Exception e) { Fail("Extra cameras", e); }
+                try { ExtraCameras.Tick(!Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras")); } catch (Exception e) { Fail("Extra cameras", e); }
             }
 
             PollHotkeys();
@@ -855,11 +855,8 @@ namespace CRIXOptimizer.Optimization
                 try
                 {
                     string path = ReShadeAdvisor.WriteLightPreset(rt);
-                    log.Info($"Wrote a lighter ReShade preset for the {rt.Label} ({rt.ConfigFile}): {path}. Your own preset was not changed. " +
-                             "Select the new one in the ReShade overlay (Home key)" +
-                             (rt.PresetSource == ReShadePresetAdvisor.FromStartupPreset
-                                 ? "; your old preset is ReShade's start-up preset, so also make the copy the start-up preset (overlay, Settings) or clear it."
-                                 : "."));
+                    log.Info($"Wrote a lighter ReShade preset for the {rt.Label} ({rt.ConfigFile}): {path}. Your own preset and ReShade's config files were not changed. " +
+                             ReShadeAdvisor.HowToUse(rt, path));
                 }
                 catch (InvalidOperationException e)
                 {
@@ -1398,13 +1395,16 @@ namespace CRIXOptimizer.Optimization
                 sb.Append(" Desktop camera: ").Append(DesktopCamera.Status).Append('.');
             if (Graphics != null && Graphics.EyeCapNote.Length > 0)
                 sb.Append(" Eye resolution cap: ").Append(Graphics.EyeCapNote).Append('.');
+            if (ExtraCameras != null && ExtraCameras.MaxFps > 0f)
+                sb.Append(" Extra camera limit: ").Append(ExtraCameras.Status).Append('.');
             return sb.ToString();
         }
 
         private void LogChangesSummary()
         {
             log.Info("CRIX status: " + ChangesSummary());
-            if (cfg.Enabled.Value && !Suspended && ActivePatchCount == 0 && ChangedSettingsCount == 0)
+            bool limitingCameras = ExtraCameras != null && ExtraCameras.MaxFps > 0f && ExtraCameras.ManagedCount > 0;
+            if (cfg.Enabled.Value && !Suspended && ActivePatchCount == 0 && ChangedSettingsCount == 0 && !limitingCameras)
             {
                 string why = Types == null || Types.IsEmpty ? "the game's code was not found (game update or unsupported build)"
                     : GamePatches?.DeferredToPotassium == true ? "Potassium is installed and handles the stutter fixes"

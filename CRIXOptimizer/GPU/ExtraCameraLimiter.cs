@@ -24,8 +24,8 @@ namespace CRIXOptimizer.GPU
     /// they still skip this frame. Every script callback during rendering (culling, begin/endCameraRendering,
     /// OnRenderObject, OnGUI) and every Update/LateUpdate therefore sees Camera.enabled as its owner set it, and an
     /// owner switching its camera off or on is respected. The only code that can see a limited camera switched off
-    /// is code that runs between the step and the start of rendering (e.g. another mod's player-loop step inserted
-    /// directly before FinishFrameRendering). endContextRendering and a step after FinishFrameRendering are
+    /// is code that runs between the step and CRIX's beginContextRendering handler: another mod's player-loop step
+    /// inserted directly before FinishFrameRendering, and beginContextRendering handlers subscribed before CRIX's. endContextRendering and a step after FinishFrameRendering are
     /// fallbacks in case the begin event does not come.
     ///
     /// Fail-open: if CRIX's own Update stops (plugin disabled, suspended, faulted), the step does nothing; if the
@@ -40,6 +40,7 @@ namespace CRIXOptimizer.GPU
         {
             public Camera Camera;
             public string Name;
+            public double Phase;
             public double Due;
         }
 
@@ -52,6 +53,7 @@ namespace CRIXOptimizer.GPU
         private readonly Action<ScriptableRenderContext, List<Camera>> endContextRendering;
         private Camera[] buffer = new Camera[16];
         private double[] dues = new double[8];
+        private double[] phases = new double[8];
         private bool[] eligible = new bool[8];
         private bool[] render = new bool[8];
         private string[] exclusions = new string[0];
@@ -59,6 +61,7 @@ namespace CRIXOptimizer.GPU
         private bool active;
         private int activeFrame = -10;
         private double typicalFrameTime;
+        private int frameTimeOutliers;
         private int stepFrame = -10;
         private int missedEndEvents;
         private int reinstalls;
@@ -118,13 +121,11 @@ namespace CRIXOptimizer.GPU
                 UpdateStatus();
         }
 
-        /// <summary>Per frame from CRIX's Update: whether limiting is allowed this frame (CRIX on, not suspended), and
-        /// the current average frame rate (a single hitch frame must not let every camera render at once).</summary>
-        public void Tick(bool allowed, double averageFps)
+        /// <summary>Per frame from CRIX's Update: whether limiting is allowed this frame (CRIX on, not suspended).</summary>
+        public void Tick(bool allowed)
         {
             active = allowed;
             activeFrame = Time.frameCount;
-            typicalFrameTime = averageFps > 1 ? 1.0 / averageFps : 0;
             if (uninstallPending)
             {
                 // A stop raised inside a player-loop step: the loop is changed here, never from inside the step.
@@ -173,7 +174,7 @@ namespace CRIXOptimizer.GPU
                     continue;
                 // Phases by discovery order (golden-ratio spacing), so cameras a mod creates together are spread out.
                 double phase = RenderRateSchedule.PhaseFor(discovered++);
-                managed.Add(new Managed { Camera = cam, Name = name, Due = RenderRateSchedule.InitialDue(now, 1.0 / MaxFps, phase) });
+                managed.Add(new Managed { Camera = cam, Name = name, Phase = phase, Due = RenderRateSchedule.InitialDue(now, 1.0 / MaxFps, phase) });
                 log.Debug("Extra camera limited: " + name);
             }
             UpdateStatus();
@@ -206,12 +207,14 @@ namespace CRIXOptimizer.GPU
                 if (skipped.Count > 0)
                     RestoreSkipped(); // not expected (the step after rendering restores); never carry it over
                 stepFrame = Time.frameCount;
+                // Kept up to date every frame; a hitch frame does not inflate it (see SmoothFrameTime).
+                typicalFrameTime = RenderRateSchedule.SmoothFrameTime(typicalFrameTime, ref frameTimeOutliers, Time.unscaledDeltaTime);
                 // Only while CRIX's own Update ran this frame and allows it (fail-open when CRIX stops).
                 if (stoppedReason != null || !active || activeFrame != stepFrame || managed.Count == 0 || MaxFps <= 0f)
                     return;
                 double now = Time.unscaledTimeAsDouble;
                 double period = 1.0 / MaxFps;
-                double frameTime = typicalFrameTime > 0 ? typicalFrameTime : Time.unscaledDeltaTime;
+                double frameTime = typicalFrameTime;
                 for (int i = managed.Count - 1; i >= 0; i--)
                 {
                     Managed m = managed[i];
@@ -232,15 +235,17 @@ namespace CRIXOptimizer.GPU
                 if (dues.Length < count)
                 {
                     dues = new double[count * 2];
+                    phases = new double[count * 2];
                     eligible = new bool[count * 2];
                     render = new bool[count * 2];
                 }
                 for (int i = 0; i < count; i++)
                 {
                     dues[i] = managed[i].Due;
+                    phases[i] = managed[i].Phase;
                     eligible[i] = managed[i].Camera.enabled; // switched off by its owner: not ours to decide
                 }
-                RenderRateSchedule.Plan(dues, eligible, render, count, now, period, frameTime);
+                RenderRateSchedule.Plan(dues, phases, eligible, render, count, now, period, frameTime);
                 for (int i = 0; i < count; i++)
                 {
                     Managed m = managed[i];

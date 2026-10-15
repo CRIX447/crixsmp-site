@@ -897,10 +897,16 @@ namespace CRIXOptimizer.Tests
                 Assert.Equal(1, candidates.Count, "only the headset preset has expensive effects");
                 Assert.Equal(Path.Combine(game, "VR.CRIX-light.ini"), a.WriteLightPreset(candidates[0]));
 
+                string how = a.HowToUse(candidates[0], Path.Combine(game, "VR.CRIX-light.ini"));
+                Assert.True(how.Contains("ReShadeVR.ini") && how.Contains("PresetPath=." + Path.DirectorySeparatorChar + "VR.CRIX-light.ini"), how);
+                Assert.False(how.StartsWith("Select the copy in the ReShade overlay"), "the headset has no Home-key overlay");
+
                 Write(game, "ReShadeVR.ini", "[GENERAL]\nPresetPath=.\\VR.ini\nPerformanceMode=0\n");
                 a.Analyze(game);
                 Assert.Equal(false, a.PerformanceMode, "the headset's own PerformanceMode wins");
                 Assert.Equal(true, a.Runtimes.First(r => !r.IsVr).PerformanceMode);
+                string perf = a.Advice.First(l => l.Contains("Performance Mode is off"));
+                Assert.True(perf.Contains("ReShadeVR.ini") && !perf.Contains("checkbox at the bottom of the Home tab"), perf);
             }
             finally
             {

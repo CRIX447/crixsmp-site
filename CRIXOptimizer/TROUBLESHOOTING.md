@@ -145,7 +145,8 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 
 ## ReShade costs too much FPS
 
-- Turn on *Performance Mode* at the bottom of the *Home* tab of the ReShade overlay (the log says when it is off).
+- Turn on *Performance Mode* at the bottom of the *Home* tab of the ReShade overlay (the log says when it is off). For
+  the headset's ReShade (`ReShadeVR.ini`) set `PerformanceMode=1` there while the game is closed.
 - The log and system report list the usually expensive effects in your active preset (ambient occlusion, global
   illumination, reflections, depth of field, motion blur, ...). `[Actions] CreateLightReShadePreset = true` writes
   `<preset>.CRIX-light.ini` without them; select it in the ReShade overlay. Your own preset is not changed.
