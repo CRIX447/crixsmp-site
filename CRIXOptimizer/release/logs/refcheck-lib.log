@@ -1,0 +1,20 @@
+Checked 261 type references and 1033 member references from CRIXOptimizer.dll
+  0Harmony: 6 type refs
+  BepInEx: 18 type refs
+  netstandard: 167 type refs
+  UnityEngine.CoreModule: 55 type refs
+  UnityEngine.IMGUIModule: 7 type refs
+  UnityEngine.SubsystemsModule: 2 type refs
+  UnityEngine.TextRenderingModule: 2 type refs
+  UnityEngine.VRModule: 3 type refs
+  UnityEngine.XRModule: 1 type refs
+  reference netstandard 2.1.0.0 -> 2.1.0.0 /usr/lib/mono/4.5/Facades/netstandard.dll
+  reference BepInEx 5.4.21.0 -> 5.4.21.0 /home/user/crixsmp-site/CRIXOptimizer/lib/bepinex/BepInEx.dll
+  reference 0Harmony 2.9.0.0 -> 2.9.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/bepinex/0Harmony.dll
+  reference UnityEngine.CoreModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.CoreModule.dll
+  reference UnityEngine.IMGUIModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.IMGUIModule.dll
+  reference UnityEngine.XRModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.XRModule.dll
+  reference UnityEngine.VRModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.VRModule.dll
+  reference UnityEngine.TextRenderingModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.TextRenderingModule.dll
+  reference UnityEngine.SubsystemsModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.SubsystemsModule.dll
+RESULT: all references resolve

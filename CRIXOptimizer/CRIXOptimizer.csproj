@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Same target as Potassium 1.0.0, which is known to load in current Gorilla Tag PCVR builds. -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>CRIXOptimizer</AssemblyName>
+    <RootNamespace>CRIXOptimizer</RootNamespace>
+    <LangVersion>10</LangVersion>
+    <Nullable>disable</Nullable>
+    <Version>1.1.0</Version>
+    <Product>CRIX OPTIMIZER</Product>
+    <Description>Unofficial BepInEx performance mod for Gorilla Tag PCVR (derived from Potassium 1.0.0).</Description>
+    <Copyright>Copyright (C) 2026 CRIX OPTIMIZER contributors; portions Copyright (C) 2026 Potassium contributors. GPL-3.0-or-later.</Copyright>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+    <DebugType>portable</DebugType>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- CS0618: we deliberately call a few APIs that newer Unity versions mark obsolete, behind runtime guards. -->
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Test projects live under Tests/ and are built separately. -->
+    <Compile Remove="Tests/**" />
+    <Compile Remove="tools/**" />
+    <Compile Remove="lib/**" />
+    <Compile Remove="release/**" />
+    <None Remove="Tests/**;tools/**;lib/**;release/**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(BepInExRefPath)\BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExRefPath)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(UnityRefPath)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(UnityRefPath)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(UnityRefPath)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.XRModule"><HintPath>$(UnityRefPath)\UnityEngine.XRModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.VRModule"><HintPath>$(UnityRefPath)\UnityEngine.VRModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.SubsystemsModule"><HintPath>$(UnityRefPath)\UnityEngine.SubsystemsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.SharedInternalsModule"><HintPath>$(UnityRefPath)\UnityEngine.SharedInternalsModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lets the test suite (Tests/) exercise internal classes. Has no effect at runtime. -->
+    <InternalsVisibleTo Include="CRIXOptimizer.Tests" />
+  </ItemGroup>
+
+  <!-- Optional: copy the built DLL into the game's plugin folder when building against a local install. -->
+  <Target Name="CopyToGamePlugins" AfterTargets="Build" Condition="'$(RefMode)' == 'Game' and '$(CopyToGame)' == 'true'">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginsPath)\CRIXOptimizer" />
+    <Message Text="Copied $(TargetFileName) to $(PluginsPath)\CRIXOptimizer" Importance="high" />
+  </Target>
+</Project>

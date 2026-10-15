@@ -1,0 +1,8 @@
+checked 70 Unity type references and 177 Unity member references
+obsolete (still present): UnityEngine.GameObject.AddComponent: [Obsolete("GameObject.AddComponent with string argument has been deprecated. Use GameObject.AddCompo)]
+obsolete (still present): UnityEngine.QualitySettings.get_masterTextureLimit: [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgrad)]
+obsolete (still present): UnityEngine.QualitySettings.set_masterTextureLimit: [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgrad)]
+obsolete (still present): UnityEngine.Rendering.GraphicsSettings.get_renderPipelineAsset: [Obsolete("renderPipelineAsset has been deprecated. Use defaultRenderPipeline instead (UnityUpgradab)]
+obsolete (still present): UnityEngine.Resolution.get_refreshRate: [Obsolete("Resolution.refreshRate is obsolete. Use refreshRateRatio instead.", false)]
+note: UnityEngine.Events.UnityAction`2: declared in Unity's generated source; used by Unity's own published API
+RESULT: all referenced Unity members are declared
