@@ -137,3 +137,126 @@ namespace CRIXOptimizer.Tests
         }
     }
 }
+
+namespace CRIXOptimizer.Tests
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using CRIXOptimizer.Diagnostics;
+
+    public sealed class PerformanceNotesTests
+    {
+        private static void Play(PerformanceNotes n, ref double now, double seconds, double fps, Func<int, float> hitch = null)
+        {
+            double end = now + seconds;
+            int f = 0;
+            while (now < end)
+            {
+                float dt = hitch != null && hitch(f) > 0 ? hitch(f) / 1000f : (float)(1.0 / fps);
+                n.AddFrame(dt, now);
+                now += dt;
+                f++;
+            }
+        }
+
+        [Test]
+        public void SummariesPerZoneLobbyAndCaptureAndATimeline()
+        {
+            var n = new PerformanceNotes();
+            n.SetRefreshRate(120);
+            double now = 100;
+            n.SetZone("forest");
+            n.SetLobby(0);
+            Play(n, ref now, 60, 110);
+            n.Tick(now, new PerformanceNotes.Snapshot { Profile = "Balanced", HeapBytes = 400L << 20, UnityBytes = 2600L << 20, EyeScale = 0.95f, VrActive = true });
+            n.SetZone("city+forest");
+            n.SetLobby(12);
+            n.AddEvent(now, "zone forest -> city+forest");
+            n.SetCapture("OBS/Streamlabs");
+            Play(n, ref now, 120, 80, f => f == 500 ? 150f : 0f);
+            n.AddBigHitch(now, 150f, "the zone changed");
+            n.Tick(now, new PerformanceNotes.Snapshot { Profile = "OBSStreaming", VrActive = true, HeapBytes = -1, UnityBytes = -1 });
+
+            var zones = n.Zones.Where(z => z.Frames.Count > 0).ToDictionary(z => z.Key);
+            Assert.Near(110, zones["forest"].Frames.AverageFps, 1.0);
+            Assert.Near(80, zones["city+forest"].Frames.AverageFps, 1.0);
+            Assert.Equal(1, zones["city+forest"].BigHitches);
+            var lobbies = n.Lobbies.Where(l => l.Frames.Count > 0).Select(l => l.Key).ToList();
+            Assert.True(lobbies.Contains("not in a room") && lobbies.Contains("10-14 players"), string.Join(",", lobbies));
+
+            string text = n.Build(new[] { "header line" }, now);
+            Assert.True(text.Contains("header line") && text.Contains("== Per zone (map) =="), "sections");
+            Assert.True(text.Contains("city+forest: 2.0 min, 79."), text.Substring(text.IndexOf("== Per zone", StringComparison.Ordinal), 200));
+            Assert.True(text.Contains("OBS/Streamlabs:") && text.Contains("not recording or streaming:"), "per capture state");
+            Assert.True(text.Contains("150 ms: the zone changed (zone city+forest, 10-14 players)"), "worst hitches");
+            Assert.True(text.Contains("0:01:00 zone forest -> city+forest"), "events are time-stamped from the start");
+            Assert.Equal(2, n.TimelineCount);
+            Assert.True(text.Contains("| OBSStreaming, adaptive 0") && text.Contains("heap n/a"), "timeline line content");
+        }
+
+        [Test]
+        public void HistogramPercentilesAndLobbyBuckets()
+        {
+            var h = new PerformanceNotes.FrameHistogram();
+            for (int i = 0; i < 990; i++)
+                h.Add(10f);
+            for (int i = 0; i < 10; i++)
+                h.Add(40f);
+            Assert.Near(10.25, h.Percentile(0.99), 0.01, "99th percentile in the 10 ms bucket");
+            Assert.Near(40.25, h.Percentile(0.995), 0.01);
+            h.Add(400f);
+            Assert.Equal(400f, h.MaxMs);
+            Assert.Equal(400.0, h.Percentile(1.0), "overflow bucket reports the worst frame");
+            Assert.Equal("lobby size unknown", PerformanceNotes.LobbyBucket(-1));
+            Assert.Equal("not in a room", PerformanceNotes.LobbyBucket(0));
+            Assert.Equal("1-4 players", PerformanceNotes.LobbyBucket(4));
+            Assert.Equal("5-9 players", PerformanceNotes.LobbyBucket(5));
+            Assert.Equal("15-20 players", PerformanceNotes.LobbyBucket(20));
+        }
+
+        [Test]
+        public void BoundedEventsAndWorstHitches()
+        {
+            var n = new PerformanceNotes();
+            for (int i = 0; i < PerformanceNotes.MaxEvents + 5; i++)
+                n.AddEvent(i, "e" + i);
+            Assert.Equal(PerformanceNotes.MaxEvents, n.EventCount);
+            for (int i = 0; i < 15; i++)
+                n.AddBigHitch(i, 80 + i * 10, "cause " + i);
+            string text = n.Build(new string[0], 20);
+            Assert.True(text.Contains("later events not recorded"), "says that events were dropped");
+            int worst = text.IndexOf("== Worst hitches ==", StringComparison.Ordinal);
+            string section = text.Substring(worst, text.IndexOf("== Events ==", StringComparison.Ordinal) - worst);
+            Assert.Equal(10, section.Split('\n').Count(l => l.Contains(" ms: cause ")), "ten worst kept");
+            Assert.True(section.IndexOf("220 ms", StringComparison.Ordinal) < section.IndexOf("210 ms", StringComparison.Ordinal), "worst first");
+        }
+
+        [Test]
+        public void GameProbeReadsZonesAndPlayersByName()
+        {
+            var probe = new GameContextProbe(Utilities.GameTypes.FromLoadedAssemblies());
+            Assert.True(probe.CanReadZones && probe.CanReadPlayers, "members found by name");
+            ZoneManagement.instance = null;
+            NetworkSystem.Instance = null;
+            Assert.Equal("unknown", probe.ReadZones());
+            Assert.Equal(-1, probe.ReadPlayers());
+            ZoneManagement.instance = new ZoneManagement();
+            Assert.Equal("none", probe.ReadZones());
+            ZoneManagement.instance.activeZones.Add(GTZone.forest);
+            ZoneManagement.instance.activeZones.Add(GTZone.city);
+            Assert.Equal("city+forest", probe.ReadZones(), "stable order");
+            NetworkSystem.Instance = new NetworkSystem { InRoom = false, RoomPlayerCount = 9 };
+            Assert.Equal(0, probe.ReadPlayers(), "not in a room");
+            NetworkSystem.Instance.InRoom = true;
+            Assert.Equal(9, probe.ReadPlayers());
+            ZoneManagement.instance = null;
+            NetworkSystem.Instance = null;
+
+            var missing = new GameContextProbe(Utilities.GameTypes.FromAssemblies(new[] { typeof(PerformanceNotesTests).Assembly }));
+            Assert.False(missing.CanReadZones || missing.CanReadPlayers);
+            Assert.Equal("unknown", missing.ReadZones());
+            Assert.Equal(-1, missing.ReadPlayers());
+        }
+    }
+}

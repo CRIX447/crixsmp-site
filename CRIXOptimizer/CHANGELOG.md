@@ -71,6 +71,14 @@ are claimed.
   contains "Sakuraa") and lists it in the log and system report. GTFX is part of Sakuraa and can only be tuned in
   Sakuraa's own presets; CRIX does not modify Sakuraa or GTFX, and leaves its cameras alone unless
   `ExtraCameraMaxFps` is set.
+- **Performance notes** (`[Diagnostics] PerformanceNotes`, on): one file per session in `BepInEx/CRIXOptimizer/notes/`
+  (last 10 kept), written every minute on a worker thread and when the game closes. A timeline every 10 s (FPS, 1 %
+  low, worst frame, hitches, zone, lobby size, recording/streaming, profile, adaptive level, eye scale, memory),
+  events (zone changes, room joins/leaves, players joining/leaving, recording/streaming start/stop, profile changes,
+  big hitches with cause), summaries per zone, per lobby size (1-4, 5-9, 10-14, 15-20) and per streaming state, the ten
+  worst hitches, and the system report. Zones and player counts are read by name (`ZoneManagement.instance.activeZones`,
+  `NetworkSystem.Instance.InRoom/RoomPlayerCount`), read-only; no room codes or player names.
+- Big hitches at a zone change or a room join/leave are attributed to it (log, notes, system report).
 - **Session trend** (system report): one line per minute with FPS, 1 % low, hitches, garbage collections, managed,
   Unity and graphics memory, profile, recording/streaming state and adaptive level, for up to three hours. When the
   frame rate falls by 10 % and 8 FPS or more over the session (first three minutes after a two-minute warm-up against
@@ -112,6 +120,10 @@ are claimed.
   headset, the log gives the `ReShadeVR.ini` line to set (its ReShade has no Home-key overlay), escaped like ReShade
   writes it; a shared preset that is the desktop window's start-up preset is pointed out; before the first VR session
   (no `ReShadeVR.ini` yet) the desktop advice says that the headset will keep its own copy later.
+- ReShade advisor: re-analysed when the headset becomes active (the first-VR-session note no longer depends on XR being
+  up when CRIX loads); with the desktop runtime switched off (`Disable=1`) and no `ReShadeVR.ini` yet, the headset is
+  still covered from `ReShade.ini`; when a start-up preset loads at launch but another preset was selected last, both
+  are reported and the last selected one is offered a light copy; the SteamVR route mentions the start-up preset.
 - The "CRIX status" summary and the system report include the extra-camera limit, and the "nothing is being changed"
   warning is not shown while it limits cameras.
 - **Camera inventory.** Lists every active camera (VR, desktop window, render textures) with resolution and a

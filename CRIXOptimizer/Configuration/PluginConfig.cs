@@ -76,6 +76,7 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<float> AlertCooldownSeconds;
         public readonly ConfigEntry<float> MemoryGrowthWarnMBPerMinute;
         public readonly ConfigEntry<bool> WriteSystemReport;
+        public readonly ConfigEntry<bool> PerformanceNotes;
         public readonly ConfigEntry<float> CompanionScanIntervalSeconds;
 
         // [Benchmark]
@@ -222,6 +223,10 @@ namespace CRIXOptimizer.Configuration
                 new ConfigDescription("Warn when managed memory grows faster than this over a 5-minute window.", new AcceptableValueRange<float>(0.5f, 500f)));
             WriteSystemReport = file.Bind("Diagnostics", "WriteSystemReport", true,
                 "Write BepInEx/CRIXOptimizer/system-report.txt shortly after startup (versions, GPU, XR runtime, plugins, settings).");
+            PerformanceNotes = file.Bind("Diagnostics", "PerformanceNotes", true,
+                "Write performance notes for each game session to BepInEx/CRIXOptimizer/notes/ (updated every minute and when the game closes): " +
+                "every 10 s the frame rate, zone, players in the room and recording/streaming state; zone changes, room joins/leaves and big hitches with their cause; " +
+                "summaries per map and per lobby size. No room codes or player names. Send the newest file when asking for tuning. The last 10 sessions are kept.");
             CompanionScanIntervalSeconds = file.Bind("Diagnostics", "CompanionScanIntervalSeconds", 30f,
                 new ConfigDescription("How often to re-check running companion apps (0 = only at startup).", new AcceptableValueRange<float>(0f, 600f)));
 
@@ -266,7 +271,8 @@ namespace CRIXOptimizer.Configuration
             ActionWriteReport = file.Bind("Actions", "WriteSystemReportNow", false, "Set to true to write the system report now (resets itself).");
             ActionLightReShadePreset = file.Bind("Actions", "CreateLightReShadePreset", false,
                 "Set to true to write a copy of your active ReShade preset without the usually expensive effects (ambient occlusion, global illumination, reflections, depth of field, ...), " +
-                "named <preset>.CRIX-light.ini next to it. Your preset and ReShade.ini are not changed; pick the copy in the ReShade overlay (resets itself).");
+                "named <preset>.CRIX-light.ini next to it. Your presets, ReShade.ini and ReShadeVR.ini are not changed. Desktop window: pick the copy in the ReShade overlay (Home key); " +
+                "headset: the log prints the PresetPath= line to set in ReShadeVR.ini (resets itself).");
 
             ExtraCameraMaxFps = file.Bind("Performance", "ExtraCameraMaxFps", 0f,
                 new ConfigDescription("Cameras that render into a texture (minimaps, tablets, spectator displays from mods such as Sakuraa Client) draw the whole scene again every frame. " +

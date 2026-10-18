@@ -15,6 +15,7 @@ public class ZoneManagement
 {
     public static ZoneManagement instance;
     public HashSet<GTZone> Active = new HashSet<GTZone>();
+    public List<GTZone> activeZones = new List<GTZone>(20);
     [MethodImpl(MethodImplOptions.NoInlining)]
     public bool IsZoneActive(GTZone zone) => Active.Contains(zone);
 }
@@ -41,6 +42,7 @@ public class NetworkSystem
 {
     public static NetworkSystem Instance { get; set; }
     public bool InRoom { get; set; }
+    public int RoomPlayerCount { get; set; }
 }
 
 public class NetPlayer

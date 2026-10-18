@@ -66,6 +66,11 @@ namespace CRIXOptimizer.ReShade
             /// <summary>Which setting chose the preset: FromStartupPreset, FromPresetPath or FromDefault.</summary>
             public string PresetSource = "";
             public bool PresetExists;
+            /// <summary>The preset last selected (PresetPath) when a different start-up preset loads at launch: ReShade
+            /// runs this one if the user switched presets during the session.</summary>
+            public bool IsAlternate;
+            /// <summary>Set when a start-up preset is configured (it loads at every launch, whatever was selected last).</summary>
+            public string StartupPreset = "";
             /// <summary>null when the config does not say.</summary>
             public bool? PerformanceMode;
             public readonly List<Technique> Enabled = new List<Technique>();
@@ -96,7 +101,8 @@ namespace CRIXOptimizer.ReShade
         private readonly List<string> disabledNotes = new List<string>();
 
         /// <summary>The runtime that matters most in VR: the headset's when ReShadeVR.ini exists, else the desktop's.</summary>
-        public RuntimeConfig Primary => Runtimes.Count == 0 ? null : Runtimes.Find(r => r.IsVr) ?? Runtimes[0];
+        public RuntimeConfig Primary => Runtimes.Count == 0 ? null
+            : Runtimes.Find(r => r.IsVr && !r.IsAlternate) ?? Runtimes.Find(r => !r.IsAlternate) ?? Runtimes[0];
         public string PresetPath => Primary?.PresetPath ?? "";
         public bool? PerformanceMode => Primary?.PerformanceMode;
         public List<Technique> Enabled => Primary?.Enabled ?? new List<Technique>();
@@ -142,16 +148,22 @@ namespace CRIXOptimizer.ReShade
                     if (ParseBool(FirstElement(Value(vr, "GENERAL", "Disable"))))
                         disabledNotes.Add("ReShade (headset): switched off with [GENERAL] Disable in ReShadeVR.ini, so it does not run in the headset.");
                     else
-                        Runtimes.Add(ResolveRuntime("headset", "ReShadeVR.ini", true, vr, global));
+                        AddRuntime("headset", "ReShadeVR.ini", true, vr, global);
                 }
+                bool desktopDisabled = hasIni && ParseBool(FirstElement(Value(global, "GENERAL", "Disable")));
                 if (hasIni)
                 {
-                    if (ParseBool(FirstElement(Value(global, "GENERAL", "Disable"))))
-                        disabledNotes.Add("ReShade (desktop window): switched off with [GENERAL] Disable in ReShade.ini.");
+                    if (desktopDisabled)
+                        disabledNotes.Add("ReShade (desktop window): switched off with [GENERAL] Disable in ReShade.ini." +
+                                          (vrActive && !hasVrIni ? " That does not switch it off in the headset: until ReShade saves its own ReShadeVR.ini (when the game closes) " +
+                                                                   "a headset ReShade uses ReShade.ini's settings and preset." : ""));
                     else
-                        Runtimes.Add(ResolveRuntime("desktop window", "ReShade.ini", false, global, null));
+                        AddRuntime("desktop window", "ReShade.ini", false, global, null);
                 }
                 VrWithoutOwnConfig = vrActive && !hasVrIni;
+                // First VR session with the desktop runtime switched off: a headset ReShade would still run, from ReShade.ini.
+                if (VrWithoutOwnConfig && desktopDisabled)
+                    AddRuntime("headset (if ReShade runs there; uses ReShade.ini until it saves ReShadeVR.ini)", "ReShade.ini", true, ParseIni(""), global);
                 BuildAdvice();
             }
             catch (Exception e)
@@ -160,8 +172,26 @@ namespace CRIXOptimizer.ReShade
             }
         }
 
-        private RuntimeConfig ResolveRuntime(string label, string file, bool isVr, Ini local, Ini global)
+        /// <summary>Adds the runtime and, when a start-up preset decides but a different valid preset was selected last,
+        /// that preset too (ReShade runs it after a switch during the session).</summary>
+        private void AddRuntime(string label, string file, bool isVr, Ini local, Ini global)
         {
+            RuntimeConfig rt = ResolveRuntime(label, file, isVr, local, global, out string lastSelected);
+            Runtimes.Add(rt);
+            if (lastSelected == null || string.Equals(lastSelected, rt.PresetPath, StringComparison.OrdinalIgnoreCase) || !File.Exists(lastSelected))
+                return;
+            var alt = new RuntimeConfig
+            {
+                Label = label + ", last selected preset", ConfigFile = file, IsVr = isVr, PresetPath = lastSelected, PresetSource = FromPresetPath,
+                PresetExists = true, PerformanceMode = rt.PerformanceMode, IsAlternate = true, StartupPreset = rt.PresetPath,
+            };
+            ParseTechniques(File.ReadAllText(lastSelected), alt.Enabled);
+            Runtimes.Add(alt);
+        }
+
+        private RuntimeConfig ResolveRuntime(string label, string file, bool isVr, Ini local, Ini global, out string lastSelected)
+        {
+            lastSelected = null;
             // ReShade's config_get: the runtime's own file first, the global ReShade.ini when the key is missing.
             List<string> Get(string key) => Value(local, "GENERAL", key) ?? (global != null ? Value(global, "GENERAL", key) : null);
 
@@ -177,6 +207,9 @@ namespace CRIXOptimizer.ReShade
             {
                 rt.PresetPath = full;
                 rt.PresetSource = FromStartupPreset;
+                rt.StartupPreset = full;
+                if (ResolvePresetPath(BasePath, current, out string selected))
+                    lastSelected = selected;
             }
             else if (ResolvePresetPath(BasePath, current, out full))
             {
@@ -305,12 +338,14 @@ namespace CRIXOptimizer.ReShade
             {
                 string prefix = Runtimes.Count > 1 ? $"ReShade ({rt.Label}, {rt.ConfigFile})" : "ReShade";
                 string vrNote = !rt.IsVr && VrWithoutOwnConfig ? FirstVrSessionNote : "";
+                if (rt.IsAlternate)
+                    vrNote += $" ReShade runs this preset if you switched to it during this session; at every launch it loads the start-up preset {Path.GetFileName(rt.StartupPreset)} first.";
                 if (!rt.PresetExists)
                 {
                     Advice.Add($"{prefix}: the active preset {rt.PresetPath} does not exist, so no effects are loaded.");
                     continue;
                 }
-                if (rt.PerformanceMode == false)
+                if (rt.PerformanceMode == false && !rt.IsAlternate)
                     Advice.Add(rt.IsVr
                         ? $"{prefix}: Performance Mode is off. The Home-key overlay only controls the desktop window's ReShade, not the headset's: " +
                           "close the game and set PerformanceMode=1 under [GENERAL] in ReShadeVR.ini (or use the ReShade tab of the SteamVR dashboard if you play through SteamVR). " +
@@ -323,7 +358,7 @@ namespace CRIXOptimizer.ReShade
                 string where = rt.IsVr ? "for each eye at the headset's resolution" : "at the desktop window's resolution";
                 if (heavy.Count > 0)
                 {
-                    string startupNote = rt.PresetSource != FromStartupPreset ? ""
+                    string startupNote = rt.PresetSource != FromStartupPreset || rt.IsAlternate ? ""
                         : rt.IsVr ? " This preset is the headset's start-up preset (StartupPresetPath in ReShadeVR.ini), loaded at every launch: point it at the copy too, or clear it."
                         : " This preset is ReShade's start-up preset, loaded at every launch: make the copy the start-up preset too (ReShade overlay, Settings), or clear it.";
                     Advice.Add($"{prefix}: {rt.Enabled.Count} effect(s) enabled in {Path.GetFileName(rt.PresetPath)}; usually expensive ones: {string.Join(", ", heavy.ToArray())}. " +
@@ -369,13 +404,14 @@ namespace CRIXOptimizer.ReShade
         public string HowToUse(RuntimeConfig rt, string copyPath)
         {
             string value = RelativeToBase(copyPath).Replace(",", ",,");
-            bool startup = rt.PresetSource == FromStartupPreset;
+            bool startup = rt.PresetSource == FromStartupPreset || rt.StartupPreset.Length > 0;
             string how;
             if (rt.IsVr)
             {
                 how = $"For the headset: close the game and set PresetPath={value} under [GENERAL] in ReShadeVR.ini" +
                       (startup ? $" (and StartupPresetPath={value}, which is set)" : "") +
-                      ", or pick the copy in the ReShade tab of the SteamVR dashboard if you play through SteamVR.";
+                      ", or pick the copy in the ReShade tab of the SteamVR dashboard if you play through SteamVR" +
+                      (startup ? " and also make it the start-up preset there (Settings) or clear the start-up preset." : ".");
             }
             else
             {

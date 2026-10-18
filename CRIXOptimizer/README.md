@@ -45,6 +45,9 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
   mods' cameras.
 - The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing. The
   report's per-minute *Session trend* shows whether the frame rate falls over a long session and what changed with it.
+- **Performance notes** (`BepInEx/CRIXOptimizer/notes/`): while you play, CRIX notes frame rate, map, lobby size,
+  streaming state and every big hitch with its cause, and sums it up per map and per lobby size. Send the file for
+  tuning (no room codes or player names are recorded).
 - **Notes on GorillaOptimizer, I HATE ALIENS and Potassium**: which of their options actually work in Gorilla Tag and
   how they interact with CRIX (read-only; CRIX never changes other mods' settings).
 
@@ -75,7 +78,7 @@ CRIX **never** changes gameplay, physics, player movement, networking or multipl
 game's saved settings (PlayerPrefs), and never injects into, modifies, re-prioritises or terminates other programs
 (Virtual Desktop, OBS, Streamlabs, Discord, Spotify, ReShade, SteamVR, Sakuraa, other mods). What it reads from them:
 process names, which DLLs are loaded in the game, other mods' plugin names and Harmony patch lists, the cameras in
-the scene, `ReShade.ini` and the active ReShade preset, and (read-only, on 127.0.0.1) OBS's and Streamlabs'
+the scene, `ReShade.ini`, `ReShadeVR.ini` and the active ReShade presets, and (read-only, on 127.0.0.1) OBS's and Streamlabs'
 live/recording state. Two options act only when you turn them on: `ExtraCameraMaxFps` skips some renders of
 render-texture cameras (also other mods'), and `CreateLightReShadePreset` writes a new preset file next to yours.
 

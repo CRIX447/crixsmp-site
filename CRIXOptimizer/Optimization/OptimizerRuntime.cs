@@ -91,6 +91,19 @@ namespace CRIXOptimizer.Optimization
         public readonly CaptureStateMachine Capture = new CaptureStateMachine();
         /// <summary>Per-minute session history (system report); finds a frame rate that falls over a long session.</summary>
         public readonly SessionTrend Trend = new SessionTrend();
+        /// <summary>The notes CRIX takes while the user plays (BepInEx/CRIXOptimizer/notes/), null when switched off.</summary>
+        public PerformanceNotes Notes { get; private set; }
+        public string NotesPath { get; private set; } = "";
+        private GameContextProbe probe;
+        private string notesZone = "";
+        private int notesPlayers = -2;
+        private CaptureKind notesCapture;
+        private string notesProfile = "";
+        private float nextNotesSecond, nextNotesTick, nextNotesFlush;
+        private int notesFlushBusy;
+        private int notesFlushCount;
+        private string notesReportText = "";
+        public int BigHitchesZoneOrRoom { get; private set; }
         private string lastSlowDrop = "";
         private float lastSlowDropLog = -1e9f;
         public ObsWebSocketClient Obs { get; private set; }
@@ -205,6 +218,7 @@ namespace CRIXOptimizer.Optimization
                 GamePatches = new GamePatchCatalog(Patches, Types, log);
             });
             Guard("Desktop camera", () => DesktopCamera = new DesktopCameraModule(Types, Ledger, log));
+            Guard("Performance notes", StartNotes);
             ExtraCameras = new ExtraCameraLimiter(log);
             ConfigureExtraCameras();
 
@@ -255,6 +269,7 @@ namespace CRIXOptimizer.Optimization
 
             Guard("Game patches", () => GamePatches?.Shutdown());
             RestoreEverything("shutdown");
+            try { FlushNotes(Time.unscaledTime, synchronous: true); } catch (Exception e) { log.Warn("Performance notes: " + e.Message); }
             try { ExtraCameras?.Dispose(); } catch (Exception e) { log.Warn("Extra camera limit shutdown: " + e.Message); }
             Guard("Memory monitor", MemoryStats.Dispose);
             StopObsClient();
@@ -277,7 +292,10 @@ namespace CRIXOptimizer.Optimization
 
             Frames.Sample(dt);
             if (cfg.Diagnostics.Value)
+            {
                 Trend.AddFrame(dt, now);
+                Notes?.AddFrame(dt, now);
+            }
             if (dt * 1000f >= BigHitchMs && dt < 5f && cfg.Diagnostics.Value)
                 NoteBigHitch(dt * 1000f, now);
 
@@ -351,6 +369,11 @@ namespace CRIXOptimizer.Optimization
                 BigHitchesSceneLoad++;
                 cause = "a scene/map was loading";
             }
+            else if (ZoneOrRoomChangedNow(now, out string change))
+            {
+                BigHitchesZoneOrRoom++;
+                cause = change;
+            }
             else if (now - lastGraphicsApplyTime <= ms / 1000f + 0.2f)
             {
                 BigHitchesAfterCrixChange++;
@@ -365,6 +388,7 @@ namespace CRIXOptimizer.Optimization
             {
                 cause = "no cause CRIX can see (game, other mods, VR runtime or PC)";
             }
+            Notes?.AddBigHitch(now, ms, cause);
             if (hitchesLogged < 15)
             {
                 hitchesLogged++;
@@ -378,6 +402,11 @@ namespace CRIXOptimizer.Optimization
 
         private void RunTimers(float now)
         {
+            if (Notes != null && cfg.Diagnostics.Value && now >= nextNotesSecond)
+            {
+                nextNotesSecond = now + 1f;
+                Guard("Performance notes", () => PollNotes(now));
+            }
             if (now >= nextQuarter)
             {
                 nextQuarter = now + 0.25f;
@@ -415,6 +444,14 @@ namespace CRIXOptimizer.Optimization
                 if (Xr.IsVrActive != vrWasActive)
                 {
                     vrWasActive = Xr.IsVrActive;
+                    // ReShade's advice depends on whether a headset is in use (first VR session, headset presets).
+                    if (vrWasActive && ReShade.Detected)
+                        Guard("ReShade advisor", () =>
+                        {
+                            ReShadeAdvisor.Analyze(Paths.GameRootPath, true);
+                            foreach (string line in ReShadeAdvisor.Advice)
+                                once.Info("reshade-preset:" + line, line);
+                        });
                     if (vrWasActive && lateApplied)
                     {
                         MarkDirty();
@@ -1141,6 +1178,177 @@ namespace CRIXOptimizer.Optimization
             else if (ev == DegradationEvent.Recovered)
             {
                 log.Info($"CRIX: performance back on target ({Frames.CurrentFps:0} FPS).");
+            }
+        }
+
+        // ------------------------------------------------------------------ performance notes
+
+        private void StartNotes()
+        {
+            if (!cfg.PerformanceNotes.Value || !cfg.Diagnostics.Value)
+                return;
+            probe = new GameContextProbe(Types);
+            Notes = new PerformanceNotes();
+            string dir = Path.Combine(OutputDirectory, "notes");
+            NotesPath = Path.Combine(dir, "notes-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture) + ".txt");
+            float now = Time.unscaledTime;
+            nextNotesTick = now + 10f;
+            nextNotesFlush = now + 60f;
+            Notes.AddEvent(now, "game started; zone and player readers: " + (probe.CanReadZones ? "zones ok" : "zones unavailable") + ", " +
+                                (probe.CanReadPlayers ? "players ok" : "players unavailable"));
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                    var old = new List<string>(Directory.GetFiles(dir, "notes-*.txt"));
+                    old.Sort(StringComparer.Ordinal);
+                    for (int i = 0; i < old.Count - 9; i++)
+                        File.Delete(old[i]);
+                }
+                catch (Exception e)
+                {
+                    log.Debug("Performance notes cleanup: " + e.Message);
+                }
+            });
+            log.Info("Performance notes for this session: " + NotesPath);
+        }
+
+        /// <summary>Once a second: zone, players, recording/streaming and profile changes become events.</summary>
+        private void PollNotes(float now)
+        {
+            Notes.SetRefreshRate(Xr.RefreshRate);
+            ZoneOrRoomChangedNow(now, out _);
+            if (Capture.Active != notesCapture)
+            {
+                Notes.AddEvent(now, Capture.Active == CaptureKind.None ? "recording/streaming stopped"
+                                   : "recording/streaming started (" + (Capture.Reason.Length > 0 ? Capture.Reason : Capture.Active.ToString()) + ")");
+                notesCapture = Capture.Active;
+                Notes.SetCapture(Capture.Active == CaptureKind.None ? "" : Capture.Active == CaptureKind.Obs ? "OBS/Streamlabs" : "Discord");
+            }
+            string profile = Suspended || !cfg.Enabled.Value ? "CRIX suspended" : ActiveSection;
+            if (profile != notesProfile)
+            {
+                if (notesProfile.Length > 0)
+                    Notes.AddEvent(now, "profile " + notesProfile + " -> " + profile);
+                notesProfile = profile;
+            }
+            if (now >= nextNotesTick)
+            {
+                nextNotesTick = now + 10f;
+                Notes.Tick(now, new PerformanceNotes.Snapshot
+                {
+                    Profile = profile,
+                    AdaptiveLevel = AdaptiveActive ? Adaptive.Level : 0,
+                    HeapBytes = MemoryStats.ManagedHeapBytes,
+                    UnityBytes = MemoryStats.UnityAllocatedBytes,
+                    EyeScale = Xr.EyeTextureScale,
+                    VrActive = Xr.IsVrActive,
+                });
+            }
+            if (now >= nextNotesFlush)
+            {
+                nextNotesFlush = now + 60f;
+                FlushNotes(now, synchronous: false);
+            }
+        }
+
+        /// <summary>Reads zone and player count; records changes as events. True if either changed just now (for hitch causes).</summary>
+        private bool ZoneOrRoomChangedNow(float now, out string change)
+        {
+            change = "";
+            if (Notes == null || probe == null)
+                return false;
+            string zone = probe.ReadZones();
+            int players = probe.ReadPlayers();
+            var parts = new List<string>(2);
+            if (zone != notesZone)
+            {
+                if (notesZone.Length > 0)
+                {
+                    Notes.AddEvent(now, "zone " + notesZone + " -> " + zone);
+                    parts.Add("the zone changed (" + notesZone + " -> " + zone + ")");
+                }
+                notesZone = zone;
+                Notes.SetZone(zone);
+            }
+            if (players != notesPlayers)
+            {
+                if (notesPlayers != -2)
+                {
+                    string text = notesPlayers <= 0 && players > 0 ? $"joined a room ({players} players)"
+                        : players == 0 && notesPlayers > 0 ? "left the room"
+                        : players > notesPlayers ? $"a player joined ({players} players)"
+                        : players >= 0 ? $"a player left ({players} players)" : "player count no longer readable";
+                    Notes.AddEvent(now, text);
+                    parts.Add(text);
+                }
+                notesPlayers = players;
+                Notes.SetLobby(players);
+            }
+            change = string.Join("; ", parts.ToArray());
+            return parts.Count > 0;
+        }
+
+        /// <summary>Writes the notes file: the notes, then the current system report. In the background except at shutdown.</summary>
+        private void FlushNotes(float now, bool synchronous)
+        {
+            if (Notes == null || NotesPath.Length == 0)
+                return;
+            var header = new List<string>
+            {
+                "CRIX OPTIMIZER " + ModInfo.Version + ", game " + Safe(() => Application.version) + ", Unity " + Application.unityVersion,
+                "CPU " + SystemInfo.processorType + " (" + SystemInfo.processorCount + " threads), RAM " + SystemInfo.systemMemorySize + " MB, GPU " + SystemInfo.graphicsDeviceName,
+                "VR: " + (Xr.IsVrActive ? Xr.OpenXRRuntimeName + ", " + Xr.RefreshRate.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " Hz, eye texture " + Xr.EyeTextureWidth + "x" + Xr.EyeTextureHeight : "not active"),
+                "What CRIX is doing: " + ChangesSummary(),
+            };
+            // Main thread: a quick copy; the text is built on the worker. The system report (a few KB, built here) is
+            // refreshed every fifth write and at shutdown.
+            PerformanceNotes.Frozen frozen = Notes.Freeze(now);
+            if (synchronous || notesReportText.Length == 0 || notesFlushCount++ % 5 == 0)
+                notesReportText = Safe(() => SystemReport.Build(this));
+            string report = notesReportText;
+            string path = NotesPath;
+            if (synchronous)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, frozen.Render(header) + "\n\n== System report ==\n" + report);
+                return;
+            }
+            if (System.Threading.Interlocked.Exchange(ref notesFlushBusy, 1) == 1)
+                return; // the previous write is still running
+            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    string text = frozen.Render(header) + "\n\n== System report ==\n" + report;
+                    string temp = path + ".tmp";
+                    File.WriteAllText(temp, text);
+                    if (File.Exists(path))
+                        File.Delete(path);
+                    File.Move(temp, path);
+                }
+                catch (Exception e)
+                {
+                    log.Debug("Performance notes write failed: " + e.Message);
+                }
+                finally
+                {
+                    System.Threading.Interlocked.Exchange(ref notesFlushBusy, 0);
+                }
+            });
+        }
+
+        private static string Safe(Func<string> f)
+        {
+            try
+            {
+                return f() ?? "";
+            }
+            catch (Exception e)
+            {
+                return "n/a (" + e.GetType().Name + ")";
             }
         }
 

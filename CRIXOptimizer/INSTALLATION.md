@@ -41,6 +41,7 @@ Nothing else is installed or modified: no game files, no registry, no other prog
 | `BepInEx/config/com.crix.crixoptimizer.profiles.cfg` | Editable values of every built-in profile (one section each). |
 | `BepInEx/CRIXOptimizer/system-report.txt` | Written ~20 s after start: versions, GPU, XR runtime, plugins, patch status, managed settings. |
 | `BepInEx/CRIXOptimizer/benchmarks/*.csv`, `*.summary.txt` | Benchmark captures (only when you start one). |
+| `BepInEx/CRIXOptimizer/notes/notes-<date>-<time>.txt` | Performance notes for each game session (updated every minute and when the game closes; the last 10 are kept). `[Diagnostics] PerformanceNotes = false` switches them off. |
 | `<your ReShade preset>.CRIX-light.ini` (next to the preset, usually in the game folder) | Only when you use `[Actions] CreateLightReShadePreset`: a lighter copy of your ReShade preset. Delete it any time. |
 
 Annotated examples of both config files with all defaults are in [docs/examples/](docs/examples/).

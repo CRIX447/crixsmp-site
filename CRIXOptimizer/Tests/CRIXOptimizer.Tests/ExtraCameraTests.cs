@@ -124,8 +124,9 @@ namespace CRIXOptimizer.Tests
             {
                 foreach (double fps in new[] { 90.0, 89.5 })
                 {
+                    var jitter = Jittered(fps, 0.0003, 11 + c.cameras); // one generator per case, so frame times really vary
                     var (renders, perFrame) = Run(c.cameras, c.rate, 2700,
-                        f => f == 900 ? 0.2 : Jittered(fps, 0.0003, 11)(f), (f, k) => k == 1 && f >= 1500 && f < 1570);
+                        f => f == 900 ? 0.2 : jitter(f), (f, k) => k == 1 && f >= 1500 && f < 1570);
                     int doubles = perFrame.Where((n, f) => f > 60 && n >= 2).Count();
                     Assert.True(doubles <= 2700 * 0.02, $"{c.cameras} x {c.rate}/s at {fps} fps: {doubles} frames with two renders");
                     Assert.True(perFrame.Max() <= 2, $"{c.cameras} x {c.rate}/s: {perFrame.Max()} renders in one frame");

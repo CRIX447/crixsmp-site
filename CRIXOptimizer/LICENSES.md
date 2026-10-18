@@ -37,7 +37,7 @@ All modifications are listed in [CHANGELOG.md](CHANGELOG.md) (GPL-3.0 section 5a
 Every other source file, including everything added in 1.1.0 (`Streaming/ObsWebSocketClient.cs`,
 `Streaming/StreamlabsStatusClient.cs`, `Core/MiniJson.cs`, `Core/CaptureState.cs`, `Adaptive/ResolutionProbe.cs`,
 `GPU/DesktopCameraModule.cs`, `Diagnostics/CameraInventory.cs`, `Compatibility/SakuraaSupport.cs`,
-`Configuration/ProfilePresetsV1.cs`, `Core/EyeResolution.cs`, `Core/RenderRateSchedule.cs`, `Diagnostics/SessionTrend.cs`,
+`Configuration/ProfilePresetsV1.cs`, `Core/EyeResolution.cs`, `Core/RenderRateSchedule.cs`, `Diagnostics/SessionTrend.cs`, `Diagnostics/PerformanceNotes.cs`, `Diagnostics/GameContextProbe.cs`,
 `Compatibility/OptimizerModsSupport.cs`,
 `GPU/ExtraCameraLimiter.cs`, `GPU/PlayerLoopHook.cs`, `ReShade/ReShadePresetAdvisor.cs`, `tools/check_unity_api.py`), is original CRIX code under the same license.
 Potassium's README asks contributors not to submit large AI-written changes without understanding them. CRIX is a

@@ -187,6 +187,8 @@ see *Aiming for 120 FPS* in INSTALLATION.md) is usually the limit. What helps:
 
 - Turn on *Performance Mode* at the bottom of the *Home* tab of the ReShade overlay (the log says when it is off). For
   the headset's ReShade (`ReShadeVR.ini`) set `PerformanceMode=1` there while the game is closed.
+- If ReShade has a start-up preset (`StartupPresetPath`), it loads that one at every launch: after switching to the light
+  copy, make the copy the start-up preset too (overlay, Settings; for the headset, `StartupPresetPath` in `ReShadeVR.ini`).
 - The log and system report list the usually expensive effects in your active preset (ambient occlusion, global
   illumination, reflections, depth of field, motion blur, ...). `[Actions] CreateLightReShadePreset = true` writes
   `<preset>.CRIX-light.ini` without them. Your own preset is not changed. For the desktop window, select the copy in
@@ -228,6 +230,22 @@ Hotkeys can be changed or cleared in `[Hotkeys]`.
 cosmetic load is normal. If it repeats every 10 minutes, disable other mods one at a time to find the cause. With
 `SkipTimedAssetUnloads` on, `[Memory] DeferredAssetUnload = true` runs an occasional unused-asset unload while you are
 not in a room.
+
+## Sending performance notes for tuning
+
+CRIX takes notes while you play: `BepInEx/CRIXOptimizer/notes/notes-<date>-<time>.txt`, one file per session. Every
+10 seconds it notes the frame rate, 1 % low, worst frame and hitches, which map (zone) you are in, how many players are
+in the room, whether OBS/Streamlabs/Discord is recording or streaming, the profile and memory. It also notes every
+zone change, room join/leave, player joining/leaving, streaming start/stop and big hitch (with what CRIX thinks caused
+it), and at the top it sums everything up per map, per lobby size and per streaming state. No room codes or player
+names are written. The file is updated every minute, so it is useful even if the game crashes.
+
+A good test session (20-40 minutes):
+
+1. Start the game normally (with the mods you always use) and play 5 minutes in a quiet place (e.g. the stump alone).
+2. Visit the maps you play, a few minutes each, including a busy lobby (10+ players) and a custom map if you use them.
+3. Start OBS (or Streamlabs/Discord) recording or streaming for 5-10 minutes while playing.
+4. Close the game normally (the notes are finished when it closes), then send the newest notes file.
 
 ## Reporting a problem
 

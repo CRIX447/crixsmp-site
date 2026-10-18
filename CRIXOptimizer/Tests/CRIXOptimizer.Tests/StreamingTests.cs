@@ -1073,6 +1073,43 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void LastSelectedPresetAndSwitchedOffDesktop()
+        {
+            string game = TempGame();
+            try
+            {
+                // A start-up preset loads at launch, but the user switched to another preset in this session.
+                Write(game, "ReShade.ini", "[GENERAL]\nStartupPresetPath=.\\Clean.ini\nPresetPath=.\\Heavy.ini\n");
+                Write(game, "Clean.ini", CleanPreset);
+                Write(game, "Heavy.ini", Preset);
+                var a = new ReShade.ReShadePresetAdvisor();
+                a.Analyze(game, false);
+                Assert.Equal(2, a.Runtimes.Count, "start-up preset and last selected preset");
+                Assert.Equal(Path.Combine(game, "Clean.ini"), a.PresetPath, "the start-up preset stays primary");
+                var alt = a.Runtimes.First(r => r.IsAlternate);
+                Assert.Equal(Path.Combine(game, "Heavy.ini"), alt.PresetPath);
+                Assert.True(a.Advice.Any(l => l.Contains("last selected preset") && l.Contains("MXAO") && l.Contains("start-up preset Clean.ini")), string.Join(" | ", a.Advice));
+                var candidates = a.LightPresetCandidates();
+                Assert.True(candidates.Count == 1 && candidates[0].IsAlternate, "the heavy last-selected preset is offered a light copy");
+                Assert.True(a.HowToUse(candidates[0], Path.Combine(game, "Heavy.CRIX-light.ini")).Contains("start-up preset"), "tells to change the start-up preset too");
+
+                // Desktop ReShade switched off, first VR session (no ReShadeVR.ini): the headset still uses ReShade.ini.
+                Write(game, "ReShade.ini", "[GENERAL]\nDisable=1\nPerformanceMode=0\nPresetPath=.\\Heavy.ini\n");
+                a.Analyze(game, true);
+                Assert.Equal(1, a.Runtimes.Count);
+                Assert.True(a.Primary.IsVr && a.Primary.Heavy.Any(), "headset runtime from ReShade.ini with its heavy effects");
+                Assert.True(a.Advice.Any(l => l.Contains("does not switch it off in the headset")), string.Join(" | ", a.Advice));
+                Assert.Equal(1, a.LightPresetCandidates().Count, "a light copy is offered");
+                a.Analyze(game, false);
+                Assert.Equal(0, a.Runtimes.Count, "without a headset nothing runs");
+            }
+            finally
+            {
+                Cleanup(game);
+            }
+        }
+
+        [Test]
         public void FollowsReShadeBasePathOverride()
         {
             string game = TempGame();
