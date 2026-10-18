@@ -7,8 +7,8 @@ Date: 2026-10-14. Raw logs: `release/logs/` (also inside the release ZIP under `
 | | |
 |---|---|
 | Output | `bin/Release/CRIXOptimizer.dll` (copied to `release/CRIXOptimizer.dll` and into the ZIP) |
-| Size | 362,496 bytes |
-| SHA-256 | `7aad509c8d27ad580434c8cf9e34a61b93b7787c96903c77a6bdfc9399a2619f` |
+| Size | 364,544 bytes |
+| SHA-256 | `e7575a7778585393c7cd957df9bcee3a8503fdcb70b11327ad6d22d52f3dea68` |
 | Warnings / errors | **0 / 0** |
 | Target | .NET Standard 2.1, AnyCPU, Release, deterministic (`ContinuousIntegrationBuild=true`) |
 | Assembly references | `netstandard 2.1`, `BepInEx 5.4.21`, `0Harmony 2.9.0`, `UnityEngine.CoreModule`, `.IMGUIModule`, `.TextRenderingModule`, `.XRModule`, `.VRModule`, `.SubsystemsModule`. **No `Assembly-CSharp`**: no game code is referenced. |
@@ -55,8 +55,8 @@ Every type and member reference in the DLL was resolved with Mono.Cecil against 
 
 | Reference set | Type refs | Member refs | Result |
 |---|---|---|---|
-| BepInEx 5.4.21 + HarmonyX 2.9.0 + Unity 2021.3.33 modules + Mono 4.5 BCL | 264 | 1125 | all resolve |
-| BepInEx 5.4.23.5 (built from the `v5-lts` branch, commit `f4c1b1103a32884b7440d9681c60cc5d619f284f`) + same Unity modules | 264 | 1125 | all resolve |
+| BepInEx 5.4.21 + HarmonyX 2.9.0 + Unity 2021.3.33 modules + Mono 4.5 BCL | 264 | 1126 | all resolve |
+| BepInEx 5.4.23.5 (built from the `v5-lts` branch, commit `f4c1b1103a32884b7440d9681c60cc5d619f284f`) + same Unity modules | 264 | 1126 | all resolve |
 
 ## Unity 6 API check (`tools/check_unity_api.py`)
 

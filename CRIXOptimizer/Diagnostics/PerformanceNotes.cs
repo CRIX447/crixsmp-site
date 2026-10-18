@@ -15,6 +15,11 @@ namespace CRIXOptimizer.Diagnostics
     /// profile changes, big hitches with their cause) and summaries per zone, per lobby size and per streaming state.
     /// No room codes, player names or anything else personal are recorded. The runtime writes the text to
     /// BepInEx/CRIXOptimizer/notes/ so the user can send it in for tuning.
+    ///
+    /// Startup is kept apart: right after the game opens, the game and mods (e.g. Sakuraa Client) load their content
+    /// and cause hitches that say nothing about the maps. The first minute counts as loading, extended by 20 seconds
+    /// after each big hitch in it (at most 5 minutes); its frames and hitches are summarised on their own and left out
+    /// of the per-zone, per-lobby and per-streaming summaries and the worst-hitch list.
     /// </summary>
     internal sealed class PerformanceNotes
     {
@@ -99,6 +104,9 @@ namespace CRIXOptimizer.Diagnostics
             public int DroppedEvents;
             public string[] Timeline;
             public bool TimelineFull;
+            public Segment Startup;
+            public string StartupEnd;
+            public bool StartupOver;
 
             public string Render(IEnumerable<string> header)
             {
@@ -107,6 +115,11 @@ namespace CRIXOptimizer.Diagnostics
                 foreach (string line in header)
                     sb.Append(line).Append('\n');
                 sb.Append("Recorded: ").Append(Stamp).Append(" (h:mm:ss since the game started). No room codes or player names are recorded.\n\n");
+                sb.Append("== Startup (game and mods loading) ==\n");
+                sb.Append(string.Format(CultureInfo.InvariantCulture,
+                    "{0} {1}: {2:0.0} FPS average, worst {3:0} ms, {4} big hitches. Normal while the game and mods (e.g. Sakuraa Client) load; " +
+                    "left out of the summaries below.\n\n",
+                    StartupOver ? "Until" : "Still loading at", StartupEnd, Startup.Frames.AverageFps, Startup.Frames.MaxMs, Startup.BigHitches));
                 AppendSegments(sb, "== Per zone (map) ==", Zones);
                 AppendSegments(sb, "== Per lobby size ==", Lobbies);
                 AppendSegments(sb, "== Recording / streaming ==", Captures);
@@ -170,6 +183,13 @@ namespace CRIXOptimizer.Diagnostics
         private readonly List<string> events = new List<string>();
         private readonly List<(double t, float ms, string cause, string zone, string lobby)> worstHitches = new List<(double, float, string, string, string)>();
         private Segment zone, lobby, capture;
+        private readonly Segment startup = new Segment("startup");
+        private double startupEnd = double.NaN;
+        private bool startupOver;
+        public const double StartupMinSeconds = 60, StartupQuietSeconds = 20, StartupMaxSeconds = 300;
+
+        /// <summary>True while the game and mods are still loading (see the class comment).</summary>
+        public bool InStartup => !startupOver;
         private string zoneName = "unknown", lobbyName = "not in a room", captureName = "not recording or streaming";
         private int windowHitches, windowBig;
         private int droppedEvents;
@@ -220,7 +240,15 @@ namespace CRIXOptimizer.Diagnostics
         public void AddFrame(float dtSeconds, double now)
         {
             if (startTime < 0)
+            {
                 startTime = now;
+                startupEnd = now + StartupMinSeconds;
+            }
+            if (!startupOver && now >= startupEnd)
+            {
+                startupOver = true;
+                AddEvent(now, string.Format(CultureInfo.InvariantCulture, "startup finished: game and mods loaded ({0} big hitches while loading)", startup.BigHitches));
+            }
             if (dtSeconds <= 0f || dtSeconds >= 5f)
                 return;
             float ms = dtSeconds * 1000f;
@@ -231,6 +259,11 @@ namespace CRIXOptimizer.Diagnostics
                 windowHitches++;
             if (big)
                 windowBig++;
+            if (!startupOver)
+            {
+                Count(startup, ms, hitch, big);
+                return;
+            }
             Count(zone, ms, hitch, big);
             Count(lobby, ms, hitch, big);
             Count(capture, ms, hitch, big);
@@ -258,6 +291,14 @@ namespace CRIXOptimizer.Diagnostics
         /// <summary>A frame over 70 ms with what CRIX thinks caused it; the ten worst are kept for the summary.</summary>
         public void AddBigHitch(double now, float ms, string cause)
         {
+            if (!startupOver)
+            {
+                // Still loading: keep loading going while big hitches continue (bounded), and keep them out of the worst list.
+                if (startTime >= 0)
+                    startupEnd = Math.Min(startTime + StartupMaxSeconds, Math.Max(startupEnd, now + StartupQuietSeconds));
+                AddEvent(now, string.Format(CultureInfo.InvariantCulture, "[loading] hitch {0:0} ms: {1}", ms, cause));
+                return;
+            }
             AddEvent(now, string.Format(CultureInfo.InvariantCulture, "hitch {0:0} ms: {1} (zone {2}, {3})", ms, cause, zoneName, lobbyName));
             worstHitches.Add((now, ms, cause, zoneName, lobbyName));
             worstHitches.Sort((a, b) => b.ms.CompareTo(a.ms));
@@ -271,9 +312,10 @@ namespace CRIXOptimizer.Diagnostics
             if (window.Count > 0 && timeline.Count < MaxTimelineLines)
             {
                 timeline.Add(string.Format(CultureInfo.InvariantCulture,
-                    "{0} {1,5:0.0} FPS, 1% low {2,5:0.0}, worst {3,4:0} ms, hitches {4,2} (big {5}) | {6} | {7} | {8} | {9}, adaptive {10}, eye scale {11:0.00} | heap {12}, Unity {13}{14}",
+                    "{0} {1,5:0.0} FPS, 1% low {2,5:0.0}, worst {3,4:0} ms, hitches {4,2} (big {5}) | {6} | {7} | {8} | {9}, adaptive {10}, eye scale {11:0.00} | heap {12}, Unity {13}{14}{15}",
                     Stamp(now), window.AverageFps, window.Low1Fps, window.MaxMs, windowHitches, windowBig, zoneName, lobbyName, captureName,
-                    s.Profile ?? "", s.AdaptiveLevel, s.EyeScale, Mb(s.HeapBytes), Mb(s.UnityBytes), s.VrActive ? "" : " | headset not active"));
+                    s.Profile ?? "", s.AdaptiveLevel, s.EyeScale, Mb(s.HeapBytes), Mb(s.UnityBytes), s.VrActive ? "" : " | headset not active",
+                    startupOver ? "" : " | loading"));
             }
             window.Clear();
             windowHitches = 0;
@@ -300,6 +342,9 @@ namespace CRIXOptimizer.Diagnostics
                 DroppedEvents = droppedEvents,
                 Timeline = timeline.ToArray(),
                 TimelineFull = timeline.Count >= MaxTimelineLines,
+                Startup = startup.Clone(),
+                StartupEnd = startTime < 0 ? "0:00:00" : Stamp(Math.Min(startupEnd, startupOver ? startupEnd : now)),
+                StartupOver = startupOver,
             };
         }
 

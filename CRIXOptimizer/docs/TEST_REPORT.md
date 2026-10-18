@@ -7,10 +7,10 @@ Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21
 
 | Run | Runtime | BepInEx | HarmonyX | Result |
 |---|---|---|---|---|
-| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **165 passed, 0 failed** |
-| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **165 passed, 0 failed** |
+| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **166 passed, 0 failed** |
+| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **166 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
-| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 264 type / 1125 member refs resolve |
+| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 264 type / 1126 member refs resolve |
 | - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 71 Unity type / 178 member references declared |
 
 **In the real game (field report, not a test run by the developers):** a user ran a 1.1.0 preview build on Gorilla
@@ -33,7 +33,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
   engine calls those methods directly and they cannot be inlined.
 - Pure logic (`Core/`, `Adaptive/`, configuration) is tested directly.
 
-## What was tested (165 tests)
+## What was tested (166 tests)
 
 | Area | Tests | What they establish |
 |---|---|---|
@@ -64,7 +64,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
 | Extra-camera limit schedule | 9 | simulated like the limiter (real frame time plus the smoothed typical one, even phases): at most N renders per second and per any 1-second window, and at least 90 % of N, for 90/120/72/144 fps against 2-100/s (**regression: the earlier frame-interval maths did not limit 60/s at 90 fps and gave 9/s for 2/s at 144 fps**); a slower game renders every camera every frame; irregular frame times and a 1.5 s hitch cause no burst; **3 x 30/s and 2 x 45/s at 90 and 89.5 fps with 0.3 ms frame-time noise (one noise generator per case, so frame times really vary), a 0.2 s hitch and one camera switched off by its owner: at most 2 % of frames with two renders, never more than two, rates 85-100 % of the limit (measured: one such frame, the hitch)**; **every 7th frame three vsyncs long: still 27-30 renders/s per camera**; **after a 15-frame load screen no frame renders all three cameras and no camera exceeds the limit**; the typical frame time moves at most 20 % on a hitch and follows a lasting drop; per-frame budget (jitter just above 1/90 adds no slot); grid points and phases |
 | Player-loop hook | 2 | steps are inserted directly before and after `PostLateUpdate.FinishFrameRendering`; removal takes out only CRIX's steps and keeps another mod's; a missing target is reported, nothing inserted |
 | Session trend | 5 | per-minute FPS, hitches (over twice the 120 Hz budget), big hitches, GC deltas and report lines; a steady session reports no drop; **a drop from 110 to 85 FPS while streaming starts and Unity memory grows names the streaming start (with its minute), the profile change and the memory growth**; a drop with nothing visible names outside causes; warm-up minutes, idle-headset minutes, small changes and short sessions are not reported; history is bounded and empty minutes are not recorded |
-| Performance notes | 4 | per-zone, per-lobby-size and per-streaming-state summaries (110 vs 79 FPS, big hitch counted in its zone), time-stamped events, ten worst hitches worst first, bounded events with a note when the limit is reached, 10 s timeline lines; histogram percentiles and the overflow bucket; lobby buckets; **zones and player counts read by name through the real reflection path** (stable zone order, not in a room = 0, unreadable = -1, missing members = unknown) |
+| Performance notes | 5 | **startup loading kept apart: a big hitch near the end of the first minute extends loading by 20 s, loading ends after 20 quiet seconds and after at most 5 minutes; loading hitches are marked, summarised separately and kept out of the worst list and the map summaries**; per-zone, per-lobby-size and per-streaming-state summaries (110 vs 79 FPS, big hitch counted in its zone), time-stamped events, ten worst hitches worst first, bounded events with a note when the limit is reached, 10 s timeline lines; histogram percentiles and the overflow bucket; lobby buckets; **zones and player counts read by name through the real reflection path** (stable zone order, not in a room = 0, unreadable = -1, missing members = unknown) |
 | Other optimisation mods | 3 | GorillaOptimizer toggles sorted into in effect / no effect under URP (built-in-pipeline settings, XR scale, frame caps) with notes for Low Physics Rate and Low XR Scale; without URP the built-in settings count as working; no toggles / a failing read / not installed; I HATE ALIENS and Potassium notes |
 | Preset upgrades (real BepInEx ConfigFile, real 1.0.0 profiles file as fixture) | 5 | frozen 1.0.0 presets match the shipped 1.0.0 file; upgrade from 1.0.0 keeps user edits and applies new defaults; upgrade from the 1.1.0 previews (revision 2) applies only the later changes; fresh installs need no upgrade; reset to defaults does not re-run the upgrade |
 

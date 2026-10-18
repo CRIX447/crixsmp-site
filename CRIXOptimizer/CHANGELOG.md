@@ -79,6 +79,10 @@ are claimed.
   worst hitches, and the system report. Zones and player counts are read by name (`ZoneManagement.instance.activeZones`,
   `NetworkSystem.Instance.InRoom/RoomPlayerCount`), read-only; no room codes or player names.
 - Big hitches at a zone change or a room join/leave are attributed to it (log, notes, system report).
+- Startup loading is kept apart: the first minute after the game opens, extended by 20 s after each big hitch in it
+  (at most 5 minutes), counts as loading (the game and mods such as Sakuraa Client loading their content). Its hitches
+  are marked `[loading]`, summarised under *Startup* and left out of the per-zone/lobby/streaming summaries and the
+  worst-hitch list; the system report counts them separately.
 - **Session trend** (system report): one line per minute with FPS, 1 % low, hitches, garbage collections, managed,
   Unity and graphics memory, profile, recording/streaming state and adaptive level, for up to three hours. When the
   frame rate falls by 10 % and 8 FPS or more over the session (first three minutes after a two-minute warm-up against

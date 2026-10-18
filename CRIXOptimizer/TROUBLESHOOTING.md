@@ -240,6 +240,11 @@ zone change, room join/leave, player joining/leaving, streaming start/stop and b
 it), and at the top it sums everything up per map, per lobby size and per streaming state. No room codes or player
 names are written. The file is updated every minute, so it is useful even if the game crashes.
 
+Lag spikes right after the game opens are normal while the game and mods load (Sakuraa Client loads its content
+then). The notes keep that apart: the first minute counts as loading, plus 20 seconds after each big spike in it (at
+most 5 minutes). Those spikes are marked `[loading]`, summed up under *Startup*, and left out of the per-map and
+per-lobby results.
+
 A good test session (20-40 minutes):
 
 1. Start the game normally (with the mods you always use) and play 5 minutes in a quiet place (e.g. the stump alone).

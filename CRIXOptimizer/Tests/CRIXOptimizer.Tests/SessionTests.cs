@@ -166,6 +166,7 @@ namespace CRIXOptimizer.Tests
             var n = new PerformanceNotes();
             n.SetRefreshRate(120);
             double now = 100;
+            Play(n, ref now, PerformanceNotes.StartupMinSeconds + 1, 60); // loading minute, kept apart
             n.SetZone("forest");
             n.SetLobby(0);
             Play(n, ref now, 60, 110);
@@ -190,9 +191,49 @@ namespace CRIXOptimizer.Tests
             Assert.True(text.Contains("city+forest: 2.0 min, 79."), text.Substring(text.IndexOf("== Per zone", StringComparison.Ordinal), 200));
             Assert.True(text.Contains("OBS/Streamlabs:") && text.Contains("not recording or streaming:"), "per capture state");
             Assert.True(text.Contains("150 ms: the zone changed (zone city+forest, 10-14 players)"), "worst hitches");
-            Assert.True(text.Contains("0:01:00 zone forest -> city+forest"), "events are time-stamped from the start");
+            Assert.True(text.Contains("0:02:01 zone forest -> city+forest"), "events are time-stamped from the start");
             Assert.Equal(2, n.TimelineCount);
             Assert.True(text.Contains("| OBSStreaming, adaptive 0") && text.Contains("heap n/a"), "timeline line content");
+        }
+
+        [Test]
+        public void StartupLoadingIsKeptApartAndExtendedWhileItHitches()
+        {
+            var n = new PerformanceNotes();
+            double now = 0;
+            n.SetZone("forest");
+            Assert.True(n.InStartup);
+            Play(n, ref now, 50, 90);
+            n.AddFrame(0.9f, now); // Sakuraa loading at about 50 s: the long frame itself...
+            now += 0.9;
+            n.AddBigHitch(now, 900f, "a garbage collection ran in that frame"); // ...and the runtime's report of it
+            Play(n, ref now, 15, 90);
+            Assert.True(n.InStartup, "a big hitch near the end of the first minute keeps loading going for 20 s");
+            Play(n, ref now, 10, 90);
+            Assert.False(n.InStartup, "loading ends after 20 quiet seconds");
+            Play(n, ref now, 60, 100);
+            n.AddFrame(0.12f, now);
+            now += 0.12;
+            n.AddBigHitch(now, 120f, "no cause CRIX can see");
+            string text = n.Build(new string[0], now);
+            Assert.True(text.Contains("== Startup (game and mods loading) ==") && text.Contains("1 big hitches"), text.Substring(0, 400));
+            Assert.True(text.Contains("[loading] hitch 900 ms"), "loading hitches are marked");
+            Assert.True(text.Contains("startup finished: game and mods loaded (1 big hitches while loading)"), "end of loading is an event");
+            int worst = text.IndexOf("== Worst hitches ==", StringComparison.Ordinal);
+            string section = text.Substring(worst, text.IndexOf("== Events ==", StringComparison.Ordinal) - worst);
+            Assert.False(section.Contains("900 ms"), "loading hitches are not in the worst list");
+            Assert.True(section.Contains("120 ms"), "later hitches are");
+            var forest = n.Zones.First(z => z.Key == "forest");
+            Assert.Near(100, forest.Frames.AverageFps, 1.5, "the map summary starts after loading");
+
+            var capped = new PerformanceNotes();
+            double t = 0;
+            for (int i = 0; i < 40; i++)
+            {
+                Play(capped, ref t, 10, 60);
+                capped.AddBigHitch(t, 200f, "loading");
+            }
+            Assert.False(capped.InStartup, "loading counts for at most 5 minutes");
         }
 
         [Test]
@@ -219,6 +260,8 @@ namespace CRIXOptimizer.Tests
         public void BoundedEventsAndWorstHitches()
         {
             var n = new PerformanceNotes();
+            n.AddFrame(0.01f, 0);
+            n.AddFrame(0.01f, PerformanceNotes.StartupMinSeconds + 1); // past the loading minute
             for (int i = 0; i < PerformanceNotes.MaxEvents + 5; i++)
                 n.AddEvent(i, "e" + i);
             Assert.Equal(PerformanceNotes.MaxEvents, n.EventCount);

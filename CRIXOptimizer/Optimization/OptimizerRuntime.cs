@@ -104,6 +104,7 @@ namespace CRIXOptimizer.Optimization
         private int notesFlushCount;
         private string notesReportText = "";
         public int BigHitchesZoneOrRoom { get; private set; }
+        public int BigHitchesStartup { get; private set; }
         private string lastSlowDrop = "";
         private float lastSlowDropLog = -1e9f;
         public ObsWebSocketClient Obs { get; private set; }
@@ -368,6 +369,12 @@ namespace CRIXOptimizer.Optimization
             {
                 BigHitchesSceneLoad++;
                 cause = "a scene/map was loading";
+            }
+            else if (Notes != null && Notes.InStartup)
+            {
+                BigHitchesStartup++;
+                cause = "the game and mods are still loading (startup; e.g. Sakuraa Client loading its content)";
+                ZoneOrRoomChangedNow(now, out _);
             }
             else if (ZoneOrRoomChangedNow(now, out string change))
             {
