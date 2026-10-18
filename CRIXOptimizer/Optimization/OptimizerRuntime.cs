@@ -89,6 +89,10 @@ namespace CRIXOptimizer.Optimization
         public string LastAlertText { get; private set; } = "";
         public CompanionApp Apps => Scanner.Latest?.Apps ?? CompanionApp.None;
         public readonly CaptureStateMachine Capture = new CaptureStateMachine();
+        /// <summary>Per-minute session history (system report); finds a frame rate that falls over a long session.</summary>
+        public readonly SessionTrend Trend = new SessionTrend();
+        private string lastSlowDrop = "";
+        private float lastSlowDropLog = -1e9f;
         public ObsWebSocketClient Obs { get; private set; }
         public StreamlabsStatusClient Streamlabs { get; private set; }
         /// <summary>The profile the user selected (ActiveSection can differ while auto streaming mode is active).</summary>
@@ -272,6 +276,8 @@ namespace CRIXOptimizer.Optimization
             float now = Time.unscaledTime;
 
             Frames.Sample(dt);
+            if (cfg.Diagnostics.Value)
+                Trend.AddFrame(dt, now);
             if (dt * 1000f >= BigHitchMs && dt < 5f && cfg.Diagnostics.Value)
                 NoteBigHitch(dt * 1000f, now);
 
@@ -426,6 +432,8 @@ namespace CRIXOptimizer.Optimization
                 if (cfg.Diagnostics.Value)
                 {
                     TickMemory(now);
+                    if (Trend.MinuteDue(now))
+                        Guard("Session trend", () => CloseTrendMinute(now));
                 // The camera list is for the dashboard and the report: every 5 s while the dashboard is open, else 30 s.
                     if (dashboard != null || now >= nextCameraInventory)
                     {
@@ -1136,6 +1144,53 @@ namespace CRIXOptimizer.Optimization
             }
         }
 
+        private List<string> optimizerModAdvice = new List<string>();
+        private float nextOptimizerModRefresh;
+
+        /// <summary>Notes on GorillaOptimizer, I HATE ALIENS and Potassium (every 30 s; reads GorillaOptimizer's saved toggles).</summary>
+        private void RefreshOptimizerMods(float now)
+        {
+            if (now < nextOptimizerModRefresh)
+                return;
+            nextOptimizerModRefresh = now + 30f;
+            bool gorillaOptimizer = Plugins.Exists(p => p.Guid == OptimizerModsSupport.GorillaOptimizerGuid);
+            bool aliens = Plugins.Exists(p => p.Guid == OptimizerModsSupport.IHateAliensGuid);
+            Func<string, bool> toggle = null;
+            if (gorillaOptimizer)
+                toggle = key => ReadPlayerPrefsInt(OptimizerModsSupport.GorillaOptimizerPrefsPrefix + key) == 1;
+            optimizerModAdvice = OptimizerModsSupport.Describe(toggle, Graphics != null && Graphics.UsesUrpAsset, aliens, PotassiumInstalled);
+        }
+
+        /// <summary>Read-only (CRIX never writes PlayerPrefs). Separate so the engine call is compiled only when used.</summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static int ReadPlayerPrefsInt(string key) => PlayerPrefs.GetInt(key, 0);
+
+        private void CloseTrendMinute(float now)
+        {
+            var ctx = new SessionTrend.Context
+            {
+                HeapBytes = MemoryStats.ManagedHeapBytes,
+                UnityBytes = MemoryStats.UnityAllocatedBytes,
+                GfxBytes = MemoryStats.GfxUsedBytes,
+                GcCount = GC.CollectionCount(0),
+                Profile = ActiveSection,
+                Capturing = Capture.Active != CaptureKind.None,
+                AdaptiveLevel = AdaptiveActive ? Adaptive.Level : 0,
+                VrActive = Xr.IsVrActive,
+                RefreshHz = Xr.RefreshRate,
+            };
+            if (Trend.CloseMinute(now, ctx) == null)
+                return;
+            string drop = Trend.FindSlowDrop();
+            // Logged when first seen and then at most every 10 minutes (the numbers change every minute).
+            if (drop != null && (lastSlowDrop.Length == 0 || now - lastSlowDropLog >= 600f))
+            {
+                lastSlowDropLog = now;
+                log.Warn(drop + " The per-minute history is in BepInEx/CRIXOptimizer/system-report.txt ([Actions] WriteSystemReportNow = true).");
+            }
+            lastSlowDrop = drop ?? "";
+        }
+
         private void TickMemory(float now)
         {
             if (IsFaulted("Memory monitor"))
@@ -1424,10 +1479,15 @@ namespace CRIXOptimizer.Optimization
         private void UpdateSetupAdvice()
         {
             SetupAdvice.Clear();
+            // The runtime the game actually loaded decides where its settings are; Windows' active OpenXR runtime (what
+            // VirtualDesktopSupport sees) can differ, e.g. a game started through the Meta Quest Link app uses Oculus.
             string runtime = (Xr.OpenXRRuntimeName + " " + Xr.DeviceName).ToLowerInvariant();
-            bool vd = runtime.Contains("virtualdesktop") || runtime.Contains("vdxr") || VirtualDesktop.Detected != VirtualDesktopSupport.Path.NotDetected;
-            bool link = !vd && (runtime.Contains("oculus") || runtime.Contains("meta") || (Apps & CompanionApp.MetaQuestLink) != 0);
+            bool loadedVd = runtime.Contains("virtualdesktop") || runtime.Contains("vdxr");
+            bool loadedLink = runtime.Contains("oculus") || runtime.Contains("meta");
             bool steamvr = runtime.Contains("openvr") || runtime.Contains("steamvr");
+            bool loadedKnown = loadedVd || loadedLink || steamvr;
+            bool vd = loadedVd || (!loadedKnown && VirtualDesktop.Detected != VirtualDesktopSupport.Path.NotDetected);
+            bool link = loadedLink || (!loadedKnown && !vd && (Apps & CompanionApp.MetaQuestLink) != 0);
             // Where each setting lives (menu names as the apps showed them when this was written).
             string whereRate = vd ? "in Virtual Desktop (in the headset: Settings > Streaming > VR Frame Rate). Also check SSW there: " +
                                     "'Always enabled' makes the game render at half the frame rate; use Automatic, or Disabled to see the real frame rate"
@@ -1445,27 +1505,46 @@ namespace CRIXOptimizer.Optimization
             else if (Xr.IsVrActive && runtimeRate && ActiveSection == "HighRefresh" && Xr.RefreshRate > 1f && Xr.RefreshRate < 110f)
                 SetupAdvice.Add($"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. Set 120 Hz {whereRate}.");
 
+            if (Xr.IsVrActive && loadedLink && VirtualDesktop.Detected == VirtualDesktopSupport.Path.VirtualDesktopOpenXR)
+                SetupAdvice.Add("Windows' active OpenXR runtime is Virtual Desktop's, but the game is running on Meta Quest Link's runtime (Oculus), " +
+                                "so its resolution and refresh rate come from the Meta Quest Link app, not from Virtual Desktop.");
+
             double mp = Graphics?.EyeMegapixelsAtScale1 ?? 0;
             if (Xr.IsVrActive && mp > 12)
+            {
+                float eyeCap = ActiveSettings?.MaxEyeMegapixels ?? 0f;
+                string capNote = eyeCap > 0f
+                    ? "Until then CRIX caps what the game renders (MaxEyeMegapixels in the profile)."
+                    : $"The {ActiveSection} profile does not cap it: under URP a lower render scale also lowers the resolution of the desktop window that OBS, Streamlabs or Discord record. " +
+                      "Lowering the resolution in your VR app keeps both sharp. To prefer frame rate over a sharp stream instead, set MaxEyeMegapixels = 8 in the " +
+                      $"[{ActiveSection}] section of BepInEx/config/com.crix.crixoptimizer.profiles.cfg.";
                 SetupAdvice.Add($"The VR runtime asks the game to render {mp:0} megapixels per eye at render scale 1.0 (a Quest 3 at default settings renders about {EyeResolution.Quest3DefaultMegapixels:0.0}). " +
-                                $"That is far more than the headset can show and the main reason for a low frame rate on most GPUs. Lower the resolution {whereResolution}. " +
-                                "Until then CRIX caps what the game renders (MaxEyeMegapixels in the profile).");
+                                $"That is far more than the headset can show and the main reason for a low frame rate on most GPUs. Lower the resolution {whereResolution}. " + capNote);
+            }
 
             if ((Hooks & GraphicsHook.NvidiaOverlay) != 0 && (vd || link))
                 SetupAdvice.Add("NVIDIA's overlay/capture (GeForce Experience / NVIDIA app: Instant Replay, recording) is hooked into the game. Instant Replay records all the time with the GPU's video encoder, " +
                                 "which Virtual Desktop and Quest Link also use to stream to the headset. Turn Instant Replay off while playing in VR.");
 
+            // Known optimisation mods get specific notes (OptimizerModsSupport); any other one the generic line.
             var optimizers = new List<string>();
-            if (PotassiumInstalled)
-                optimizers.Add("Potassium");
             foreach (PluginInventory.Entry p in Plugins)
-                if (p.Guid != null && p.Guid != ModInfo.Guid && p.Guid != ModInfo.PotassiumGuid &&
+                if (p.Guid != null && p.Guid != ModInfo.Guid && p.Guid != ModInfo.PotassiumGuid && p.Guid != OptimizerModsSupport.GorillaOptimizerGuid &&
                     (p.Guid.IndexOf("optimi", StringComparison.OrdinalIgnoreCase) >= 0 || (p.Name ?? "").IndexOf("optimi", StringComparison.OrdinalIgnoreCase) >= 0))
                     optimizers.Add(p.Name ?? p.Guid);
             if (optimizers.Count > 0)
-                SetupAdvice.Add("Other optimisation mods are installed (" + string.Join(", ", optimizers.ToArray()) + "). They patch overlapping parts of the game and may change the same settings" +
-                                (PotassiumInstalled ? " (CRIX already contains Potassium's fixes and currently leaves them to Potassium)" : "") +
-                                ". If you have problems, test with only one optimiser.");
+                SetupAdvice.Add("Other optimisation mods are installed (" + string.Join(", ", optimizers.ToArray()) + "). They may patch overlapping parts of the game and change the same settings. " +
+                                "If you have problems, test with only one optimiser.");
+            RefreshOptimizerMods(Time.unscaledTime);
+            SetupAdvice.AddRange(optimizerModAdvice);
+
+            // Timed unused-asset unloads skipped (by CRIX's profile or by Potassium) and memory has really grown.
+            bool unloadsSkipped = Live.SkipTimedAssetUnloads || PotassiumInstalled;
+            if (unloadsSkipped && !cfg.DeferredAssetUnload.Value && MemoryStats.GrowthSinceBaselineBytes >= 1024L * 1024 * 1024)
+                SetupAdvice.Add($"Unity memory has grown by {MemoryMonitor.FormatBytes(MemoryStats.GrowthSinceBaselineBytes)} since the game started. " +
+                                (PotassiumInstalled ? "Potassium" : "The profile") + " skips the game's timed unused-asset unloads (they cause hitches), so assets such as " +
+                                "other players' cosmetics and visited maps stay in memory. Set [Memory] DeferredAssetUnload = true in com.crix.crixoptimizer.cfg: " +
+                                "CRIX then frees them once memory has grown by DeferredAssetUnloadGrowthMB, and only while you are not in a room.");
 
             foreach (string line in SetupAdvice)
                 once.Info("setup:" + line, line);

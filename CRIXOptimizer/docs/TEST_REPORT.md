@@ -7,11 +7,11 @@ Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21
 
 | Run | Runtime | BepInEx | HarmonyX | Result |
 |---|---|---|---|---|
-| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **152 passed, 0 failed** |
-| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **152 passed, 0 failed** |
+| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **160 passed, 0 failed** |
+| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **160 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
-| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 261 type / 1033 member refs resolve |
-| - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 70 Unity type / 177 member references declared |
+| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 262 type / 1076 member refs resolve |
+| - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 71 Unity type / 178 member references declared |
 
 **In the real game (field report, not a test run by the developers):** a user ran a 1.1.0 preview build on Gorilla
 Tag 1.1.147 (Unity 6000.2.9f1, BepInEx 5.4.23.5, Windows 11, Ryzen 5 5500, RTX 4060, Quest via a Meta/OpenXR runtime)
@@ -33,7 +33,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
   engine calls those methods directly and they cannot be inlined.
 - Pure logic (`Core/`, `Adaptive/`, configuration) is tested directly.
 
-## What was tested (152 tests)
+## What was tested (160 tests)
 
 | Area | Tests | What they establish |
 |---|---|---|
@@ -63,6 +63,8 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
 | ReShade preset advisor (real files in a temp folder) | 10 | reads `PerformanceMode` and `PresetPath`; flags ambient occlusion, depth of field and DisplayDepth, not SMAA or sharpening; the light copy drops only those from `Techniques`, keeps effect settings and `TechniqueSorting` (**regression: `TechniqueSorting` was rewritten too because it starts with "Techniques" when case is ignored**) and contains no expensive effect; the user's preset and `ReShade.ini` are byte-identical afterwards; **headset `ReShadeVR.ini` with per-key fallback is analysed and preferred**; **start-up preset wins, missing/invalid `PresetPath` falls back to `ReShadePreset.ini`, non-preset files and other extensions are rejected, a not-yet-existing preset is valid**; **escaped commas in paths and effect names, `/` comments and repeated keys parse as in ReShade**; `[INSTALL] BasePath` is followed; **headset instructions name `ReShadeVR.ini`, not the Home-key overlay, and are valid ini lines (a comma in the name is doubled; following the printed line makes the headset load the copy)**; **a shared preset that is the desktop window's start-up preset is pointed out**; **`[GENERAL] Disable` in the runtime's own file, ReShade's boolean rules and repeated keys that end in a comma behave as in ReShade**; **the first-VR-session note appears only with a headset**; missing `ReShade.ini`, old name-only format, nothing to remove |
 | Extra-camera limit schedule | 9 | simulated like the limiter (real frame time plus the smoothed typical one, even phases): at most N renders per second and per any 1-second window, and at least 90 % of N, for 90/120/72/144 fps against 2-100/s (**regression: the earlier frame-interval maths did not limit 60/s at 90 fps and gave 9/s for 2/s at 144 fps**); a slower game renders every camera every frame; irregular frame times and a 1.5 s hitch cause no burst; **3 x 30/s and 2 x 45/s at 90 and 89.5 fps with 0.3 ms frame-time noise, a 0.2 s hitch and one camera switched off by its owner: at most 2 % of frames with two renders, never more than two, rates 85-100 % of the limit (measured: one such frame, the hitch)**; **every 7th frame three vsyncs long: still 27-30 renders/s per camera**; **after a 15-frame load screen no frame renders all three cameras and no camera exceeds the limit**; the typical frame time moves at most 20 % on a hitch and follows a lasting drop; per-frame budget (jitter just above 1/90 adds no slot); grid points and phases |
 | Player-loop hook | 2 | steps are inserted directly before and after `PostLateUpdate.FinishFrameRendering`; removal takes out only CRIX's steps and keeps another mod's; a missing target is reported, nothing inserted |
+| Session trend | 5 | per-minute FPS, hitches (over twice the 120 Hz budget), big hitches, GC deltas and report lines; a steady session reports no drop; **a drop from 110 to 85 FPS while streaming starts and Unity memory grows names the streaming start (with its minute), the profile change and the memory growth**; a drop with nothing visible names outside causes; warm-up minutes, idle-headset minutes, small changes and short sessions are not reported; history is bounded and empty minutes are not recorded |
+| Other optimisation mods | 3 | GorillaOptimizer toggles sorted into in effect / no effect under URP (built-in-pipeline settings, XR scale, frame caps) with notes for Low Physics Rate and Low XR Scale; without URP the built-in settings count as working; no toggles / a failing read / not installed; I HATE ALIENS and Potassium notes |
 | Preset upgrades (real BepInEx ConfigFile, real 1.0.0 profiles file as fixture) | 5 | frozen 1.0.0 presets match the shipped 1.0.0 file; upgrade from 1.0.0 keeps user edits and applies new defaults; upgrade from the 1.1.0 previews (revision 2) applies only the later changes; fresh installs need no upgrade; reset to defaults does not re-run the upgrade |
 
 ### Scheduling simulation (synthetic, not a game benchmark)

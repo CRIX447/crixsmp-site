@@ -34,7 +34,10 @@ cosmetics culled a little sooner), smooths frame pacing during loads (1 ms uploa
 priority) and applies Potassium's stutter fixes. When the VR runtime reports GPU time, adaptive mode keeps 20 % of
 the GPU budget free for OBS. It does **not** change the desktop mirror, and adaptive mode may not lower the render
 scale in this profile: under URP that scale also sets the resolution of the desktop camera OBS records, so the
-captured image keeps its resolution. It warns if the
+captured image keeps its resolution. For the same reason this profile does not cap the eye resolution
+(`MaxEyeMegapixels = 0`): if your VR app asks for a very high resolution (the system report's *Setup* line says so),
+lower it in the VR app, or set `MaxEyeMegapixels = 8` in `[OBSStreaming]` to prefer frame rate over a sharp stream.
+The system report's *Session trend* shows minute by minute whether the frame rate falls during a long stream. It warns if the
 dashboard is visible while OBS's game-capture hook is loaded (the dashboard would appear on stream).
 
 **What CRIX cannot do:** fix encoder overload, upload bandwidth, dropped network frames, capture-card problems or OBS

@@ -7,8 +7,8 @@ Date: 2026-10-14. Raw logs: `release/logs/` (also inside the release ZIP under `
 | | |
 |---|---|
 | Output | `bin/Release/CRIXOptimizer.dll` (copied to `release/CRIXOptimizer.dll` and into the ZIP) |
-| Size | 323,584 bytes |
-| SHA-256 | `91d8a988573f7e5b5975b85847d4c54dc0cfdde2347be148477e99ebea470b52` |
+| Size | 344,064 bytes |
+| SHA-256 | `6a12a90be40ecb93b1563d21c04de7e850f57b54a502541841a70bf188e4093c` |
 | Warnings / errors | **0 / 0** |
 | Target | .NET Standard 2.1, AnyCPU, Release, deterministic (`ContinuousIntegrationBuild=true`) |
 | Assembly references | `netstandard 2.1`, `BepInEx 5.4.21`, `0Harmony 2.9.0`, `UnityEngine.CoreModule`, `.IMGUIModule`, `.TextRenderingModule`, `.XRModule`, `.VRModule`, `.SubsystemsModule`. **No `Assembly-CSharp`**: no game code is referenced. |
@@ -55,8 +55,8 @@ Every type and member reference in the DLL was resolved with Mono.Cecil against 
 
 | Reference set | Type refs | Member refs | Result |
 |---|---|---|---|
-| BepInEx 5.4.21 + HarmonyX 2.9.0 + Unity 2021.3.33 modules + Mono 4.5 BCL | 261 | 1033 | all resolve |
-| BepInEx 5.4.23.5 (built from the `v5-lts` branch, commit `f4c1b1103a32884b7440d9681c60cc5d619f284f`) + same Unity modules | 261 | 1033 | all resolve |
+| BepInEx 5.4.21 + HarmonyX 2.9.0 + Unity 2021.3.33 modules + Mono 4.5 BCL | 262 | 1076 | all resolve |
+| BepInEx 5.4.23.5 (built from the `v5-lts` branch, commit `f4c1b1103a32884b7440d9681c60cc5d619f284f`) + same Unity modules | 262 | 1076 | all resolve |
 
 ## Unity 6 API check (`tools/check_unity_api.py`)
 
@@ -70,8 +70,8 @@ check does catch absent APIs.
 
 | Unity source | Unity type / member references | Result |
 |---|---|---|
-| UnityCsReference tag `6000.1.9f1` | 70 / 177 | all declared |
-| UnityCsReference tag `6000.2.9f1` (`release/logs/unity-api-check.log`) | 70 / 177 | all declared |
+| UnityCsReference tag `6000.1.9f1` | 71 / 178 | all declared |
+| UnityCsReference tag `6000.2.9f1` (`release/logs/unity-api-check.log`) | 71 / 178 | all declared |
 
 Obsolete but still present (used only as fallbacks): `QualitySettings.masterTextureLimit` (when
 `globalTextureMipmapLimit` is missing), `GraphicsSettings.renderPipelineAsset` (when `currentRenderPipeline` fails) and

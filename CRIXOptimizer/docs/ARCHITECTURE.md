@@ -23,7 +23,9 @@ Plugin (BepInEx entry, thin)
      │     writes only <preset>.CRIX-light.ini on request
      ├─ DesktopCameraModule, ExtraCameraLimiter (opt-in: render-texture cameras at most N renders/s; player-loop
      │     steps around FinishFrameRendering + beginContextRendering, RenderRateSchedule, PlayerLoopHook)
-     ├─ PluginInventory, HarmonyFootprint (compatibility scan, once + on demand), SakuraaSupport, CameraInventory
+     ├─ PluginInventory, HarmonyFootprint (compatibility scan, once + on demand), SakuraaSupport, CameraInventory,
+     │     OptimizerModsSupport (GorillaOptimizer toggles read from PlayerPrefs, I HATE ALIENS, Potassium notes)
+     ├─ SessionTrend (per-minute history, slow-drop finder) ◄── frame times + memory/profile/capture each minute
      └─ DashboardOverlay (exists only while visible) ◄── DashboardText (rebuilt 2×/s), SystemReport
 ```
 

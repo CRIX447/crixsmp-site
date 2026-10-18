@@ -43,7 +43,10 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
 - **Extra-camera limit (opt-in):** `[Performance] ExtraCameraMaxFps` updates cameras that render into textures
   (minimaps, tablets, Sakuraa's display cameras) at most N times a second. Off by default because it affects other
   mods' cameras.
-- The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing.
+- The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing. The
+  report's per-minute *Session trend* shows whether the frame rate falls over a long session and what changed with it.
+- **Notes on GorillaOptimizer, I HATE ALIENS and Potassium**: which of their options actually work in Gorilla Tag and
+  how they interact with CRIX (read-only; CRIX never changes other mods' settings).
 
 VR frame rates are capped at the headset refresh rate, so if the game already holds it the FPS number cannot rise;
 gains show as fewer drops and steadier frame times. Measure with the benchmark recorder (F6).

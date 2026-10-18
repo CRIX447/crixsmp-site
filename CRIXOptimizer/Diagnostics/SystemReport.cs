@@ -91,6 +91,16 @@ namespace CRIXOptimizer.Diagnostics
               .Append(MemoryMonitor.FormatBytes(rt.MemoryStats.UnityAllocatedBytes)).Append(", Unity gfx estimate [R]: ")
               .Append(rt.MemoryStats.GfxUsedBytes >= 0 ? MemoryMonitor.FormatBytes(rt.MemoryStats.GfxUsedBytes) : "n/a").Append(", total VRAM use: n/a\n\n");
 
+            sb.Append("== Session trend (per minute, last 30) ==\n");
+            if (rt.Trend.Minutes.Count == 0)
+                sb.Append("No complete minute yet.\n");
+            foreach (string line in rt.Trend.Describe(30))
+                sb.Append(line).Append('\n');
+            string drop = rt.Trend.FindSlowDrop();
+            if (drop != null)
+                sb.Append("Trend: ").Append(drop).Append('\n');
+            sb.Append('\n');
+
             sb.Append("== Active profile: ").Append(rt.ActiveSection).Append(rt.Suspended ? " (SUSPENDED)" : "").Append(" ==\n");
             sb.Append(SettingsBlock(rt)).Append('\n');
             AppendLines(sb, "Note", rt.SettingsNotes);

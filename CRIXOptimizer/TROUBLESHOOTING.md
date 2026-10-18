@@ -121,6 +121,41 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
 - Desktop window black or showing one eye: that is the desktop camera switched off by HighRefresh while you are not
   streaming. Set `DesktopCamera = Unchanged` in the `[HighRefresh]` section if you want the third-person view.
 
+## FPS drops slowly while streaming or recording
+
+1. **Look at the trend.** The system report (`[Actions] WriteSystemReportNow = true`, or written 20 s after start) has a
+   *Session trend* section: one line per minute with FPS, 1 % low, hitches, garbage collections, memory, profile and
+   whether OBS/Streamlabs/Discord was capturing. When the frame rate falls by 10 % or more over the session, the log
+   and the report say from what to what, and what changed along with it (streaming started, memory grew, hitches or
+   garbage collections increased, adaptive mode already stepped down). Send that report when asking for help.
+2. **Eye resolution.** If the report's *Setup* lines say the VR runtime asks for far more than about 5 megapixels per
+   eye, lower the resolution in the VR app the game actually runs on (the line names it: Meta Quest Link app >
+   Devices > Graphics Preferences > Render resolution, and Pixel Density 0 in the Oculus Debug Tool; or Virtual
+   Desktop's VR Graphics Quality). `OBSStreaming` and `VirtualDesktop.Streaming` do not cap the eye resolution (the
+   other profiles do, at 5-10 megapixels), because under URP a lower render scale also lowers the resolution of the
+   desktop window that OBS records. To prefer frame rate over a sharp stream, set `MaxEyeMegapixels = 8` in that
+   profile's section of `BepInEx/config/com.crix.crixoptimizer.profiles.cfg`.
+3. **Memory that only grows.** Potassium (and CRIX's profiles) skip the game's timed unused-asset unloads, which
+   cause hitches; other players' cosmetics and visited maps then stay in memory. If the trend shows Unity memory
+   growing, set `[Memory] DeferredAssetUnload = true`: CRIX frees them once memory has grown by
+   `DeferredAssetUnloadGrowthMB`, only while you are not in a room.
+4. **The video encoder.** OBS, the headset stream (Quest Link / Virtual Desktop) and NVIDIA Instant Replay can all
+   use the GPU's encoder. Turn Instant Replay off, and check OBS's *View > Stats* for rendering or encoding lag.
+5. **Heat.** A frame rate that falls after 20-40 minutes with nothing else changing is often the GPU or CPU getting
+   hot; check temperatures with your GPU's tool.
+
+## Big lobbies (up to 20 players)
+
+No mod can guarantee no frame drops in a full lobby: with many players the CPU (and on AMD Ryzen the memory speed,
+see *Aiming for 120 FPS* in INSTALLATION.md) is usually the limit. What helps:
+
+- CRIX's adaptive CPU savings: fewer players at full cosmetic detail and slower cosmetic updates while frames run
+  late. **They only work when Potassium is not installed** (with Potassium, CRIX leaves those patches to it and
+  Potassium uses the fixed values in its own `BepInEx/config/zone.xenon.potassium.cfg`). Either remove Potassium.dll
+  (CRIX contains its fixes) or lower Potassium's *Maximum detailed player count* and cosmetic distances there.
+- The `HighRefresh` profile (fewer detailed cosmetics, 20/s cosmetic updates) when you are not streaming.
+- Lower eye resolution (see above): a GPU at its limit makes every CPU spike visible.
+
 ## Auto streaming mode
 
 | Symptom | Cause / fix |
@@ -141,6 +176,11 @@ permanent, but it can make two mods fight over a value. Use it only if you know 
   need turns choppy, add its camera name to `[Performance] ExtraCameraExclude`.
 - Sakuraa's spectator camera renders the game a second time to the desktop window. A smaller game window, or a lower
   quality setting for that camera in Sakuraa, saves GPU time.
+- **Sakuraa's spectator camera at 60 FPS:** it is the game's desktop camera and renders once per game frame, so it runs
+  at the game's frame rate (OBS records 60 of those per second). CRIX cannot render it at exactly 60 without making
+  the window flicker. Free GPU time instead: lower the eye resolution, limit Sakuraa's minimap/display cameras with
+  `ExtraCameraMaxFps = 30`, pick a lighter GTFX preset, and if ReShade is only for viewers, keep it out of the
+  headset (`Disable=1` under `[GENERAL]` in `ReShadeVR.ini`; the desktop window keeps its effects).
 - Download Sakuraa only from its official source; CRIX does not check where a copy came from.
 
 ## ReShade costs too much FPS

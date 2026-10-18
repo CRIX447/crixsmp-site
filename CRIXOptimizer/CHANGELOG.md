@@ -71,6 +71,19 @@ are claimed.
   contains "Sakuraa") and lists it in the log and system report. GTFX is part of Sakuraa and can only be tuned in
   Sakuraa's own presets; CRIX does not modify Sakuraa or GTFX, and leaves its cameras alone unless
   `ExtraCameraMaxFps` is set.
+- **Session trend** (system report): one line per minute with FPS, 1 % low, hitches, garbage collections, managed,
+  Unity and graphics memory, profile, recording/streaming state and adaptive level, for up to three hours. When the
+  frame rate falls by 10 % and 8 FPS or more over the session (first three minutes after a two-minute warm-up against
+  the last three, headset on), the log and report say from what to what and what changed with it (streaming started,
+  profile, memory growth, hitches, garbage collections, adaptive level), or that nothing visible to CRIX changed and
+  what usually causes it outside the game.
+- **Notes on other optimisation mods**, from their published source: GorillaOptimizer's switched-on toggles (read
+  from its saved PlayerPrefs, read-only) sorted into in effect / no effect in Gorilla Tag (built-in-pipeline settings
+  URP ignores, its XR scale that URP overwrites every frame, frame caps VR ignores) with notes on Low Physics Rate,
+  Low Textures, Low LOD Bias, Disable Post Processing and Aggressive GC; I HATE ALIENS (no overlap); Potassium (its
+  own config is used and CRIX's adaptive CPU savings for busy lobbies are off while it is installed).
+- A setup line when timed unused-asset unloads are skipped (profile or Potassium), `DeferredAssetUnload` is off and
+  Unity memory has grown by 1 GB or more.
 - **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
   render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
   (time-based: each camera on its own grid with evenly spaced phases, re-spaced when cameras come and go; earliest
@@ -127,6 +140,9 @@ are claimed.
     headroom 20 %, adaptive render scale off. VirtualDesktop.Performance: cascades 1, MSAA 2x.
   - MaximumPerformance: MSAA 2x. ReShadeCompatible: cascades 2.
 - Streamlabs Desktop's own obs64 backend process is no longer reported as OBS Studio; `DiscordDevelopment` is detected.
+- Setup advice names the VR app the game actually runs on (the loaded OpenXR runtime, e.g. Oculus = Meta Quest Link)
+  instead of Windows' active OpenXR runtime, and says when the two differ. The eye-resolution line no longer says
+  CRIX caps it when the active profile has no cap (the streaming profiles), and says how to prefer frame rate there.
 - `DesktopCamera`: the "never a VR camera" check uses `Camera.stereoEnabled` (whether the camera actually renders to
   the headset) instead of `stereoTargetEye`, which the game's desktop camera may leave at its default.
 
