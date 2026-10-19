@@ -231,8 +231,7 @@ namespace CRIXOptimizer.GPU
         /// <summary>Drops the pin (main thread). The camera itself is not touched.</summary>
         public void Unpin()
         {
-            if (pinned == null)
-                return;
+            // Also after the pin was dropped inside a step (LosePin): nothing pinned and nothing limited means nothing stays installed.
             RestoreSkipped();
             pinned = null;
             pinnedTexture = null;

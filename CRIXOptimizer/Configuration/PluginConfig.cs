@@ -288,9 +288,10 @@ namespace CRIXOptimizer.Configuration
                 "e.g. one whose image you stream.");
             SpectatorCameraMaxFps = file.Bind("Performance", "SpectatorCameraMaxFps", 0f,
                 new ConfigDescription("The desktop spectator view (the game's third-person 'Shoulder Camera', which Sakuraa Client uses as its spectator camera) renders the scene at most this many " +
-                                      "times per second; the headset keeps its full rate, and the game window (and OBS) still gets a new frame every frame (CRIX shows the camera's latest image). " +
-                                      "60 suits a 60 fps stream or recording on a 120 Hz headset. It lowers the average CPU/GPU load of that camera by about half at 120 Hz; the frames on which it renders cost as " +
-                                      "much as before. 0 = off (default). It points that camera at a texture of CRIX's, so it is only active when you set it. Experimental: not tested in Gorilla Tag yet.",
+                                      "times per second (about 5 % more at most, from rounding to whole headset frames); the headset keeps its full rate, and the game window is drawn every frame with the camera's " +
+                                      "latest image, so it does not flicker. At 60 on a 120 Hz headset it renders on every 2nd frame: about half of that camera's CPU work. The VR render scale may not apply to it " +
+                                      "any more (it can render at the full window size: sharper, more GPU work per render). A 60 fps recording samples the window on its own clock, so a frame may repeat now and then. " +
+                                      "0 = off (default). It points that camera at a texture of CRIX's, so it is only active when you set it. Experimental: not tested in Gorilla Tag yet.",
                     new AcceptableValueRange<float>(0f, 144f)));
             SpectatorCameraCadence = file.Bind("Performance", "SpectatorCameraCadence", SpectatorCadence.EvenFrames,
                 "EvenFrames: renders every Nth headset frame (120 Hz -> 60/s, 90 Hz -> 45/s, 144 Hz -> 48/s): evenly spaced, never two heavy frames in a row. " +

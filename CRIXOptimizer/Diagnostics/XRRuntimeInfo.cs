@@ -38,6 +38,22 @@ namespace CRIXOptimizer.Diagnostics
 
         public bool IsVrActive => XrEnabled && DeviceActive;
 
+        /// <summary>Read now (cheap, per frame): a headset is still active and its display, if one was found, still runs.</summary>
+        public bool VrActiveNow
+        {
+            get
+            {
+                try
+                {
+                    return XRSettings.isDeviceActive && (Display == null || Display.running);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
         /// <summary>Refreshes the cached runtime description (every 5 s, or immediately when forced). Main thread only.</summary>
         public void Refresh(float now, bool force = false)
         {

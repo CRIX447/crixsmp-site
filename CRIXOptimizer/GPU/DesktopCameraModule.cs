@@ -41,6 +41,9 @@ namespace CRIXOptimizer.GPU
 
         public bool Available { get; }
         public string Status { get; private set; } = "not used by this profile";
+        /// <summary>CRIX has switched the camera off and it is still off (the last Apply did it).</summary>
+        public bool HoldsCameraOff => enabledSetting != null && enabledSetting.State == SettingState.Applied;
+
         /// <summary>CRIX's own spectator texture (SpectatorCameraModule): a camera rendering into it still draws to the window.</summary>
         public Func<RenderTexture, bool> IsCrixTexture { get; set; } = _ => false;
 
@@ -175,7 +178,7 @@ namespace CRIXOptimizer.GPU
             // Safety: only a camera that draws to the desktop window, never one rendering in stereo (VR) or into a
             // texture. (stereoTargetEye is not used: a desktop-only camera can keep its default "Both" and simply not
             // be an XR camera.)
-            if (!UnityObjects.IsAlive(cam) || cam.targetTexture != null || CameraRoles.RendersToHeadset(cam))
+            if (!UnityObjects.IsAlive(cam) || (cam.targetTexture != null && !IsCrixTexture(cam.targetTexture)) || CameraRoles.RendersToHeadset(cam))
                 return null;
             return cam;
         }

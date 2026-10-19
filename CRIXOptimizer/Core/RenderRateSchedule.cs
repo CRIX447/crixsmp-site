@@ -22,7 +22,8 @@ namespace CRIXOptimizer.Core
     {
         /// <summary>
         /// Even-frames cadence for one camera (the spectator view): render every Nth frame, N the smallest whole number of
-        /// typical frames that is at least the period (with a 10 % tolerance for jitter). Renders are then evenly spaced
+        /// typical frames that is at least the period (with a 10 % tolerance for jitter; UpdateCadence keeps the result
+        /// from going clearly above the limit when the refresh rate is known). Renders are then evenly spaced
         /// and never on two frames in a row while N &gt; 1: 120 Hz and a 60/s limit give every 2nd frame (60/s), 90 Hz every
         /// 2nd (45/s), 144 Hz every 3rd (48/s), and a game running at or below the limit renders it every frame.
         /// </summary>
@@ -67,7 +68,19 @@ namespace CRIXOptimizer.Core
         {
             if (!(typicalFrameTime > 0) && !(nominalFrameTime > 0))
                 return Math.Max(1, state.N); // nothing measured yet: do not lock anything in
-            int n = EveryNthFrame(period, CadenceFrameTime(typicalFrameTime > 0 ? typicalFrameTime : nominalFrameTime, nominalFrameTime));
+            double measured = typicalFrameTime > 0 ? typicalFrameTime : nominalFrameTime;
+            double cadenceTime = CadenceFrameTime(measured, nominalFrameTime);
+            int n = EveryNthFrame(period, cadenceTime);
+            if (nominalFrameTime > 0)
+            {
+                // The snap (61-70 fps on a 120 Hz headset snaps to 60) and the jitter tolerance round N down; never so far
+                // that the camera renders more than about 5 % more often than the limit at the measured rate (a tighter margin
+                // would flip N on frame-time noise under reprojection). The game cannot run faster than the headset, so at full
+                // rate the headset's frame time counts.
+                double actual = Math.Min(cadenceTime, Math.Max(measured, nominalFrameTime));
+                while (n < 1000 && n * actual < period * 0.95)
+                    n++;
+            }
             if (state.N <= 0)
             {
                 state.N = n;

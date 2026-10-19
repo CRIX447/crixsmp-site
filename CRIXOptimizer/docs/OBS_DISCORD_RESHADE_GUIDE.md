@@ -114,16 +114,26 @@ renders the whole scene a second time on every headset frame. For a 60 fps strea
 
 - **What happens:** CRIX points that camera at a window-sized texture of its own and lets it render on every Nth
   headset frame (`SpectatorCameraCadence = EvenFrames`: every 2nd frame at 120 Hz = 60/s, every 2nd at 90 Hz = 45/s,
-  every 3rd at 144 Hz = 48/s; evenly spaced, never two heavy frames in a row). Every frame, the latest picture is drawn
-  into the window as the lowest screen overlay, so Sakuraa's HUD, menus and CRIX's dashboard stay on top, and OBS
-  captures a steady picture. `ExactRate` keeps exactly 60/s instead, with uneven spacing on 90 Hz.
-- **What it saves:** on average about half of that camera's CPU and GPU work at 120 Hz. The frames on which it renders
-  cost as much as before, so a PC that misses frames with it will still miss some; expect fewer dropped frames, not a
-  higher minimum. Measure with F6 (benchmark) with and without it while recording.
+  every 3rd at 144 Hz = 48/s; evenly spaced, never two heavy frames in a row; at most about 5 % above the limit from
+  rounding to whole frames). Every frame, the latest picture is drawn into the window as the lowest screen overlay, so
+  the window never shows the headset view in between and Sakuraa's HUD, menus and CRIX's dashboard stay on top.
+  `ExactRate` keeps exactly 60/s instead, with uneven spacing on 90 Hz.
+- **Recording:** the picture changes 60 times a second. OBS takes its frames on its own clock, so in a 60 fps recording
+  a frame can repeat (and the next one be skipped) now and then, when the two clocks drift into step. If perfectly
+  smooth motion in the recording matters more than the saving, leave the limit off.
+- **What it saves:** about half of that camera's CPU work (culling, draw calls) at 120 Hz. GPU: the VR render scale
+  (CRIX's eye-resolution cap, e.g. 0.51) may no longer apply to the camera once it renders into a texture, so each
+  render can be at the full window size: sharper, up to 1/scale² the pixels per render, with half as many renders. The
+  status line says when that applies. The frames on which it renders are not cheaper, so a PC that misses frames with
+  it will still miss some; expect fewer dropped frames, not a higher minimum. Measure with F6 (benchmark) with and
+  without it while recording.
 - **When CRIX hands the camera back** (the window then shows it directly, as without CRIX): the setting at `0`, F10 or
-  CRIX disabled, no headset, `DesktopCamera` switching the camera off, a window resize (back after a second), HDR
+  CRIX disabled, no headset, `DesktopCamera` really switching the camera off (it leaves it on while Sakuraa uses it,
+  so the limit then works without OBS too), a window resize (back after a second), HDR
   display output, another camera drawing to the window after it (for example Sakuraa's replay camera), and any error.
-  If the game or another mod gives the camera its own render target, CRIX leaves it alone until the profile is re-applied.
+  If the game or another mod gives the camera its own render target, CRIX leaves it alone until you switch or re-apply
+  the profile (`[Actions] ReapplyProfileNow`). A change of `SpectatorCameraPresenter` or of the anti-aliasing takes
+  effect at once (the camera is taken again).
   Only the camera's render target is changed: its position, field of view and the mods controlling it are untouched.
 - **ReShade:** stays on with ReShade (`[Compatibility] SpectatorCameraWithReShade = true`). ReShade still applies to the
   window; depth-based effects on the window (ambient occlusion, depth of field) may flicker, because the camera's depth

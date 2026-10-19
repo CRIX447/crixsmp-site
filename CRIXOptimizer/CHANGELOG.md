@@ -138,11 +138,19 @@ are claimed.
   CRIX's (no alpha, the camera's MSAA) at most N times a second, every Nth headset frame by default (120 Hz and 60:
   every 2nd frame; N held steady against frame-time noise and snapped to the headset's refresh rate), and its latest
   image is drawn into the window every frame as the lowest screen overlay (or copied at the end of the frame), so the
-  window and OBS never flicker and other mods' HUDs stay on top. It is a "pinned" camera of the extra-camera limiter
+  window never shows the headset view in between and other mods' HUDs stay on top. N is never chosen so that the
+  camera renders more than about 5 % above the limit (also at 61-70 fps on 120 Hz). It stands by only while the
+  `DesktopCamera` setting really holds the camera off (not when it leaves it on for Sakuraa). A presenter or MSAA
+  change re-takes the camera at once; a window resize or the headset going away hands it back in the same frame. The
+  texture's MSAA is the lower of the URP asset's and the quality setting's (never more samples than in the window). The
+  status line says when the VR render scale no longer applies to the camera (it can then render at full window size).
+  A 60 fps recording may repeat a frame now and then (OBS samples on its own clock). It is a "pinned" camera of the extra-camera limiter
   (planned on its own, never adopted by `ExtraCameraMaxFps`). Handed back (render target cleared only if still CRIX's)
   on: off, suspend, quit, no headset, `DesktopCamera` switching the camera off, resize (re-engaged after 1 s), HDR
-  output, another screen camera drawing after it, no render within 10 frames, errors; another owner's render target is
-  left alone until the profile is re-applied, and a texture another camera still renders into is never destroyed.
+  output, another screen camera drawing after it, no render within 10 frames (counted while it is on), errors; another
+  owner's render target is left alone until the profile is switched or re-applied, and a texture another camera still
+  renders into is never destroyed. The limit keeps working if the desktop-camera module fails, and nothing of the
+  limiter stays installed once nothing is pinned or limited.
   Camera inventory and render counts treat it as the window camera. Not tested in Gorilla Tag.
 - Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a
   target texture to the headset unless its URP data turns XR off): the desktop-camera setting, the spectator limit and

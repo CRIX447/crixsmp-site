@@ -179,8 +179,8 @@ see *Aiming for 120 FPS* in INSTALLATION.md) is usually the limit. What helps:
 - **Sakuraa's spectator camera at 60 FPS (experimental, opt-in):** it is the game's desktop camera and normally renders
   the whole scene again on every headset frame (120 times a second at 120 Hz). Set
   `[Performance] SpectatorCameraMaxFps = 60` in `com.crix.crixoptimizer.cfg`: it then renders on every 2nd headset
-  frame at 120 Hz, and the game window (and OBS) still gets a picture every frame, the camera's latest one, so nothing
-  flickers. The headset keeps its full rate. Details and limits:
+  frame at 120 Hz, and the game window still gets a picture every frame, the camera's latest one, so it does not
+  flicker (a 60 fps recording may repeat a frame now and then). The headset keeps its full rate. Details and limits:
   [docs/OBS_DISCORD_RESHADE_GUIDE.md](docs/OBS_DISCORD_RESHADE_GUIDE.md#spectator-camera-limit-experimental-opt-in).
   Not tested in Gorilla Tag yet: check the system report's *Spectator camera limit* line, and set it back to `0` if
   the window shows the headset view, a black image, or Sakuraa's HUD disappears.

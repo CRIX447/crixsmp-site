@@ -44,8 +44,8 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
   (minimaps, tablets, Sakuraa's display cameras) at most N times a second. Off by default because it affects other
   mods' cameras.
 - **Spectator camera limit (experimental, opt-in):** `[Performance] SpectatorCameraMaxFps = 60` renders the desktop
-  spectator view (Sakuraa's spectator camera) on every 2nd headset frame at 120 Hz, while the window still gets a new
-  picture every frame. Not tested in the game yet.
+  spectator view (Sakuraa's spectator camera) on every 2nd headset frame at 120 Hz, while the window is still drawn
+  every frame with its latest picture. Not tested in the game yet.
 - The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing. The
   report's per-minute *Session trend* shows whether the frame rate falls over a long session and what changed with it.
 - **Performance notes** (`BepInEx/CRIXOptimizer/notes/`): while you play, CRIX notes frame rate, map, lobby size,

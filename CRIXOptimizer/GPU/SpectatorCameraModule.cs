@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using CRIXOptimizer.Configuration;
 using CRIXOptimizer.Core;
 using CRIXOptimizer.Utilities;
@@ -45,6 +46,7 @@ namespace CRIXOptimizer.GPU
         private readonly ExtraCameraLimiter limiter;
         private readonly Func<float, Camera> findCamera;
         private readonly Func<Camera, string> ownerLabel;
+        private readonly Func<bool> vrActiveNow;
         private readonly ILogSink log;
         private readonly Action<Camera> onEndCamera;
         private readonly Action<ScriptableRenderContext, Camera> endCameraRendering;
@@ -54,6 +56,8 @@ namespace CRIXOptimizer.GPU
         private Camera cam;
         private RenderTexture rt;
         private ISpectatorPresenter presenter;
+        private SpectatorPresenterKind presenterInUse;
+        private int rtSamples = 1;
         private bool engaged;
         private bool renderedSinceEngage;
         private int enabledFramesWithoutRender;
@@ -71,11 +75,12 @@ namespace CRIXOptimizer.GPU
         public bool Engaged => engaged;
         public string TextureInfo { get; private set; } = "";
 
-        public SpectatorCameraModule(ExtraCameraLimiter limiter, Func<float, Camera> findCamera, Func<Camera, string> ownerLabel, ILogSink log)
+        public SpectatorCameraModule(ExtraCameraLimiter limiter, Func<float, Camera> findCamera, Func<Camera, string> ownerLabel, Func<bool> vrActiveNow, ILogSink log)
         {
             this.limiter = limiter;
             this.findCamera = findCamera;
             this.ownerLabel = ownerLabel ?? (_ => "");
+            this.vrActiveNow = vrActiveNow ?? (() => true);
             this.log = log ?? NullLogSink.Instance;
             onEndCamera = OnEndCamera;
             endCameraRendering = (context, camera) => onEndCamera(camera);
@@ -125,6 +130,10 @@ namespace CRIXOptimizer.GPU
             }
             if (engaged && (rt.width != width || rt.height != height))
                 Release("window resized");
+            else if (engaged && presenterKind != presenterInUse)
+                Release("[Compatibility] SpectatorCameraPresenter changed"); // taken again below with the new presenter
+            else if (engaged && UnityObjects.IsAlive(cam) && WantedSamples(cam) != rtSamples)
+                Release("the anti-aliasing (MSAA) setting changed"); // taken again below with a matching texture
             if (!engaged && now - sizeChangedAt < ResizeSettleSeconds)
             {
                 Status = "paused: window being resized";
@@ -191,6 +200,22 @@ namespace CRIXOptimizer.GPU
             {
                 handedBack = "the game or another mod set its own render target on the camera";
                 Release(handedBack);
+                return;
+            }
+            int width = Screen.width, height = Screen.height;
+            if (width != rt.width || height != rt.height)
+            {
+                // Hand back in this frame, before a mis-sized image is drawn; Apply takes it again once the size is stable.
+                lastWidth = width;
+                lastHeight = height;
+                sizeChangedAt = Time.unscaledTime;
+                Release("window resized");
+                return;
+            }
+            if (!vrActiveNow())
+            {
+                // Without a headset URP draws overlay UI itself, only in the last camera that draws to the screen.
+                Release("VR headset no longer active");
                 return;
             }
             if (!rt.IsCreated())
@@ -346,7 +371,8 @@ namespace CRIXOptimizer.GPU
         private void Engage(Camera found, SpectatorPresenterKind kind)
         {
             int width = Screen.width, height = Screen.height;
-            RenderTexture texture = CreateTexture(found, width, height, out string error);
+            int samples = WantedSamples(found);
+            RenderTexture texture = CreateTexture(width, height, samples, out string error);
             if (texture == null)
             {
                 Status = "unavailable: " + error;
@@ -388,6 +414,8 @@ namespace CRIXOptimizer.GPU
             cam = found;
             rt = texture;
             presenter = view;
+            presenterInUse = kind;
+            rtSamples = samples;
             ActiveTexture = texture;
             engaged = true;
             renderedSinceEngage = false;
@@ -403,17 +431,56 @@ namespace CRIXOptimizer.GPU
         private string OnStatus()
         {
             string rate = evenFrames
-                ? (limiter.PinnedEveryNth <= 1 ? "every frame (the game runs at or below the limit)" : $"every {limiter.PinnedEveryNth} frames, at most {maxFps:0}/s")
+                ? (limiter.PinnedEveryNth <= 1 ? "every frame (the game runs at about the limit or slower)" : $"every {limiter.PinnedEveryNth} frames, at most {maxFps:0}/s")
                 : $"at most {maxFps:0}/s";
-            return "on: " + label + " renders " + rate + "; the window shows its latest image every frame";
+            string text = "on: " + label + " renders " + rate + "; the window shows its latest image every frame";
+            float scale = UrpAssetValue("renderScale", 1f);
+            if (scale < 0.95f)
+                text += string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "; note: the VR render scale ({0:0.00}) may not apply to it any more (URP scales a camera that renders into a texture only when it needs an " +
+                    "intermediate texture), so it can render at the full window size: sharper, up to {1:0.0}x the pixels per render, with half as many renders", scale, 1f / (scale * scale));
+            return text;
+        }
+
+        /// <summary>
+        /// MSAA for the texture: URP renders a camera with a target texture at that texture's sample count when its asset has
+        /// MSAA on, and the window used the lower of the asset's count and QualitySettings' (URP copies its asset value
+        /// there only when the pipeline is created). The lower of the two, so a spectator render never costs more because of it.
+        /// </summary>
+        private static int WantedSamples(Camera c)
+        {
+            if (!c.allowMSAA)
+                return 1;
+            int quality = Math.Max(1, QualitySettings.antiAliasing);
+            int asset = (int)UrpAssetValue("msaaSampleCount", quality);
+            int n = Math.Min(Math.Max(1, asset), quality);
+            return n >= 8 ? 8 : n >= 4 ? 4 : n >= 2 ? 2 : 1;
+        }
+
+        /// <summary>A public numeric property of the active URP asset, read by name (about once a second).</summary>
+        private static float UrpAssetValue(string name, float fallback)
+        {
+            try
+            {
+                object asset = GraphicsSettings.currentRenderPipeline;
+                PropertyInfo property = asset?.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                if (property == null)
+                    return fallback;
+                object value = property.GetValue(asset, null);
+                return value is float f ? f : value is int i ? i : fallback;
+            }
+            catch
+            {
+                return fallback;
+            }
         }
 
         /// <summary>
         /// A window-sized colour target without alpha (so drawing it can never let the headset mirror show through), with
-        /// a depth buffer and the camera's MSAA. B10G11R11 keeps HDR values when the camera renders HDR and is as small
-        /// as an 8-bit target.
+        /// a depth buffer and <paramref name="samples"/> MSAA samples. B10G11R11 keeps HDR values when the camera renders HDR
+        /// and is as small as an 8-bit target.
         /// </summary>
-        private static RenderTexture CreateTexture(Camera found, int width, int height, out string error)
+        private static RenderTexture CreateTexture(int width, int height, int samples, out string error)
         {
             error = null;
             try
@@ -428,7 +495,7 @@ namespace CRIXOptimizer.GPU
 #pragma warning restore 618
                 var desc = new RenderTextureDescriptor(width, height, color, SystemInfo.GetGraphicsFormat(DefaultFormat.DepthStencil))
                 {
-                    msaaSamples = found.allowMSAA ? Mathf.Clamp(QualitySettings.antiAliasing, 1, 8) : 1,
+                    msaaSamples = samples,
                     useMipMap = false,
                     autoGenerateMips = false,
                 };

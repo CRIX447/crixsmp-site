@@ -135,6 +135,30 @@ namespace CRIXOptimizer.Tests
             // Reprojection: the game runs at 60 on a 120 Hz headset -> the spectator renders every frame.
             gaps = EvenFrameGaps(60, 120, 6000, Jittered(60, 0.0015, 15), out _);
             Assert.True(gaps.Count == 1 && gaps.ContainsKey(1), "60 fps under reprojection: " + Show(gaps));
+            // A struggling game between the two (61-70 fps, not locked to half rate): at most about 5 % above the limit
+            // (61 fps: every frame), clearly faster: every 2nd frame.
+            foreach (double fps in new[] { 61.0, 65.0, 70.0 })
+            {
+                gaps = EvenFrameGaps(60, 120, (int)(fps * 60), Jittered(fps, 0.0005, 16), out int r);
+                Assert.True(r <= 60 * 60 * 1.05 + 1, fps + " fps: " + r + " renders in 60 s");
+                if (fps >= 65)
+                    Assert.True(gaps.Count == 1 && gaps.ContainsKey(2), fps + " fps on 120 Hz: " + Show(gaps));
+            }
+            // Mixed 1- and 2-vsync frames averaging about 70 fps on 120 Hz: still every 2nd frame.
+            gaps = EvenFrameGaps(60, 120, 8400, f => f % 7 < 3 ? 1.0 / 60 : 1.0 / 120, out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(2), "vsync mix: " + Show(gaps));
+            // Odd limits never give more than about 5 % above the limit: 110/s at 120 Hz -> 60/s, 58/s -> 60/s (3 % above),
+            // 55/s -> 40/s, 70/s at 144 Hz -> 72/s (3 % above), 65/s at 144 Hz -> 48/s.
+            gaps = EvenFrameGaps(110, 120, 12000, Steady(120), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(2), "110 at 120 Hz: " + Show(gaps));
+            gaps = EvenFrameGaps(58, 120, 12000, Steady(120), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(2), "58 at 120 Hz: " + Show(gaps));
+            gaps = EvenFrameGaps(55, 120, 12000, Steady(120), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(3), "55 at 120 Hz: " + Show(gaps));
+            gaps = EvenFrameGaps(70, 144, 14400, Steady(144), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(2), "70 at 144 Hz: " + Show(gaps));
+            gaps = EvenFrameGaps(65, 144, 14400, Steady(144), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(3), "65 at 144 Hz: " + Show(gaps));
 
             // A short swing does not change N; a lasting change does, after PersistFrames frames.
             var c = new RenderRateSchedule.Cadence();

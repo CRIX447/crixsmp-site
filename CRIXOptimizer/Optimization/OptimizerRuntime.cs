@@ -240,7 +240,8 @@ namespace CRIXOptimizer.Optimization
             Guard("Performance notes", StartNotes);
             ExtraCameras = new ExtraCameraLimiter(log);
             ConfigureExtraCameras();
-            Spectator = new SpectatorCameraModule(ExtraCameras, now => DesktopCamera?.FindShoulderCamera(now), cam => DesktopCamera?.OwnerLabel(cam) ?? "", log);
+            Spectator = new SpectatorCameraModule(ExtraCameras, now => DesktopCamera?.FindShoulderCamera(now), cam => DesktopCamera?.OwnerLabel(cam) ?? "",
+                                                  () => Xr.VrActiveNow, log);
             if (DesktopCamera != null)
                 DesktopCamera.IsCrixTexture = SpectatorCameraModule.IsSpectatorTexture;
 
@@ -721,7 +722,6 @@ namespace CRIXOptimizer.Optimization
                     Fail("Graphics settings", e);
                 }
             }
-            Spectator?.ResetHandBack();
             ApplyDesktopCamera(active);
             if (SettingWrites.Count != writesBefore)
                 lastGraphicsApplyTime = Time.unscaledTime;
@@ -754,33 +754,41 @@ namespace CRIXOptimizer.Optimization
 
         private void ApplyDesktopCamera(bool active)
         {
-            if (DesktopCamera == null || IsFaulted("Desktop camera"))
-                return;
-            DesktopCameraMode mode = ActiveSettings?.DesktopCamera ?? DesktopCameraMode.Unchanged;
-            // Never without a headset: the desktop camera may then be the only view of the game.
-            bool off = active && Xr.IsVrActive && DesktopCameraModeWantsOff(mode);
-            string reason = !active ? "CRIX suspended" : mode == DesktopCameraMode.Unchanged ? "profile leaves it alone"
-                : !Xr.IsVrActive ? "no VR headset active" : ReShade.GuardActive ? "ReShade guard"
-                : off ? (mode == DesktopCameraMode.Off ? "profile setting" : "not recording or streaming") : Capture.Reason;
             float now = Time.unscaledTime;
+            bool desktopUsable = DesktopCamera != null && !IsFaulted("Desktop camera");
             // The spectator limit points the same camera at CRIX's texture: hand it back before the desktop-camera setting
-            // looks at the camera, and take it again after (only while that setting leaves the camera on).
-            string standBy = SpectatorStandBy(active, off);
+            // looks at the camera, and take it again after, only while that setting leaves the camera on.
+            string standBy = SpectatorStandBy(active);
             if (standBy != null && Spectator != null)
                 Guard("Spectator camera", () => Spectator.Release(standBy));
-            Guard("Desktop camera", () => DesktopCamera.Apply(off, reason, cfg.DesktopCameraWhenModsUseIt.Value, now));
+            if (desktopUsable)
+            {
+                DesktopCameraMode mode = ActiveSettings?.DesktopCamera ?? DesktopCameraMode.Unchanged;
+                // Never without a headset: the desktop camera may then be the only view of the game.
+                bool off = active && Xr.IsVrActive && DesktopCameraModeWantsOff(mode);
+                string reason = !active ? "CRIX suspended" : mode == DesktopCameraMode.Unchanged ? "profile leaves it alone"
+                    : !Xr.IsVrActive ? "no VR headset active" : ReShade.GuardActive ? "ReShade guard"
+                    : off ? (mode == DesktopCameraMode.Off ? "profile setting" : "not recording or streaming") : Capture.Reason;
+                Guard("Desktop camera", () => DesktopCamera.Apply(off, reason, cfg.DesktopCameraWhenModsUseIt.Value, now));
+                // Only when it really switched the camera off: it leaves it on for Sakuraa's spectator, while the game's LIV
+                // camera drives it, or after an outside change, and the camera then still renders every frame.
+                if (standBy == null && DesktopCamera.HoldsCameraOff)
+                    standBy = "standing by: the DesktopCamera setting has switched the camera off (" + reason + ")";
+            }
+            else if (standBy == null)
+            {
+                standBy = DesktopCamera == null ? "unavailable: the game's camera rig was not found" : "unavailable: the desktop camera module is disabled after errors";
+            }
             ApplySpectator(standBy, now);
         }
 
-        /// <summary>Why the spectator limit must not run now, or null.</summary>
-        private string SpectatorStandBy(bool active, bool desktopCameraOff)
+        /// <summary>Why the spectator limit must not run now, or null (the desktop-camera setting is checked after it acted).</summary>
+        private string SpectatorStandBy(bool active)
         {
             if (!active)
                 return "paused: CRIX suspended or disabled";
             if (!Xr.IsVrActive)
                 return "standing by: no VR headset active (the camera may be the only view)";
-            if (desktopCameraOff)
-                return "standing by: the DesktopCamera profile setting has switched the camera off (not recording or streaming)";
             if (ReShade.GuardActive && !cfg.SpectatorCameraWithReShade.Value)
                 return "paused: ReShade detected and [Compatibility] SpectatorCameraWithReShade = false";
             if (IsFaulted("Extra cameras"))
@@ -917,7 +925,10 @@ namespace CRIXOptimizer.Optimization
             lastUserProfileKey = key;
             ResolveProfile(logNotes: valuesEdited);
             if (rearm)
+            {
                 Ledger.RearmAll(); // the user chose a profile: apply it even to settings changed externally before
+                Spectator?.ResetHandBack();
+            }
             if (!cfg.AdaptiveEnabled)
                 Adaptive.Reset();
             ApplyAll(rearm ? "profile changed" : valuesEdited ? "profile values changed" : "config changed", explicitChange: rearm || valuesEdited);
@@ -947,6 +958,7 @@ namespace CRIXOptimizer.Optimization
                 case "ReapplyProfileNow":
                     Suspended = false;
                     Ledger.RearmAll();
+                    Spectator?.ResetHandBack();
                     ResolveProfile();
                     ApplyAll("re-apply requested");
                     log.Info("Profile re-applied, including settings that had been changed externally.");
