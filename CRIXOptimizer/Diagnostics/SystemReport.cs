@@ -83,12 +83,13 @@ namespace CRIXOptimizer.Diagnostics
               .Append(" / ").Append(s.P99Ms.ToString("0.0", Inv)).Append(" / ").Append(s.MaxMs.ToString("0.0", Inv)).Append('\n');
             sb.Append("GPU frame time: ").Append(rt.Gpu.HasGpuTime ? rt.Gpu.AverageGpuMs.ToString("0.00", Inv) + " ms (" + rt.Gpu.Source + ")" : rt.Gpu.Source).Append('\n');
             sb.Append("Hitches (>2x budget) / GC-coincident [M]: ").Append(rt.Frames.Hitches).Append(" / ").Append(rt.Frames.GcCoincidentHitches).Append('\n');
-            sb.Append("Big hitches (>70 ms) [M]: ").Append(rt.BigHitches).Append(" - during garbage collection ").Append(rt.BigHitchesGc)
+            sb.Append("Big hitches (>70 ms) [M]: ").Append(rt.BigHitches).Append(" - while CRIX freed unused assets ").Append(rt.BigHitchesDeferredUnload)
+              .Append(", during garbage collection ").Append(rt.BigHitchesGc)
               .Append(", during scene loads ").Append(rt.BigHitchesSceneLoad).Append(", while the game and mods were loading (startup) ").Append(rt.BigHitchesStartup)
               .Append(", at a zone change or room join/leave ").Append(rt.BigHitchesZoneOrRoom)
               .Append(", at a time-of-day change or lightmap load ").Append(rt.BigHitchesTimeOfDay)
               .Append(", right after a CRIX settings change ").Append(rt.BigHitchesAfterCrixChange)
-              .Append(", other ").Append(rt.BigHitches - rt.BigHitchesGc - rt.BigHitchesSceneLoad - rt.BigHitchesStartup - rt.BigHitchesZoneOrRoom - rt.BigHitchesTimeOfDay - rt.BigHitchesAfterCrixChange).Append('\n');
+              .Append(", other ").Append(rt.BigHitches - rt.BigHitchesDeferredUnload - rt.BigHitchesGc - rt.BigHitchesSceneLoad - rt.BigHitchesStartup - rt.BigHitchesZoneOrRoom - rt.BigHitchesTimeOfDay - rt.BigHitchesAfterCrixChange).Append('\n');
             if (rt.NotesPath.Length > 0)
                 sb.Append("Performance notes for this session: ").Append(rt.NotesPath).Append('\n');
             if (rt.LastMapContent != null)

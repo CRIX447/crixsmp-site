@@ -14,10 +14,11 @@ namespace CRIXOptimizer.Diagnostics
     /// performance notes. ZoneManagement.instance.activeZones (GTZone values) and NetworkSystem.Instance.InRoom /
     /// RoomPlayerCount. Anything missing after a game update reads as "unknown"; nothing is ever written.
     /// For hitch causes: the time-of-day step (BetterDayNightManager.instance.currentTimeIndex; a change swaps the
-    /// lightmaps of every loaded map), how many maps are loading lightmaps (PerSceneRenderData) and whether zone scenes
-    /// are still loading (ZoneManagement.AnyActiveLoadOps). Custom (mod.io) maps: CustomMapLoader.IsMapLoaded(),
-    /// LoadedMapModId and IsCustomScene(name); while one is loaded the "customMaps" zone reads as "customMaps:&lt;map id&gt;"
-    /// so each map gets its own summary.
+    /// lightmaps of every loaded map), how many loaded maps are loading lightmaps (BetterDayNightManager.allScenesRenderData,
+    /// PerSceneRenderData.IsLoadingLightmaps) and whether zone scenes are still loading (ZoneManagement.AnyActiveLoadOps).
+    /// Custom (mod.io) maps: CustomMapLoader.IsMapLoaded(), IsLoading(), LoadedMapModId and IsCustomScene(name); while
+    /// one is loaded the "customMaps" zone reads as "customMaps:&lt;map id&gt;" so each map gets its own summary. A map that
+    /// loads more of its scenes while you play it (its load zones) keeps its id meanwhile.
     /// </summary>
     internal sealed class GameContextProbe
     {
@@ -29,9 +30,12 @@ namespace CRIXOptimizer.Diagnostics
         private readonly List<string> names = new List<string>(8);
         private readonly Func<object> dayNightInstance;
         private readonly Func<object, int> timeIndex;
-        private readonly Func<int> lightmapLoads;
+        private readonly Func<object> renderDataList;
+        private readonly Func<object, bool> renderDataLoading;
         private readonly MethodInfo anyActiveLoadOps;
         private readonly Func<bool> mapLoaded;
+        private readonly Func<bool> mapLoading;
+        private string lastMapId = "";
         private readonly Func<object> mapId;
         private readonly Func<string, bool> isCustomScene;
 
@@ -58,14 +62,16 @@ namespace CRIXOptimizer.Diagnostics
             {
                 dayNightInstance = Accessors.StaticGetter<object>(dn, "instance");
                 timeIndex = Accessors.Getter<int>(dn, "currentTimeIndex");
+                renderDataList = Accessors.StaticGetter<object>(dn, "allScenesRenderData");
             }
             Type rd = types.Find("PerSceneRenderData");
             if (rd != null)
-                lightmapLoads = Accessors.StaticGetter<int>(rd, "g_AllScenesPopulatingLightmapsLoadCount");
+                renderDataLoading = Accessors.Getter<bool>(rd, "IsLoadingLightmaps");
             Type loader = types.Find("CustomMapLoader");
             if (loader != null)
             {
                 mapLoaded = StaticFunc<Func<bool>>(Accessors.FindMethod(loader, "IsMapLoaded", 0));
+                mapLoading = StaticFunc<Func<bool>>(Accessors.FindMethod(loader, "IsLoading", 0));
                 isCustomScene = StaticFunc<Func<string, bool>>(Accessors.FindMethod(loader, "IsCustomScene", 1));
                 mapId = Accessors.StaticGetter<object>(loader, "LoadedMapModId");
             }
@@ -110,7 +116,10 @@ namespace CRIXOptimizer.Diagnostics
             }
         }
 
-        /// <summary>The loaded custom map's mod.io id (digits only), or "" when none is loaded or it cannot be read.</summary>
+        /// <summary>
+        /// The loaded custom map's mod.io id (digits only), or "" when none is loaded or it cannot be read. The game
+        /// reports no map while it loads one, also while a loaded map loads more of its scenes; the last id is kept then.
+        /// </summary>
         public string ReadCustomMapId()
         {
             if (mapLoaded == null || mapId == null)
@@ -118,17 +127,34 @@ namespace CRIXOptimizer.Diagnostics
             try
             {
                 if (!mapLoaded())
-                    return "";
+                {
+                    if (lastMapId.Length > 0 && mapLoading != null && mapLoading())
+                        return lastMapId;
+                    return lastMapId = "";
+                }
                 string text = mapId()?.ToString() ?? "";
                 var digits = new System.Text.StringBuilder(text.Length);
                 foreach (char c in text)
                     if (c >= '0' && c <= '9')
                         digits.Append(c);
-                return digits.Length > 0 && digits.Length <= 20 ? digits.ToString() : "";
+                return lastMapId = digits.Length > 0 && digits.Length <= 20 ? digits.ToString() : "";
             }
             catch
             {
                 return "";
+            }
+        }
+
+        /// <summary>The game is loading a custom map or more of its scenes (false when unreadable).</summary>
+        public bool CustomMapLoading()
+        {
+            try
+            {
+                return mapLoading != null && mapLoading();
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -177,14 +203,23 @@ namespace CRIXOptimizer.Diagnostics
             }
         }
 
-        /// <summary>How many loaded maps are loading lightmaps right now, or -1 when it cannot be read.</summary>
+        /// <summary>How many loaded maps are loading lightmaps right now, or -1 when it cannot be read. Hitch frames only.</summary>
         public int ReadLightmapLoads()
         {
-            if (lightmapLoads == null)
+            if (renderDataList == null || renderDataLoading == null)
                 return -1;
             try
             {
-                return lightmapLoads();
+                if (!(renderDataList() is IList list))
+                    return -1;
+                int loading = 0;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    object data = list[i];
+                    if (UnityObjects.IsAlive(data) && renderDataLoading(data))
+                        loading++;
+                }
+                return loading;
             }
             catch
             {

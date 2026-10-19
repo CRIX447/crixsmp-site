@@ -51,6 +51,9 @@ namespace CRIXOptimizer.CPU
                 return;
             }
 
+            // Read-only. Built before the Potassium check: the deferred asset unload needs it either way.
+            inRoom = BuildInRoomCheck();
+
             if (potassiumInstalled && coexistence == PotassiumCoexistence.DeferToPotassium)
             {
                 DeferredToPotassium = true;
@@ -64,7 +67,6 @@ namespace CRIXOptimizer.CPU
             if (potassiumInstalled)
                 log.Warn("Potassium is also installed and WhenPotassiumInstalled = ApplyBoth: the same game methods are patched by both mods.");
 
-            inRoom = BuildInRoomCheck();
             if (applyNow)
                 Ensure(settings, groups);
         }

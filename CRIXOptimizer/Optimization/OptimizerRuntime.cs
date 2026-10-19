@@ -112,6 +112,7 @@ namespace CRIXOptimizer.Optimization
         public int BigHitchesZoneOrRoom { get; private set; }
         public int BigHitchesStartup { get; private set; }
         public int BigHitchesTimeOfDay { get; private set; }
+        public int BigHitchesDeferredUnload { get; private set; }
         private string lastSlowDrop = "";
         private float lastSlowDropLog = -1e9f;
         public ObsWebSocketClient Obs { get; private set; }
@@ -154,7 +155,7 @@ namespace CRIXOptimizer.Optimization
         private int environmentScans;
         private float alertVisibleUntil;
         private float lastDeferredUnload = -1e9f;
-        private bool notesLoading = true;
+        private bool memoryBaselineAfterLoading;
         private int notesTimeOfDay = -2;
         private float lastTimeOfDayChange = -1e9f;
         // Potassium's "Skip timed unused-asset unloads" (default on; read from its config every 30 s).
@@ -314,6 +315,8 @@ namespace CRIXOptimizer.Optimization
                 Notes?.AddFrame(dt, now);
                 renderCounter?.AddFrame();
             }
+            if (renderCounter != null)
+                renderCounter.Counting = cfg.Diagnostics.Value;
             if (dt * 1000f >= BigHitchMs && dt < 5f && cfg.Diagnostics.Value)
                 NoteBigHitch(dt * 1000f, now);
 
@@ -377,7 +380,13 @@ namespace CRIXOptimizer.Optimization
         {
             BigHitches++;
             string cause;
-            if (Frames.LastFrameCollected)
+            if (now - lastDeferredUnload <= ms / 1000f + 0.2f)
+            {
+                // Before the GC check: freeing unused assets also runs a garbage collection.
+                BigHitchesDeferredUnload++;
+                cause = "CRIX freed unused assets ([Memory] DeferredAssetUnload; only while not in a room)";
+            }
+            else if (Frames.LastFrameCollected)
             {
                 BigHitchesGc++;
                 cause = "a garbage collection ran in that frame";
@@ -404,11 +413,6 @@ namespace CRIXOptimizer.Optimization
                 cause = now - lastTimeOfDayChange <= 3f
                     ? "the time of day had just changed (the game swaps the lightmaps of every loaded map)"
                     : "a map was loading its lightmaps";
-            }
-            else if (now - lastDeferredUnload <= ms / 1000f + 0.2f)
-            {
-                BigHitchesAfterCrixChange++;
-                cause = "CRIX freed unused assets ([Memory] DeferredAssetUnload; only while not in a room)";
             }
             else if (now - lastGraphicsApplyTime <= ms / 1000f + 0.2f)
             {
@@ -1268,14 +1272,8 @@ namespace CRIXOptimizer.Optimization
         {
             Notes.SetRefreshRate(Xr.RefreshRate);
             TimeOfDayChangedNow(now);
-            PollCustomMap(now);
-            if (notesLoading && !Notes.InStartup)
-            {
-                // What the game and mods loaded at startup is not growth over the session.
-                notesLoading = false;
-                MemoryStats.ResetGrowthBaseline();
-            }
             ZoneOrRoomChangedNow(now, out _);
+            PollCustomMap(now); // after the zone check, so a map that was just unloaded is no longer an active zone
             if (Capture.Active != notesCapture)
             {
                 Notes.AddEvent(now, Capture.Active == CaptureKind.None ? "recording/streaming stopped"
@@ -1326,12 +1324,17 @@ namespace CRIXOptimizer.Optimization
             if (map != notesMap)
             {
                 if (notesMap.Length > 0)
+                {
                     Notes.AddEvent(now, "left custom map " + notesMap);
+                    // The game unloads the map's bundle and frees unused assets when a map is unloaded.
+                    Notes.AssetsFreed(now, "the game unloaded custom map " + notesMap);
+                }
                 if (map.Length > 0)
                 {
                     Notes.AddEvent(now, "custom map " + map + " loaded");
                     pendingMapScan = map;
-                    mapScanAt = now + 3f;
+                    // After the map's entry window, so the count's own frame is not measured as part of entering the map.
+                    mapScanAt = now + (float)PerformanceNotes.ZoneEntrySeconds + 3f;
                 }
                 else
                 {
@@ -1341,6 +1344,11 @@ namespace CRIXOptimizer.Optimization
             }
             if (pendingMapScan.Length == 0 || now < mapScanAt)
                 return;
+            if (probe.CustomMapLoading())
+            {
+                mapScanAt = now + 5f; // loading more of its scenes: count once that is done
+                return;
+            }
             string scanned = pendingMapScan;
             pendingMapScan = "";
             try
@@ -1348,13 +1356,25 @@ namespace CRIXOptimizer.Optimization
                 MapContent content = MapContentScanner.Scan(probe.IsCustomScene, scanned);
                 LastMapContent = content;
                 Notes.AddEvent(now, content.Describe());
-                foreach (string hint in content.Hints(Graphics == null || Graphics.RealtimeShadowsPossible))
+                foreach (string hint in content.Hints(Graphics == null || Graphics.RealtimeShadowsPossible, ReadRealtimeProbesAllowed()))
                     Notes.AddEvent(now, "custom map " + scanned + ": " + hint);
                 log.Info(content.Describe());
             }
             catch (Exception e)
             {
                 log.Debug("Custom map content count failed: " + e.Message);
+            }
+        }
+
+        private static bool ReadRealtimeProbesAllowed()
+        {
+            try
+            {
+                return QualitySettings.realtimeReflectionProbes;
+            }
+            catch
+            {
+                return true;
             }
         }
 
@@ -1544,10 +1564,18 @@ namespace CRIXOptimizer.Optimization
                              $"(now {MemoryMonitor.FormatBytes(MemoryStats.ManagedUsedBytes)}). If this continues, check recently added mods.");
                 }
 
+                // What the game and mods load at startup is not growth over the session: the baseline is taken once loading
+                // has finished (the notes' startup phase, or two minutes when the notes are off), and nothing is freed before.
+                if (!memoryBaselineAfterLoading && (Notes != null ? !Notes.InStartup : now >= 120f))
+                {
+                    memoryBaselineAfterLoading = true;
+                    MemoryStats.ResetGrowthBaseline();
+                }
+
                 // With Potassium installed CRIX's own game patches are off (Live flags cleared), but Potassium skips the
                 // same unloads, so the deferred unload is checked against either.
                 RefreshOptimizerMods(now);
-                if (cfg.DeferredAssetUnload.Value && TimedUnloadsSkipped && !Suspended &&
+                if (cfg.DeferredAssetUnload.Value && TimedUnloadsSkipped && !Suspended && memoryBaselineAfterLoading &&
                     MemoryStats.LargestGrowthSinceBaselineBytes >= cfg.DeferredAssetUnloadGrowthMB.Value * 1024L * 1024L &&
                     now - lastDeferredUnload >= cfg.DeferredAssetUnloadMinIntervalMinutes.Value * 60f &&
                     GamePatches != null && GamePatches.TryIsInRoom(out bool inRoom) && !inRoom)
@@ -1556,8 +1584,8 @@ namespace CRIXOptimizer.Optimization
                     log.Info($"Deferred unused-asset unload (memory grew: Unity {MemoryMonitor.FormatBytes(MemoryStats.GrowthSinceBaselineBytes)}, " +
                              $"graphics {MemoryMonitor.FormatBytes(MemoryStats.GfxGrowthSinceBaselineBytes)}; not in a room).");
                     Resources.UnloadUnusedAssets();
-                    MemoryStats.ResetGrowthBaseline();
-                    Notes?.AssetsFreed(now);
+                    MemoryStats.ResetGrowthBaselineAtNextSample();
+                    Notes?.AssetsFreed(now, "CRIX's deferred unload");
                 }
             }
             catch (Exception e)

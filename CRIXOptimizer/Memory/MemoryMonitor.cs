@@ -110,6 +110,14 @@ namespace CRIXOptimizer.Memory
             return true;
         }
 
+        /// <summary>After Resources.UnloadUnusedAssets (which finishes later): the next sample becomes the baseline.</summary>
+        public void ResetGrowthBaselineAtNextSample()
+        {
+            baselineTotalAllocated = -1;
+            baselineGfx = -1;
+            managedTrend.Clear();
+        }
+
         public void ResetGrowthBaseline()
         {
             baselineTotalAllocated = UnityAllocatedBytes > 0 ? UnityAllocatedBytes : -1;

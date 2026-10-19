@@ -85,19 +85,24 @@ are claimed.
   (at most 5 minutes), counts as loading (the game and mods such as Sakuraa Client loading their content). Its hitches
   are marked `[loading]`, summarised under *Startup* and left out of the per-zone/lobby/streaming summaries and the
   worst-hitch list; the system report counts them separately.
-- **Entering maps** (notes): the first 10 s after a zone becomes active, split into the first visit this session and
-  later visits (worst frame, big hitches, hitches). A hitch only on the first visit points to first use of shaders or
-  textures; one on every visit to the game switching the map on. A visit after CRIX's deferred unload counts as a
-  first visit again. Zone change events say which visit it was.
+- **Entering maps** (notes): the first 10 s after a zone becomes active (plus the 1.2 s before CRIX saw the change, so
+  the frame in which the game switched the zone on is included), split into the first visit this session and later
+  visits (worst frame, big hitches, hitches). A hitch only on the first visit points to first use of shaders or
+  textures; one on every visit to the game switching the map on. A visit after unused assets were freed (CRIX's
+  deferred unload, or the game unloading a custom map) counts as a first visit again; leaving a zone ends its
+  measurement. Zone change events say which visit it was.
 - More hitch causes: a time-of-day change (the game swaps the lightmaps of every loaded map;
-  `BetterDayNightManager.currentTimeIndex`), a map loading lightmaps (`PerSceneRenderData`), and "zone scenes were
-  still loading" (`ZoneManagement.AnyActiveLoadOps`, read only on hitch frames). Time-of-day changes are events. The
+  `BetterDayNightManager.currentTimeIndex`), a map loading lightmaps (`BetterDayNightManager.allScenesRenderData`,
+  `PerSceneRenderData.IsLoadingLightmaps`), and "zone scenes were still loading" (`ZoneManagement.AnyActiveLoadOps`);
+  the last two are read only on hitch frames. Time-of-day changes are events. The
   system report counts them as "at a time-of-day change or lightmap load".
 - **Custom maps** (notes): each mod.io map gets its own zone name (`customMaps:<map id>`; public map ids, nothing
-  personal), entering and leaving are events, and 3 s after a map has loaded its content is counted once, read-only:
-  renderers, triangles, LOD groups, lights (realtime, with shadows), reflection probes (realtime, every frame), cameras
-  rendering into textures, particle systems, with a note on what costs frame time. The count runs once per map and
-  its duration is written next to it. The last map's line is also in the system report.
+  personal), entering and leaving are events (a map loading more of its scenes through its load zones keeps its id),
+  and once its entry window is over its content is counted once, read-only: renderers, triangles, LOD groups, lights
+  (realtime, with shadows), reflection probes (realtime, set to update every frame, without time slicing), cameras
+  rendering into textures, particle systems (sum of their limits), with a note on what costs frame time (taking into
+  account whether realtime shadows and realtime reflection probes can render at all). The count waits while the map
+  is still loading and its duration is written next to it. The last map's line is also in the system report.
 - **Camera renders per frame** in the notes timeline (headset, desktop window, cameras into textures, reflection
   probes), counted in `RenderPipelineManager.beginCameraRendering`. Shows whether reflection probes still render
   with `RealtimeReflectionProbes = Off` and how many extra renders a map or mod adds.
@@ -118,10 +123,12 @@ are claimed.
   Unity or graphics memory has grown by 1 GB or more since loading finished.
 - **Fixed: `DeferredAssetUnload` never ran while Potassium was installed** (CRIX's own patches are off then, and the
   check looked only at them, although Potassium skips the same unloads and the setup advice recommended the option).
-  It now checks Potassium's own "Skip timed unused-asset unloads" setting (read from its config, read-only). Growth of
-  graphics memory (visited maps, other players' cosmetics) now triggers it too, the growth baseline is taken after
-  startup loading, and its hitch is named as CRIX's unload in the log and notes. It still only runs while not in a
-  room.
+  It now checks Potassium's own "Skip timed unused-asset unloads" setting (read from its config, read-only), and the
+  read-only "in a room" check it needs is built in that case too (it was not, so the unload could still never run).
+  Growth of graphics memory (visited maps, other players' cosmetics) now triggers it too; the growth baseline is taken
+  once startup loading is over (also with the notes off) and again on the first sample after each unload, and nothing
+  is freed while the game is still loading. Its hitch has its own count and cause in the log, notes and system report.
+  It still only runs while not in a room.
 - **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
   render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
   (time-based: each camera on its own grid with evenly spaced phases, re-spaced when cameras come and go; earliest

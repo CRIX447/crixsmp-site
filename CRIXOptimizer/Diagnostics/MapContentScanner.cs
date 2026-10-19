@@ -70,7 +70,11 @@ namespace CRIXOptimizer.Diagnostics
                         {
                             content.RealtimeProbes++;
                             if (p.refreshMode == ReflectionProbeRefreshMode.EveryFrame)
+                            {
                                 content.EveryFrameProbes++;
+                                if (p.timeSlicingMode == ReflectionProbeTimeSlicingMode.NoTimeSlicing)
+                                    content.UnslicedEveryFrameProbes++;
+                            }
                         }
                     }
                     root.GetComponentsInChildren(true, cameras);
@@ -143,6 +147,8 @@ namespace CRIXOptimizer.Diagnostics
     internal sealed class CameraRenderCounter : IDisposable
     {
         public readonly CameraRenderCounts Counts = new CameraRenderCounts();
+        /// <summary>Counts only while diagnostics are on (frames are only counted then too).</summary>
+        public bool Counting = true;
         private bool subscribed;
 
         public void Start()
@@ -160,7 +166,7 @@ namespace CRIXOptimizer.Diagnostics
         {
             try
             {
-                if (camera == null)
+                if (!Counting || camera == null)
                     return;
                 switch (camera.cameraType)
                 {

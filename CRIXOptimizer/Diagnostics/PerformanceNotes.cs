@@ -22,7 +22,8 @@ namespace CRIXOptimizer.Diagnostics
     /// of the per-zone, per-lobby and per-streaming summaries and the worst-hitch list.
     ///
     /// Entering a map is measured on its own: the first 10 seconds after a zone becomes active, split into the first
-    /// visit this session and later visits. A hitch on the first visit that is gone on later visits points to first use
+    /// visit this session and later visits. The game switches a zone on inside one long frame and CRIX sees the change
+    /// up to a second later, so the window also takes in the frames of the last <see cref="ZoneEntryLookbackSeconds"/>. A hitch on the first visit that is gone on later visits points to first use
     /// of shaders or textures; one on every visit points to the game switching the map on (activating its objects,
     /// swapping lightmaps), which CRIX cannot change without changing the game.
     /// </summary>
@@ -241,6 +242,8 @@ namespace CRIXOptimizer.Diagnostics
 
         public const int MaxEvents = 3000;
         public const double ZoneEntrySeconds = 10;
+        public const double ZoneEntryLookbackSeconds = 1.2;
+        private const int RecentFrames = 512; // > 1.2 s at 240 Hz
         public const int MaxTimelineLines = 2160; // 6 hours at one line per 10 s
 
         private readonly Dictionary<string, Segment> zones = new Dictionary<string, Segment>();
@@ -256,6 +259,9 @@ namespace CRIXOptimizer.Diagnostics
         private readonly List<Entry> openEntries = new List<Entry>();
         private readonly HashSet<string> activeZones = new HashSet<string>();
         private readonly List<string> zoneParts = new List<string>(8);
+        private readonly float[] recentMs = new float[RecentFrames];
+        private readonly double[] recentTime = new double[RecentFrames];
+        private int recentNext, recentCount;
         private double startupEnd = double.NaN;
         private bool startupOver;
         public const double StartupMinSeconds = 60, StartupQuietSeconds = 20, StartupMaxSeconds = 300;
@@ -316,7 +322,7 @@ namespace CRIXOptimizer.Diagnostics
                 if (first && !startupOver && stats.Visits == 1)
                     stats.FirstWhileLoading = true;
                 else if (startupOver)
-                    openEntries.Add(new Entry { Time = now, Stats = stats, First = first });
+                    OpenEntry(new Entry { Time = now, Stats = stats, First = first });
                 described.Add(z + (stats.Visits == 1 ? ": first visit" : first ? ": visit " + stats.Visits.ToString(CultureInfo.InvariantCulture) + ", first since assets were freed"
                                        : ": visit " + stats.Visits.ToString(CultureInfo.InvariantCulture)));
             }
@@ -324,16 +330,32 @@ namespace CRIXOptimizer.Diagnostics
             foreach (string z in zoneParts)
                 if (z.Length > 0)
                     activeZones.Add(z);
+            // A zone that left ends its measurement, so a quick re-entry does not count the same frames twice.
+            openEntries.RemoveAll(e => !activeZones.Contains(e.Stats.Zone));
             return string.Join(", ", described.ToArray());
         }
 
-        /// <summary>Unused assets were freed: maps not active now load again like a first visit next time.</summary>
-        public void AssetsFreed(double now)
+        /// <summary>Starts an entry measurement and counts the frames of the last ZoneEntryLookbackSeconds into it.</summary>
+        private void OpenEntry(Entry entry)
+        {
+            openEntries.Add(entry);
+            for (int i = 0; i < recentCount; i++)
+            {
+                int k = (recentNext - recentCount + i + RecentFrames) % RecentFrames;
+                if (recentTime[k] < entry.Time - ZoneEntryLookbackSeconds)
+                    continue;
+                float ms = recentMs[k];
+                CountEntry(entry, ms, ms > hitchBudgetMs * 2, ms > 70f);
+            }
+        }
+
+        /// <summary>Unused assets were freed (by whom: <paramref name="by"/>): maps not active now load again like a first visit.</summary>
+        public void AssetsFreed(double now, string by)
         {
             foreach (ZoneEntries e in entries.Values)
                 if (!activeZones.Contains(e.Zone))
                     e.SinceFree = 0;
-            AddEvent(now, "unused assets freed (CRIX's deferred unload): maps visited before load again like a first visit");
+            AddEvent(now, "unused assets freed (" + by + "): maps visited before load again like a first visit");
         }
 
         public void SetLobby(int players)
@@ -366,6 +388,11 @@ namespace CRIXOptimizer.Diagnostics
             float ms = dtSeconds * 1000f;
             bool hitch = ms > hitchBudgetMs * 2;
             bool big = ms > 70f;
+            recentMs[recentNext] = ms;
+            recentTime[recentNext] = now;
+            recentNext = (recentNext + 1) % RecentFrames;
+            if (recentCount < RecentFrames)
+                recentCount++;
             window.Add(ms);
             if (hitch)
                 windowHitches++;
@@ -388,43 +415,48 @@ namespace CRIXOptimizer.Diagnostics
             for (int i = openEntries.Count - 1; i >= 0; i--)
             {
                 Entry e = openEntries[i];
-                ZoneEntries s = e.Stats;
                 if (now - e.Time > ZoneEntrySeconds)
                 {
                     openEntries.RemoveAt(i);
                     continue;
                 }
-                if (!e.Counted)
-                {
-                    e.Counted = true;
-                    if (e.First)
-                        s.FirstMeasured++;
-                    else
-                        s.LaterMeasured++;
-                }
-                if (e.First)
-                {
-                    s.FirstWorstMs = Math.Max(s.FirstWorstMs, ms);
-                    if (hitch)
-                        s.FirstHitches++;
-                    if (big)
-                        s.FirstBig++;
-                }
-                else
-                {
-                    s.LaterWorstMs = Math.Max(s.LaterWorstMs, ms);
-                    if (hitch)
-                        s.LaterHitches++;
-                    if (big)
-                    {
-                        s.LaterBig++;
-                        if (!e.HadBig)
-                            s.LaterWithBig++;
-                    }
-                }
-                if (big)
-                    e.HadBig = true;
+                CountEntry(e, ms, hitch, big);
             }
+        }
+
+        private static void CountEntry(Entry e, float ms, bool hitch, bool big)
+        {
+            ZoneEntries s = e.Stats;
+            if (!e.Counted)
+            {
+                e.Counted = true;
+                if (e.First)
+                    s.FirstMeasured++;
+                else
+                    s.LaterMeasured++;
+            }
+            if (e.First)
+            {
+                s.FirstWorstMs = Math.Max(s.FirstWorstMs, ms);
+                if (hitch)
+                    s.FirstHitches++;
+                if (big)
+                    s.FirstBig++;
+            }
+            else
+            {
+                s.LaterWorstMs = Math.Max(s.LaterWorstMs, ms);
+                if (hitch)
+                    s.LaterHitches++;
+                if (big)
+                {
+                    s.LaterBig++;
+                    if (!e.HadBig)
+                        s.LaterWithBig++;
+                }
+            }
+            if (big)
+                e.HadBig = true;
         }
 
         private static void Count(Segment s, float ms, bool hitch, bool big)

@@ -29,6 +29,8 @@ namespace CRIXOptimizer.Diagnostics
         public int ReflectionProbes;
         public int RealtimeProbes;
         public int EveryFrameProbes;
+        /// <summary>Of those, probes without time slicing: all six faces every frame.</summary>
+        public int UnslicedEveryFrameProbes;
         public readonly List<string> TextureCameras = new List<string>();
         public int ParticleSystems;
         public long MaxParticles;
@@ -52,19 +54,20 @@ namespace CRIXOptimizer.Diagnostics
                 lights += " (" + RealtimeLights.ToString(CultureInfo.InvariantCulture) + " realtime";
                 if (ShadowedRealtimeLights > 0)
                     lights += ", " + ShadowedRealtimeLights.ToString(CultureInfo.InvariantCulture) + " with shadows" +
-                              (ShadowedPointLights > 0 ? ", " + ShadowedPointLights.ToString(CultureInfo.InvariantCulture) + " of them point lights (6 shadow renders each)" : "");
+                              (ShadowedPointLights > 0 ? ", " + ShadowedPointLights.ToString(CultureInfo.InvariantCulture) + " of them point lights" : "");
                 lights += ")";
             }
             parts.Add(lights);
             string probes = Count(ReflectionProbes, "reflection probe");
             if (RealtimeProbes > 0)
                 probes += " (" + RealtimeProbes.ToString(CultureInfo.InvariantCulture) + " realtime" +
-                          (EveryFrameProbes > 0 ? ", " + EveryFrameProbes.ToString(CultureInfo.InvariantCulture) + " every frame" : "") + ")";
+                          (EveryFrameProbes > 0 ? ", " + EveryFrameProbes.ToString(CultureInfo.InvariantCulture) + " set to update every frame" +
+                           (UnslicedEveryFrameProbes > 0 ? " (" + UnslicedEveryFrameProbes.ToString(CultureInfo.InvariantCulture) + " without time slicing)" : "") : "") + ")";
             parts.Add(probes);
             parts.Add(Count(TextureCameras.Count, "camera") + " rendering into textures" +
                       (TextureCameras.Count > 0 ? " (" + string.Join(", ", TextureCameras.ToArray()) + ")" : ""));
             parts.Add(Count(ParticleSystems, "particle system") + (ParticleSystems > 0
-                ? " (up to " + MaxParticles.ToString(CultureInfo.InvariantCulture) + " particles" +
+                ? " (limits add up to " + MaxParticles.ToString(CultureInfo.InvariantCulture) + " particles" +
                   (ParticleLightSystems > 0 ? ", " + ParticleLightSystems.ToString(CultureInfo.InvariantCulture) + " with lights" : "") + ")"
                 : ""));
             var sb = new StringBuilder();
@@ -73,20 +76,26 @@ namespace CRIXOptimizer.Diagnostics
             return sb.ToString();
         }
 
-        /// <summary>What the content means for frame time, for the notes; empty when nothing stands out.</summary>
-        public List<string> Hints(bool realtimeShadowsPossible)
+        /// <summary>
+        /// What the content means for frame time, for the notes; empty when nothing stands out.
+        /// <paramref name="realtimeShadowsPossible"/>: the URP asset can render realtime shadows at all;
+        /// <paramref name="realtimeProbesAllowed"/>: QualitySettings.realtimeReflectionProbes is on.
+        /// </summary>
+        public List<string> Hints(bool realtimeShadowsPossible, bool realtimeProbesAllowed)
         {
             var hints = new List<string>(4);
             if (ShadowedRealtimeLights > 0 && realtimeShadowsPossible)
-                hints.Add("realtime lights with shadows render the map again for each shadow");
+                hints.Add("realtime lights with shadows render the map again for each shadow (a point light six times)");
             if (EveryFrameProbes > 0)
-                hints.Add("reflection probes updating every frame render the map six more times each (CRIX's RealtimeReflectionProbes = Off stops realtime probes)");
+                hints.Add(!realtimeProbesAllowed
+                    ? "realtime reflection probes are switched off in the quality settings (RealtimeReflectionProbes = Off); the 'reflection' renders per frame in the timeline show whether any still render"
+                    : UnslicedEveryFrameProbes > 0
+                        ? "reflection probes updating every frame without time slicing render the map six more times per frame each"
+                        : "reflection probes updating every frame render the map six more times per update, spread over several frames (time slicing)");
             if (TextureCameras.Count > 0)
                 hints.Add("each camera rendering into a texture (screens, mirrors) renders the map again; [Performance] ExtraCameraMaxFps limits how often");
             if (Triangles >= 5_000_000)
-                hints.Add("a very detailed map: the GPU and CPU work per frame is high whatever CRIX changes; a lower eye resolution (MaxEyeMegapixels) helps most");
-            if (MaxParticles >= 20_000)
-                hints.Add("many particles: overdraw at headset resolution");
+                hints.Add("a very detailed map: rendering it costs much GPU and CPU time per frame, which CRIX cannot reduce without changing the map");
             return hints;
         }
 

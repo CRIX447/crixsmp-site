@@ -155,6 +155,20 @@ namespace CRIXOptimizer.Tests
             Assert.Equal(0, set.Records.Count(r => r.State == ModuleState.Active));
             Assert.Equal(GamePatchCatalog.AllPatchIds.Length, status.Count(ModuleState.Deferred));
             Assert.False(Harmony.GetAllPatchedMethods().Any(m => Harmony.GetPatchInfo(m).Owners.Contains("crix.tests.deferred")));
+
+            // The read-only room check still works (the deferred asset unload uses it while Potassium handles the patches).
+            NetworkSystem saved = NetworkSystem.Instance;
+            try
+            {
+                NetworkSystem.Instance = new NetworkSystem { InRoom = false };
+                Assert.True(catalog.TryIsInRoom(out bool inRoom) && !inRoom, "room state readable with Potassium installed");
+                NetworkSystem.Instance.InRoom = true;
+                Assert.True(catalog.TryIsInRoom(out inRoom) && inRoom);
+            }
+            finally
+            {
+                NetworkSystem.Instance = saved;
+            }
         }
 
         [Test]

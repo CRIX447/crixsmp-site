@@ -33,13 +33,14 @@ public class ZoneManagement
 public class BetterDayNightManager
 {
     public static volatile BetterDayNightManager instance;
+    public static List<PerSceneRenderData> allScenesRenderData = new List<PerSceneRenderData>();
     public int currentTimeIndex;
 }
 
 public class PerSceneRenderData
 {
-    public static int Populating;
-    public static int g_AllScenesPopulatingLightmapsLoadCount => Populating;
+    public int Requests;
+    public bool IsLoadingLightmaps => Requests != 0;
 }
 
 namespace GorillaTagScripts.Builder
@@ -238,6 +239,7 @@ public class CustomMapLoader
     public static FakeModId LoadedMapModId => Loaded;
     public static bool IsMapLoaded() => !Loading && Loaded.Id != 0;
     public static bool IsMapLoaded(FakeModId id) => IsMapLoaded() && Loaded.Id == id.Id;
+    public static bool IsLoading() => Loading;
     public static bool IsCustomScene(string sceneName) => Scenes.Contains(sceneName);
     public static List<int> Layers => APPROVED_LAYERS;
 

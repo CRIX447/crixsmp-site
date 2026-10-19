@@ -264,7 +264,7 @@ namespace CRIXOptimizer.Tests
             Play(n, ref now, 12, 90, f => f == 10 ? 100f : 0f);
             n.SetZone("forest", now);
             Play(n, ref now, 5, 90);
-            n.AssetsFreed(now);
+            n.AssetsFreed(now, "test");
             Assert.Equal("canyon: visit 3, first since assets were freed", n.SetZone("canyon+forest", now));
             Play(n, ref now, 12, 90);
 
@@ -279,6 +279,35 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void EntryWindowTakesInTheActivationFrameAndQuickReentriesCountOnce()
+        {
+            var n = new PerformanceNotes();
+            n.SetRefreshRate(90);
+            double now = 0;
+            n.SetZone("forest", now);
+            Play(n, ref now, PerformanceNotes.StartupMinSeconds + 1, 90);
+
+            // As in the runtime: the long frame in which the game switches the zone on is recorded first, and the zone
+            // change is seen afterwards (in that frame's hitch check, or up to a second later in the poll).
+            n.AddFrame(0.2f, now);
+            now += 0.2;
+            Play(n, ref now, 0.8, 90);
+            Assert.Equal("canyon: first visit", n.SetZone("canyon+forest", now));
+            Play(n, ref now, 3, 90);
+            // Leaves and comes back within the 10 s window: the first visit stops, the later visit starts, no frame twice.
+            n.SetZone("forest", now);
+            Play(n, ref now, 2, 90);
+            Assert.Equal("canyon: visit 2", n.SetZone("canyon+forest", now));
+            Play(n, ref now, 12, 90);
+
+            string text = n.Build(new string[0], now);
+            int at = text.IndexOf("== Entering maps", StringComparison.Ordinal);
+            string section = text.Substring(at, text.IndexOf("== Per lobby size ==", StringComparison.Ordinal) - at);
+            Assert.True(section.Contains("canyon: first visit: worst 200 ms, 1 big hitches, 1 hitches"), "the activation frame belongs to the first visit: " + section);
+            Assert.True(section.Contains("later visits (1): worst 11 ms, big hitches in 0 of 1 (0 in total), 0 hitches"), "the later visit has only its own frames: " + section);
+        }
+
+        [Test]
         public void MapContentAndCameraRenderCountsDescribeThemselves()
         {
             var c = new MapContent
@@ -289,13 +318,16 @@ namespace CRIXOptimizer.Tests
             };
             c.TextureCameras.Add("512x512");
             string text = c.Describe();
-            Assert.True(text.StartsWith("custom map 4242 contains: 2400 renderers (3 skinned), 1.9 M triangles, 0 LOD groups, 5 lights (2 realtime, 1 with shadows, 1 of them point lights"), text);
-            Assert.True(text.Contains("2 reflection probes (1 realtime, 1 every frame)") && text.Contains("1 camera rendering into textures (512x512)") &&
-                        text.Contains("14 particle systems (up to 3200 particles)") && text.Contains("(1 scene, counted in 12 ms)"), text);
-            var hints = c.Hints(realtimeShadowsPossible: false);
+            Assert.True(text.StartsWith("custom map 4242 contains: 2400 renderers (3 skinned), 1.9 M triangles, 0 LOD groups, 5 lights (2 realtime, 1 with shadows, 1 of them point lights)"), text);
+            Assert.True(text.Contains("2 reflection probes (1 realtime, 1 set to update every frame)") && text.Contains("1 camera rendering into textures (512x512)") &&
+                        text.Contains("14 particle systems (limits add up to 3200 particles)") && text.Contains("(1 scene, counted in 12 ms)"), text);
+            var hints = c.Hints(realtimeShadowsPossible: false, realtimeProbesAllowed: true);
             Assert.Equal(2, hints.Count, string.Join(" | ", hints));
-            Assert.True(hints[0].Contains("reflection probes") && hints[1].Contains("[Performance] ExtraCameraMaxFps"));
-            Assert.Equal(3, c.Hints(realtimeShadowsPossible: true).Count, "shadows only matter when the pipeline renders realtime shadows");
+            Assert.True(hints[0].Contains("spread over several frames (time slicing)") && hints[1].Contains("[Performance] ExtraCameraMaxFps"), hints[0]);
+            Assert.Equal(3, c.Hints(realtimeShadowsPossible: true, realtimeProbesAllowed: true).Count, "shadows only matter when the pipeline renders realtime shadows");
+            Assert.True(c.Hints(false, realtimeProbesAllowed: false)[0].Contains("switched off in the quality settings"), "no claim of probe renders while they are off");
+            c.UnslicedEveryFrameProbes = 1;
+            Assert.True(c.Hints(false, true)[0].Contains("six more times per frame each"));
             Assert.True(new MapContent().Describe().Contains("0 renderers, 0 k triangles"), "empty map");
 
             var counts = new CameraRenderCounts();
@@ -371,9 +403,19 @@ namespace CRIXOptimizer.Tests
             Assert.Equal("city+customMaps:4242+forest", probe.ReadZones(), "each custom map gets its own zone name");
             Assert.True(probe.IsCustomScene("MapScene") && !probe.IsCustomScene("Forest"));
             CustomMapLoader.Loading = true;
-            Assert.Equal("", probe.ReadCustomMapId(), "not while loading");
+            Assert.Equal("4242", probe.ReadCustomMapId(), "a loaded map loading more of its scenes keeps its id");
+            Assert.Equal("city+customMaps:4242+forest", probe.ReadZones(), "no fake leave while it loads a load zone");
+            Assert.True(probe.CustomMapLoading());
             CustomMapLoader.Loading = false;
             CustomMapLoader.Loaded = default;
+            Assert.Equal("", probe.ReadCustomMapId(), "left the map");
+            CustomMapLoader.Loading = true;
+            CustomMapLoader.Loaded = new FakeModId { Id = 77 };
+            Assert.Equal("", probe.ReadCustomMapId(), "a new map is not reported while it is still loading");
+            CustomMapLoader.Loading = false;
+            Assert.Equal("77", probe.ReadCustomMapId());
+            CustomMapLoader.Loaded = default;
+            probe.ReadCustomMapId();
             CustomMapLoader.Scenes.Clear();
             ZoneManagement.instance.activeZones.Remove(GTZone.customMaps);
             NetworkSystem.Instance = new NetworkSystem { InRoom = false, RoomPlayerCount = 9 };
@@ -392,9 +434,10 @@ namespace CRIXOptimizer.Tests
             BetterDayNightManager.instance = new BetterDayNightManager { currentTimeIndex = 4 };
             Assert.Equal(4, probe.ReadTimeOfDay());
             BetterDayNightManager.instance = null;
-            PerSceneRenderData.Populating = 2;
-            Assert.Equal(2, probe.ReadLightmapLoads());
-            PerSceneRenderData.Populating = 0;
+            Assert.Equal(0, probe.ReadLightmapLoads());
+            BetterDayNightManager.allScenesRenderData.AddRange(new[] { new PerSceneRenderData { Requests = 2 }, new PerSceneRenderData(), new PerSceneRenderData { Requests = 1 } });
+            Assert.Equal(2, probe.ReadLightmapLoads(), "maps with lightmap requests outstanding");
+            BetterDayNightManager.allScenesRenderData.Clear();
 
             var missing = new GameContextProbe(Utilities.GameTypes.FromAssemblies(new[] { typeof(PerformanceNotesTests).Assembly }));
             Assert.False(missing.CanReadZones || missing.CanReadPlayers);
