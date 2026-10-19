@@ -20,6 +20,86 @@ namespace CRIXOptimizer.Core
     /// </summary>
     internal static class RenderRateSchedule
     {
+        /// <summary>
+        /// Even-frames cadence for one camera (the spectator view): render every Nth frame, N the smallest whole number of
+        /// typical frames that is at least the period (with a 10 % tolerance for jitter). Renders are then evenly spaced
+        /// and never on two frames in a row while N &gt; 1: 120 Hz and a 60/s limit give every 2nd frame (60/s), 90 Hz every
+        /// 2nd (45/s), 144 Hz every 3rd (48/s), and a game running at or below the limit renders it every frame.
+        /// </summary>
+        public static int EveryNthFrame(double period, double typicalFrameTime)
+        {
+            if (!(period > 0) || !(typicalFrameTime > 0) || double.IsInfinity(period))
+                return 1;
+            double n = Math.Ceiling(period / typicalFrameTime - 0.1);
+            return n < 1 ? 1 : n > 1000 ? 1000 : (int)n;
+        }
+
+        /// <summary>
+        /// The frame time the even-frames cadence uses: the headset's frame time (or a whole multiple of it, e.g. half
+        /// rate under reprojection) when the measured typical frame time is within 15 % of it, so normal jitter cannot
+        /// change N; otherwise the measured one. <paramref name="nominal"/> 0 = refresh rate unknown.
+        /// </summary>
+        public static double CadenceFrameTime(double typical, double nominal)
+        {
+            if (nominal > 0 && typical > 0)
+            {
+                for (int k = 1; k <= 4; k++)
+                {
+                    double target = k * nominal;
+                    if (Math.Abs(typical - target) <= 0.15 * target)
+                        return target;
+                }
+            }
+            return typical;
+        }
+
+        /// <summary>State of the even-frames cadence: N changes only after a different N held for PersistFrames frames.</summary>
+        internal struct Cadence
+        {
+            public const int PersistFrames = 30;
+            public int N;
+            public int Candidate;
+            public int Count;
+        }
+
+        /// <summary>N for this frame (see EveryNthFrame), held steady against short swings of the frame time.</summary>
+        public static int UpdateCadence(ref Cadence state, double period, double typicalFrameTime, double nominalFrameTime)
+        {
+            if (!(typicalFrameTime > 0) && !(nominalFrameTime > 0))
+                return Math.Max(1, state.N); // nothing measured yet: do not lock anything in
+            int n = EveryNthFrame(period, CadenceFrameTime(typicalFrameTime > 0 ? typicalFrameTime : nominalFrameTime, nominalFrameTime));
+            if (state.N <= 0)
+            {
+                state.N = n;
+                state.Count = 0;
+                return n;
+            }
+            if (n == state.N)
+            {
+                state.Count = 0;
+                return state.N;
+            }
+            if (n == state.Candidate)
+            {
+                state.Count++;
+            }
+            else
+            {
+                state.Candidate = n;
+                state.Count = 1;
+            }
+            if (state.Count >= Cadence.PersistFrames)
+            {
+                state.N = n;
+                state.Count = 0;
+            }
+            return state.N;
+        }
+
+        /// <summary>Even-frames decision for this frame: forced, never rendered yet, or N frames since the last render.</summary>
+        public static bool EveryNthDue(int frame, int lastRenderFrame, int everyNth, bool forced) =>
+            forced || lastRenderFrame < 0 || frame - lastRenderFrame >= Math.Max(1, everyNth) || frame < lastRenderFrame;
+
         /// <summary>Evenly spaced phase in [0, 1) for camera <paramref name="index"/> of <paramref name="count"/>.</summary>
         public static double EvenPhase(int index, int count)
         {

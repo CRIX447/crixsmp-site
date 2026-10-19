@@ -65,6 +65,7 @@ namespace CRIXOptimizer.Optimization
         public readonly CameraInventory Cameras = new CameraInventory();
         public readonly ReShadePresetAdvisor ReShadeAdvisor = new ReShadePresetAdvisor();
         public ExtraCameraLimiter ExtraCameras { get; private set; }
+        public SpectatorCameraModule Spectator { get; private set; }
         private int reshadeAnalyses;
 
         public GraphicsSettingsModule Graphics { get; private set; }
@@ -156,6 +157,7 @@ namespace CRIXOptimizer.Optimization
         private float alertVisibleUntil;
         private float lastDeferredUnload = -1e9f;
         private bool memoryBaselineAfterLoading;
+        private readonly Dictionary<string, double> trendZoneTotals = new Dictionary<string, double>();
         private int notesTimeOfDay = -2;
         private float lastTimeOfDayChange = -1e9f;
         // Potassium's "Skip timed unused-asset unloads" (default on; read from its config every 30 s).
@@ -238,6 +240,9 @@ namespace CRIXOptimizer.Optimization
             Guard("Performance notes", StartNotes);
             ExtraCameras = new ExtraCameraLimiter(log);
             ConfigureExtraCameras();
+            Spectator = new SpectatorCameraModule(ExtraCameras, now => DesktopCamera?.FindShoulderCamera(now), cam => DesktopCamera?.OwnerLabel(cam) ?? "", log);
+            if (DesktopCamera != null)
+                DesktopCamera.IsCrixTexture = SpectatorCameraModule.IsSpectatorTexture;
 
             if (cfg.UpgradeNote.Length > 0)
                 log.Info(cfg.UpgradeNote);
@@ -287,6 +292,7 @@ namespace CRIXOptimizer.Optimization
             Guard("Game patches", () => GamePatches?.Shutdown());
             RestoreEverything("shutdown");
             try { FlushNotes(Time.unscaledTime, synchronous: true); } catch (Exception e) { log.Warn("Performance notes: " + e.Message); }
+            try { Spectator?.Dispose(); } catch (Exception e) { log.Warn("Spectator camera shutdown: " + e.Message); }
             try { ExtraCameras?.Dispose(); } catch (Exception e) { log.Warn("Extra camera limit shutdown: " + e.Message); }
             try { renderCounter?.Dispose(); } catch (Exception e) { log.Warn("Camera render counter shutdown: " + e.Message); }
             Guard("Memory monitor", MemoryStats.Dispose);
@@ -342,11 +348,15 @@ namespace CRIXOptimizer.Optimization
                 try { GamePatches.Tick(); } catch (Exception e) { Fail("Game patches", e); }
             }
 
-            if (ExtraCameras != null && ExtraCameras.MaxFps > 0f)
+            if (ExtraCameras != null && ExtraCameras.NeedsTick)
             {
                 // Limiting only happens in frames where this call ran and allowed it, so a suspended, disabled or
                 // faulted CRIX never leaves a camera switched off.
                 try { ExtraCameras.Tick(!Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras")); } catch (Exception e) { Fail("Extra cameras", e); }
+            }
+            if (Spectator != null && Spectator.Engaged)
+            {
+                try { Spectator.Tick(); } catch (Exception e) { Spectator.EmergencyRelease(); Fail("Spectator camera", e); }
             }
 
             PollHotkeys();
@@ -506,7 +516,7 @@ namespace CRIXOptimizer.Optimization
                     Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
                     Guard("Graphics settings", Graphics.VerifyRenderScale);
                 }
-                if (ExtraCameras != null && ExtraCameras.MaxFps > 0f && !Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"))
+                if (ExtraCameras != null && ExtraCameras.Wanted && !Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"))
                     Guard("Extra cameras", ExtraCameras.Discover);
                 if (cfg.Diagnostics.Value)
                 {
@@ -711,6 +721,7 @@ namespace CRIXOptimizer.Optimization
                     Fail("Graphics settings", e);
                 }
             }
+            Spectator?.ResetHandBack();
             ApplyDesktopCamera(active);
             if (SettingWrites.Count != writesBefore)
                 lastGraphicsApplyTime = Time.unscaledTime;
@@ -752,7 +763,46 @@ namespace CRIXOptimizer.Optimization
                 : !Xr.IsVrActive ? "no VR headset active" : ReShade.GuardActive ? "ReShade guard"
                 : off ? (mode == DesktopCameraMode.Off ? "profile setting" : "not recording or streaming") : Capture.Reason;
             float now = Time.unscaledTime;
+            // The spectator limit points the same camera at CRIX's texture: hand it back before the desktop-camera setting
+            // looks at the camera, and take it again after (only while that setting leaves the camera on).
+            string standBy = SpectatorStandBy(active, off);
+            if (standBy != null && Spectator != null)
+                Guard("Spectator camera", () => Spectator.Release(standBy));
             Guard("Desktop camera", () => DesktopCamera.Apply(off, reason, cfg.DesktopCameraWhenModsUseIt.Value, now));
+            ApplySpectator(standBy, now);
+        }
+
+        /// <summary>Why the spectator limit must not run now, or null.</summary>
+        private string SpectatorStandBy(bool active, bool desktopCameraOff)
+        {
+            if (!active)
+                return "paused: CRIX suspended or disabled";
+            if (!Xr.IsVrActive)
+                return "standing by: no VR headset active (the camera may be the only view)";
+            if (desktopCameraOff)
+                return "standing by: the DesktopCamera profile setting has switched the camera off (not recording or streaming)";
+            if (ReShade.GuardActive && !cfg.SpectatorCameraWithReShade.Value)
+                return "paused: ReShade detected and [Compatibility] SpectatorCameraWithReShade = false";
+            if (IsFaulted("Extra cameras"))
+                return "unavailable: the camera limiter is disabled after errors";
+            return null;
+        }
+
+        private void ApplySpectator(string standBy, float now)
+        {
+            if (Spectator == null || IsFaulted("Spectator camera"))
+                return;
+            if (ExtraCameras != null)
+                ExtraCameras.NominalFrameTime = Xr.RefreshRate > 1f ? 1.0 / Xr.RefreshRate : 0;
+            try
+            {
+                Spectator.Apply(cfg.SpectatorCameraMaxFps.Value, cfg.SpectatorCameraCadence.Value, cfg.SpectatorCameraPresenter.Value, standBy, now);
+            }
+            catch (Exception e)
+            {
+                Spectator.EmergencyRelease();
+                Fail("Spectator camera", e);
+            }
         }
 
         private void RestoreEverything(string reason)
@@ -761,6 +811,7 @@ namespace CRIXOptimizer.Optimization
             {
                 Live.Suspended = true;
                 Graphics?.Apply(null, false, false, 0, Ladder, false);
+                try { Spectator?.Release(reason); } catch (Exception e) { Spectator?.EmergencyRelease(); log.Warn("Spectator camera restore: " + e.Message); }
                 DesktopCamera?.Apply(false, "restored", false, Time.unscaledTime);
                 ExtraCameras?.ReleaseAll(reason);
                 SettingsLedger.RestoreReport report = Ledger.RestoreAll();
@@ -1536,6 +1587,14 @@ namespace CRIXOptimizer.Optimization
                 VrActive = Xr.IsVrActive,
                 RefreshHz = Xr.RefreshRate,
             };
+            if (Notes != null)
+            {
+                // The map of the minute: the zone whose recorded play time grew most (nothing per frame).
+                var totals = new List<KeyValuePair<string, double>>();
+                foreach (PerformanceNotes.Segment s in Notes.Zones)
+                    totals.Add(new KeyValuePair<string, double>(s.Key, s.Frames.TotalMs));
+                (ctx.Zone, ctx.ZoneShare) = SessionTrend.MinuteZone(totals, trendZoneTotals);
+            }
             if (Trend.CloseMinute(now, ctx) == null)
                 return;
             string drop = Trend.FindSlowDrop();
@@ -1822,13 +1881,15 @@ namespace CRIXOptimizer.Optimization
                 sb.Append(" Eye resolution cap: ").Append(Graphics.EyeCapNote).Append('.');
             if (ExtraCameras != null && ExtraCameras.MaxFps > 0f)
                 sb.Append(" Extra camera limit: ").Append(ExtraCameras.Status).Append('.');
+            if (Spectator != null && cfg.SpectatorCameraMaxFps.Value > 0f)
+                sb.Append(" Spectator camera limit: ").Append(Spectator.Status).Append('.');
             return sb.ToString();
         }
 
         private void LogChangesSummary()
         {
             log.Info("CRIX status: " + ChangesSummary());
-            bool limitingCameras = ExtraCameras != null && ExtraCameras.MaxFps > 0f && ExtraCameras.ManagedCount > 0;
+            bool limitingCameras = (ExtraCameras != null && ExtraCameras.MaxFps > 0f && ExtraCameras.ManagedCount > 0) || (Spectator != null && Spectator.Engaged);
             if (cfg.Enabled.Value && !Suspended && ActivePatchCount == 0 && ChangedSettingsCount == 0 && !limitingCameras)
             {
                 string why = Types == null || Types.IsEmpty ? "the game's code was not found (game update or unsupported build)"

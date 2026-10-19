@@ -114,6 +114,10 @@ namespace CRIXOptimizer.Configuration
         // [Performance]
         public readonly ConfigEntry<float> ExtraCameraMaxFps;
         public readonly ConfigEntry<string> ExtraCameraExclude;
+        public readonly ConfigEntry<float> SpectatorCameraMaxFps;
+        public readonly ConfigEntry<SpectatorCadence> SpectatorCameraCadence;
+        public readonly ConfigEntry<SpectatorPresenterKind> SpectatorCameraPresenter;
+        public readonly ConfigEntry<bool> SpectatorCameraWithReShade;
 
         public PluginConfig(ConfigFile file)
         {
@@ -282,6 +286,21 @@ namespace CRIXOptimizer.Configuration
             ExtraCameraExclude = file.Bind("Performance", "ExtraCameraExclude", "mirror,lck,photo,reflection,portal",
                 "Comma-separated name fragments of render-texture cameras ExtraCameraMaxFps never limits (case-insensitive). Add a camera's name here if it must update every frame, " +
                 "e.g. one whose image you stream.");
+            SpectatorCameraMaxFps = file.Bind("Performance", "SpectatorCameraMaxFps", 0f,
+                new ConfigDescription("The desktop spectator view (the game's third-person 'Shoulder Camera', which Sakuraa Client uses as its spectator camera) renders the scene at most this many " +
+                                      "times per second; the headset keeps its full rate, and the game window (and OBS) still gets a new frame every frame (CRIX shows the camera's latest image). " +
+                                      "60 suits a 60 fps stream or recording on a 120 Hz headset. It lowers the average CPU/GPU load of that camera by about half at 120 Hz; the frames on which it renders cost as " +
+                                      "much as before. 0 = off (default). It points that camera at a texture of CRIX's, so it is only active when you set it. Experimental: not tested in Gorilla Tag yet.",
+                    new AcceptableValueRange<float>(0f, 144f)));
+            SpectatorCameraCadence = file.Bind("Performance", "SpectatorCameraCadence", SpectatorCadence.EvenFrames,
+                "EvenFrames: renders every Nth headset frame (120 Hz -> 60/s, 90 Hz -> 45/s, 144 Hz -> 48/s): evenly spaced, never two heavy frames in a row. " +
+                "ExactRate: keeps the exact rate, but the spacing is uneven when the refresh rate is not a multiple of it (90 Hz and 60/s: 1, 2, 1, 2 frames).");
+            SpectatorCameraPresenter = file.Bind("Compatibility", "SpectatorCameraPresenter", SpectatorPresenterKind.Canvas,
+                "How CRIX draws the spectator image into the window while SpectatorCameraMaxFps is on. Canvas (default): as the lowest screen overlay, under other mods' HUDs and menus. " +
+                "Blit: copied into the window at the end of each frame. Try the other one if the window shows the headset view or a black image.");
+            SpectatorCameraWithReShade = file.Bind("Compatibility", "SpectatorCameraWithReShade", true,
+                "Keep SpectatorCameraMaxFps on while ReShade is detected. ReShade still applies to the window; depth-based effects (ambient occlusion, depth of field) on the window may flicker, " +
+                "because the spectator's depth buffer is only drawn on the frames it renders. Set false to pause the limit while ReShade is detected.");
 
             // 1.0.0 had "[Adaptive] Enabled" (default false). 1.1.0 replaces it with "[Adaptive] Mode" (default On)
             // so existing installs get adaptive quality; drop the old key so the file does not show both.

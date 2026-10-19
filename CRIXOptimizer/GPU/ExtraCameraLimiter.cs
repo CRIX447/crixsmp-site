@@ -33,6 +33,11 @@ namespace CRIXOptimizer.GPU
     /// stops. Never touched: cameras that render to the headset or the screen, and cameras whose name matches the
     /// exclusion list (mirrors, the game's LCK/LIV camera, photo booth by default). Needs a scriptable render
     /// pipeline (Gorilla Tag uses URP).
+    ///
+    /// One camera can also be "pinned" with its own rate and cadence (the spectator view, see SpectatorCameraModule):
+    /// it is planned on its own, so the other cameras never take its turn, and Discover never adopts it. If it is
+    /// destroyed, or its render target is no longer the texture it was pinned with, the pin is dropped without touching
+    /// the camera and the owner of the pin is told (TryTakePinLost).
     /// </summary>
     internal sealed class ExtraCameraLimiter : IDisposable
     {
@@ -69,14 +74,53 @@ namespace CRIXOptimizer.GPU
         private bool uninstallPending;
         private string status = "off";
 
+        // The pinned camera (spectator view).
+        private Camera pinned;
+        private RenderTexture pinnedTexture;
+        private double pinnedPeriod;
+        private bool pinnedEvenFrames;
+        private bool pinnedForce;
+        private int pinnedLastRender = -1;
+        private string pinnedLabel = "";
+        private string pinLost;
+        private readonly double[] pinDue = new double[1];
+        private readonly double[] pinPhase = new double[1];
+        private readonly bool[] pinEligible = new bool[1];
+        private readonly bool[] pinRender = new bool[1];
+        private RenderRateSchedule.Cadence pinCadence;
+
+        /// <summary>The headset's frame time (1 / refresh rate), 0 when unknown; keeps the even-frames cadence steady.</summary>
+        public double NominalFrameTime { get; set; }
+
         public float MaxFps { get; private set; }
         public int ManagedCount => managed.Count;
+        /// <summary>The limiter has work: ExtraCameraMaxFps is set or a camera is pinned.</summary>
+        public bool Wanted => MaxFps > 0f || pinned != null;
+        /// <summary>Even-frames cadence of the pinned camera this frame (1 = every frame).</summary>
+        public int PinnedEveryNth { get; private set; } = 1;
+        public bool IsPinned(Camera cam) => pinned != null && ReferenceEquals(pinned, cam);
 
         /// <summary>Shown in the system report. "paused" while CRIX's update does not allow limiting (disabled,
         /// suspended, faulted): cameras then render normally.</summary>
-        public string Status => MaxFps > 0f && stoppedReason == null && installed && !active
-            ? "paused (CRIX disabled, suspended or faulted; cameras render normally)"
-            : status;
+        public string Status
+        {
+            get
+            {
+                bool paused = Wanted && stoppedReason == null && installed && !active;
+                string text = paused ? "paused (CRIX disabled, suspended or faulted; cameras render normally)" : status;
+                if (pinned == null)
+                    return text;
+                string rate = pinnedEvenFrames ? (PinnedEveryNth <= 1 ? "every frame" : "every " + Ordinal(PinnedEveryNth) + " frame")
+                    : $"at most {1.0 / pinnedPeriod:0}/s";
+                string pin = "spectator: " + pinnedLabel + " (" + rate + ")";
+                return MaxFps > 0f || paused ? text + "; " + pin : pin;
+            }
+        }
+
+        /// <summary>CRIX's Update should call Tick: something is limited or pinned, or an uninstall is still pending.</summary>
+        public bool NeedsTick => Wanted || uninstallPending;
+
+        private static string Ordinal(int n) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : n % 10 == 1 ? "st" : n % 10 == 2 ? "nd" : n % 10 == 3 ? "rd" : "th");
 
         public ExtraCameraLimiter(ILogSink log)
         {
@@ -101,12 +145,14 @@ namespace CRIXOptimizer.GPU
             MaxFps = newMax;
             if (MaxFps <= 0f)
             {
-                Uninstall();
                 managed.Clear();
+                status = "off";
+                if (pinned != null)
+                    return; // the pinned camera keeps the step installed
+                Uninstall();
                 stoppedReason = null; // setting it again later tries again
                 reinstalls = 0;
                 missedEndEvents = 0;
-                status = "off";
                 return;
             }
             if (stoppedReason != null)
@@ -137,10 +183,77 @@ namespace CRIXOptimizer.GPU
             }
         }
 
-        /// <summary>Finds new render-texture cameras (every few seconds; main thread).</summary>
+        /// <summary>
+        /// Pins one camera (main thread): from the next step it renders at most once per <paramref name="period"/>
+        /// seconds, every Nth frame when <paramref name="evenFrames"/>, and on the next frame in any case. It must already
+        /// render into <paramref name="texture"/>. False (with the reason in Status) when the limiter cannot run.
+        /// </summary>
+        public bool Pin(Camera cam, RenderTexture texture, double period, bool evenFrames, string label)
+        {
+            if (!UnityObjects.IsAlive(cam) || texture == null || !(period > 0))
+                return false;
+            if (stoppedReason != null)
+                return false;
+            if (GraphicsSettings.currentRenderPipeline == null)
+            {
+                status = "unavailable: needs a scriptable render pipeline (URP)";
+                return false;
+            }
+            if (managed.RemoveAll(m => ReferenceEquals(m.Camera, cam)) > 0)
+                respace = true;
+            bool samePin = ReferenceEquals(pinned, cam) && ReferenceEquals(pinnedTexture, texture);
+            pinned = cam;
+            pinnedTexture = texture;
+            pinnedPeriod = period;
+            pinnedEvenFrames = evenFrames;
+            pinnedLabel = label ?? SafeName(cam);
+            pinLost = null;
+            if (!samePin)
+            {
+                pinnedForce = true;
+                pinnedLastRender = -1;
+                pinCadence = default;
+                pinDue[0] = RenderRateSchedule.InitialDue(Time.unscaledTimeAsDouble, period, 0);
+            }
+            Install();
+            if (!installed || stoppedReason != null)
+            {
+                pinned = null;
+                pinnedTexture = null;
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>Renders the pinned camera on the next frame whatever the cadence (new texture, resize).</summary>
+        public void RequestRender() => pinnedForce = true;
+
+        /// <summary>Drops the pin (main thread). The camera itself is not touched.</summary>
+        public void Unpin()
+        {
+            if (pinned == null)
+                return;
+            RestoreSkipped();
+            pinned = null;
+            pinnedTexture = null;
+            pinLost = null;
+            if (MaxFps <= 0f)
+                Uninstall();
+        }
+
+        /// <summary>The pin was dropped inside a render step (camera destroyed, render target changed, limiter stopped).</summary>
+        public bool TryTakePinLost(out string reason)
+        {
+            reason = pinLost;
+            pinLost = null;
+            return reason != null;
+        }
+
+        /// <summary>Finds new render-texture cameras (every few seconds; main thread). Also re-installs the step if another
+        /// mod removed it, while anything is limited or pinned.</summary>
         public void Discover()
         {
-            if (MaxFps <= 0f || stoppedReason != null)
+            if (!Wanted || stoppedReason != null)
                 return;
             if (!installed)
             {
@@ -159,6 +272,8 @@ namespace CRIXOptimizer.GPU
             CheckStepRuns();
             if (stoppedReason != null || !installed)
                 return; // stopped or the re-install failed: do not refill the list or overwrite the status
+            if (MaxFps <= 0f)
+                return; // only the pinned camera
             int count = Camera.allCamerasCount;
             if (buffer.Length < count)
                 buffer = new Camera[Math.Max(count, buffer.Length * 2)];
@@ -170,7 +285,7 @@ namespace CRIXOptimizer.GPU
                 // A camera with a target texture never renders to the headset (URP only uses XR for screen cameras).
                 if (!UnityObjects.IsAlive(cam) || !cam.enabled || cam.targetTexture == null || cam.stereoEnabled)
                     continue;
-                if (managed.Exists(m => ReferenceEquals(m.Camera, cam)))
+                if (managed.Exists(m => ReferenceEquals(m.Camera, cam)) || IsPinned(cam))
                     continue;
                 string name = SafeName(cam);
                 if (IsExcluded(name))
@@ -199,6 +314,8 @@ namespace CRIXOptimizer.GPU
             RestoreSkipped();
             Uninstall();
             managed.Clear();
+            pinned = null;
+            pinnedTexture = null;
         }
 
         // ------------------------------------------------------------------ render-time steps
@@ -216,9 +333,13 @@ namespace CRIXOptimizer.GPU
                 double typicalBefore = typicalFrameTime;
                 typicalFrameTime = RenderRateSchedule.SmoothFrameTime(typicalFrameTime, frameTime);
                 // Only while CRIX's own Update ran this frame and allows it (fail-open when CRIX stops).
-                if (stoppedReason != null || !active || activeFrame != stepFrame || managed.Count == 0 || MaxFps <= 0f)
+                if (stoppedReason != null || !active || activeFrame != stepFrame)
                     return;
                 double now = Time.unscaledTimeAsDouble;
+                if (pinned != null)
+                    PlanPinned(now, frameTime, typicalBefore);
+                if (managed.Count == 0 || MaxFps <= 0f)
+                    return;
                 double period = 1.0 / MaxFps;
                 for (int i = managed.Count - 1; i >= 0; i--)
                 {
@@ -278,6 +399,53 @@ namespace CRIXOptimizer.GPU
                 RestoreSkipped();
                 Stop("error: " + e.GetType().Name + ": " + e.Message);
             }
+        }
+
+        /// <summary>The pinned camera: render or skip this frame (inside the step).</summary>
+        private void PlanPinned(double now, double frameTime, double typicalBefore)
+        {
+            Camera cam = pinned;
+            if (!UnityObjects.IsAlive(cam))
+            {
+                LosePin("the camera was destroyed");
+                return;
+            }
+            if (!ReferenceEquals(cam.targetTexture, pinnedTexture))
+            {
+                LosePin("its render target was changed by the game or another mod");
+                return;
+            }
+            PinnedEveryNth = RenderRateSchedule.UpdateCadence(ref pinCadence, pinnedPeriod, typicalBefore, NominalFrameTime);
+            if (!cam.enabled)
+                return; // switched off by its owner: not ours to decide
+            bool force = pinnedForce || pinnedLastRender < 0 || !pinnedTexture.IsCreated();
+            bool renderNow;
+            if (pinnedEvenFrames)
+            {
+                renderNow = RenderRateSchedule.EveryNthDue(stepFrame, pinnedLastRender, PinnedEveryNth, force);
+            }
+            else
+            {
+                pinPhase[0] = 0;
+                pinEligible[0] = true;
+                RenderRateSchedule.Plan(pinDue, pinPhase, pinEligible, pinRender, 1, now, pinnedPeriod, frameTime, typicalBefore);
+                renderNow = force || pinRender[0];
+            }
+            if (renderNow)
+            {
+                pinnedForce = false;
+                pinnedLastRender = stepFrame;
+                return;
+            }
+            cam.enabled = false;
+            skipped.Add(cam);
+        }
+
+        private void LosePin(string reason)
+        {
+            pinLost = reason;
+            pinned = null;
+            pinnedTexture = null;
         }
 
         /// <summary>Directly after FinishFrameRendering: normally nothing left; if the render pipeline's events did
@@ -423,6 +591,8 @@ namespace CRIXOptimizer.GPU
             stoppedReason = reason;
             status = "stopped: " + reason;
             managed.Clear();
+            if (pinned != null)
+                LosePin("CRIX's camera limiter stopped: " + reason);
             uninstallPending = installed;
         }
 

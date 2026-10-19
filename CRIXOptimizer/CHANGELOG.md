@@ -108,6 +108,9 @@ are claimed.
   with `RealtimeReflectionProbes = Off` and how many extra renders a map or mod adds.
 - Graphics-driver and texture memory in the notes timeline (when Unity reports them); the URP asset line in the
   system report includes main/additional light shadow support.
+- The session trend knows the map of each minute (the zone with most play time in it): a slow drop is only looked for
+  within one map, minutes split between maps are left out, and a lower frame rate in a different map is reported as
+  the map ("you are in a different map"), not blamed on streaming or memory.
 - **Session trend** (system report): one line per minute with FPS, 1 % low, hitches, garbage collections, managed,
   Unity and graphics memory, profile, recording/streaming state and adaptive level, for up to three hours. When the
   frame rate falls by 10 % and 8 FPS or more over the session (first three minutes after a two-minute warm-up against
@@ -129,7 +132,18 @@ are claimed.
   once startup loading is over (also with the notes off) and again on the first sample after each unload, and nothing
   is freed while the game is still loading. Its hitch has its own count and cause in the log, notes and system report.
   It still only runs while not in a room.
-- **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
+- **Spectator camera limit** (experimental; `[Performance] SpectatorCameraMaxFps`, default `0` = off;
+  `SpectatorCameraCadence`, `[Compatibility] SpectatorCameraPresenter`, `SpectatorCameraWithReShade`). The desktop
+  spectator view (the game's Shoulder Camera, Sakuraa's spectator camera) renders into a window-sized texture of
+  CRIX's (no alpha, the camera's MSAA) at most N times a second, every Nth headset frame by default (120 Hz and 60:
+  every 2nd frame; N held steady against frame-time noise and snapped to the headset's refresh rate), and its latest
+  image is drawn into the window every frame as the lowest screen overlay (or copied at the end of the frame), so the
+  window and OBS never flicker and other mods' HUDs stay on top. It is a "pinned" camera of the extra-camera limiter
+  (planned on its own, never adopted by `ExtraCameraMaxFps`). Handed back (render target cleared only if still CRIX's)
+  on: off, suspend, quit, no headset, `DesktopCamera` switching the camera off, resize (re-engaged after 1 s), HDR
+  output, another screen camera drawing after it, no render within 10 frames, errors; another owner's render target is
+  left alone until the profile is re-applied, and a texture another camera still renders into is never destroyed.
+  Camera inventory and render counts treat it as the window camera. Not tested in Gorilla Tag.
   render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
   (time-based: each camera on its own grid with evenly spaced phases, re-spaced when cameras come and go; earliest
   due first within a per-frame budget of cameras x rate x frame time, with the frame time capped at twice the typical

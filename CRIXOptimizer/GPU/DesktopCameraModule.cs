@@ -41,6 +41,8 @@ namespace CRIXOptimizer.GPU
 
         public bool Available { get; }
         public string Status { get; private set; } = "not used by this profile";
+        /// <summary>CRIX's own spectator texture (SpectatorCameraModule): a camera rendering into it still draws to the window.</summary>
+        public Func<RenderTexture, bool> IsCrixTexture { get; set; } = _ => false;
 
         public DesktopCameraModule(GameTypes types, SettingsLedger ledger, ILogSink log)
         {
@@ -87,7 +89,7 @@ namespace CRIXOptimizer.GPU
             string keepOn = null;
             if (wantOff)
             {
-                if (cam.targetTexture != null || cam.stereoEnabled)
+                if ((cam.targetTexture != null && !IsCrixTexture(cam.targetTexture)) || cam.stereoEnabled)
                     keepOn = "left on: it no longer draws only to the desktop window";
                 else if (UnityObjects.IsAlive(brain) && !brain.enabled)
                     keepOn = "left on: its camera controller is paused (the game's LIV camera or another mod is driving it)";
@@ -106,6 +108,36 @@ namespace CRIXOptimizer.GPU
             {
                 enabledSetting.Release();
                 Status = keepOn ?? "on (" + reason + ")";
+            }
+        }
+
+        /// <summary>
+        /// The shoulder camera for the spectator limit (main thread, rate-limited by-name lookup): the camera this module
+        /// tracks, else the rig's camera, else "Shoulder Camera" by name. Null when none draws to the window.
+        /// </summary>
+        public Camera FindShoulderCamera(float now)
+        {
+            if (!Available)
+                return null;
+            if (UnityObjects.IsAlive(tracked) && tracked.targetTexture == null && !tracked.stereoEnabled)
+                return tracked;
+            return Resolve(Rig(), now);
+        }
+
+        /// <summary>Who uses the camera now, for status lines: the game's rig, Sakuraa's spectator, or another mod.</summary>
+        public string OwnerLabel(Camera cam)
+        {
+            try
+            {
+                GameObject rig = Rig();
+                if (UnityObjects.IsAlive(rig) && cam.transform.IsChildOf(rig.transform))
+                    return "game camera";
+                Transform parent = cam.transform.parent;
+                return parent != null && parent.name.IndexOf("Sakuraa", StringComparison.OrdinalIgnoreCase) >= 0 ? "Sakuraa spectator" : "moved by another mod";
+            }
+            catch
+            {
+                return "?";
             }
         }
 

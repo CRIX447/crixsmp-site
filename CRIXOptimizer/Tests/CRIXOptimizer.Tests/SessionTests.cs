@@ -35,9 +35,42 @@ namespace CRIXOptimizer.Tests
             return t;
         }
 
-        private static SessionTrend.Context Ctx(long unityMb = 2600, bool capturing = false, string profile = "Balanced", bool vr = true, int gcs = 1, int level = 0) =>
+        private static SessionTrend.Context Ctx(long unityMb = 2600, bool capturing = false, string profile = "Balanced", bool vr = true, int gcs = 1, int level = 0,
+                                                string zone = null, double share = 1) =>
             new SessionTrend.Context { HeapBytes = 400 * MB, UnityBytes = unityMb * MB, GfxBytes = -1, GcCount = gcs, Profile = profile, Capturing = capturing,
-                                       AdaptiveLevel = level, VrActive = vr, RefreshHz = 120 };
+                                       AdaptiveLevel = level, VrActive = vr, RefreshHz = 120, Zone = zone, ZoneShare = zone == null ? 0 : share };
+
+        [Test]
+        public void AHeavierMapIsNotASlowDrop()
+        {
+            // Forest at 110 FPS, then (with OBS on) a heavy custom map at a steady 80 FPS: compared with its own first
+            // minutes, nothing dropped.
+            var t = Play(14, m => m < 6 ? 110 : 80, m => Ctx(capturing: m >= 6, zone: m < 6 ? "forest" : "customMaps:4242"));
+            Assert.Equal(null, t.FindSlowDrop(), "a steady heavier map is no drop over time");
+            // Only the last three minutes in the heavy map: too few to compare within it, so it says it is the map.
+            t = Play(14, m => m < 11 ? 110 : 80, m => Ctx(capturing: m >= 11, zone: m < 11 ? "forest" : "customMaps:4242"));
+            string drop = t.FindSlowDrop();
+            Assert.True(drop != null && drop.Contains("different map (forest then, customMaps:4242 now)"), drop ?? "null");
+            Assert.False(drop.Contains("streaming"), "streaming is not blamed for a map change");
+
+            // The same map, slowly dropping while streaming: still found, compared within that map.
+            t = Play(16, m => m < 3 ? 110 : m < 6 ? 95 : Math.Max(70, 95 - (m - 5) * 4),
+                     m => Ctx(capturing: m >= 8, zone: m < 3 ? "forest" : "canyon"));
+            drop = t.FindSlowDrop();
+            Assert.True(drop != null && drop.Contains("from about 95 to 70 FPS") && drop.Contains("both in canyon"), drop ?? "null");
+
+            // Minutes split between maps (map changes inside the minute) are left out.
+            t = Play(14, m => m < 6 ? 110 : 80, m => Ctx(zone: "forest", share: 0.5));
+            Assert.Equal(null, t.FindSlowDrop(), "no usable minutes");
+            Assert.True(t.Describe(1).First().Contains("mostly forest"), t.Describe(1).First());
+
+            // Which map the minute was: the zone whose play time grew most.
+            var previous = new System.Collections.Generic.Dictionary<string, double>();
+            var first = SessionTrend.MinuteZone(new[] { new System.Collections.Generic.KeyValuePair<string, double>("forest", 50_000), new System.Collections.Generic.KeyValuePair<string, double>("city", 10_000) }, previous);
+            Assert.True(first.zone == "forest" && Math.Abs(first.share - 50.0 / 60) < 1e-9, first.zone + " " + first.share);
+            var second = SessionTrend.MinuteZone(new[] { new System.Collections.Generic.KeyValuePair<string, double>("forest", 51_000), new System.Collections.Generic.KeyValuePair<string, double>("city", 69_000) }, previous);
+            Assert.True(second.zone == "city" && Math.Abs(second.share - 59.0 / 60) < 1e-9, second.zone + " " + second.share);
+        }
 
         [Test]
         public void SteadySessionHasNoDropAndPerMinuteLines()

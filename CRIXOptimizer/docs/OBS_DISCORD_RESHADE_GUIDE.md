@@ -106,6 +106,33 @@ therefore leaves that camera on when Sakuraa has taken it over, unless you allow
 GTFX cheaper, choose a lighter GTFX preset inside Sakuraa while streaming. Sakuraa sets Unity's
 `targetFrameRate`/`vSyncCount`; VR runtimes ignore those, and CRIX does not manage them.
 
+### Spectator camera limit (experimental, opt-in)
+
+The desktop window's third-person view (the game's *Shoulder Camera*; Sakuraa Client uses it as its spectator camera)
+renders the whole scene a second time on every headset frame. For a 60 fps stream it only needs 60 pictures a second.
+`[Performance] SpectatorCameraMaxFps = 60` (default `0` = off):
+
+- **What happens:** CRIX points that camera at a window-sized texture of its own and lets it render on every Nth
+  headset frame (`SpectatorCameraCadence = EvenFrames`: every 2nd frame at 120 Hz = 60/s, every 2nd at 90 Hz = 45/s,
+  every 3rd at 144 Hz = 48/s; evenly spaced, never two heavy frames in a row). Every frame, the latest picture is drawn
+  into the window as the lowest screen overlay, so Sakuraa's HUD, menus and CRIX's dashboard stay on top, and OBS
+  captures a steady picture. `ExactRate` keeps exactly 60/s instead, with uneven spacing on 90 Hz.
+- **What it saves:** on average about half of that camera's CPU and GPU work at 120 Hz. The frames on which it renders
+  cost as much as before, so a PC that misses frames with it will still miss some; expect fewer dropped frames, not a
+  higher minimum. Measure with F6 (benchmark) with and without it while recording.
+- **When CRIX hands the camera back** (the window then shows it directly, as without CRIX): the setting at `0`, F10 or
+  CRIX disabled, no headset, `DesktopCamera` switching the camera off, a window resize (back after a second), HDR
+  display output, another camera drawing to the window after it (for example Sakuraa's replay camera), and any error.
+  If the game or another mod gives the camera its own render target, CRIX leaves it alone until the profile is re-applied.
+  Only the camera's render target is changed: its position, field of view and the mods controlling it are untouched.
+- **ReShade:** stays on with ReShade (`[Compatibility] SpectatorCameraWithReShade = true`). ReShade still applies to the
+  window; depth-based effects on the window (ambient occlusion, depth of field) may flicker, because the camera's depth
+  buffer is only drawn on the frames it renders. Set it to `false` to pause the limit while ReShade is detected.
+- **If the window shows the headset view or a black image:** try `[Compatibility] SpectatorCameraPresenter = Blit`, or
+  set `SpectatorCameraMaxFps = 0`. The system report's *Spectator camera limit* line says what it is doing and why.
+- Not tested in Gorilla Tag yet. Check, with the setting on: Sakuraa's HUD and the CRIX dashboard on top, the headset
+  view unchanged, the same brightness in OBS as without it, Sakuraa's camera modes and replay, resizing the window.
+
 ### Extra-camera limit (opt-in, 1.1)
 
 Every camera that renders into a texture (a minimap, a tablet or in-game screen, Sakuraa's `MiniMapCam` and

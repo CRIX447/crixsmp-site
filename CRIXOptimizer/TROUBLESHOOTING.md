@@ -176,9 +176,15 @@ see *Aiming for 120 FPS* in INSTALLATION.md) is usually the limit. What helps:
   need turns choppy, add its camera name to `[Performance] ExtraCameraExclude`.
 - Sakuraa's spectator camera renders the game a second time to the desktop window. A smaller game window, or a lower
   quality setting for that camera in Sakuraa, saves GPU time.
-- **Sakuraa's spectator camera at 60 FPS:** it is the game's desktop camera and renders once per game frame, so it runs
-  at the game's frame rate (OBS records 60 of those per second). CRIX cannot render it at exactly 60 without making
-  the window flicker. Free GPU time instead: lower the eye resolution, limit Sakuraa's minimap/display cameras with
+- **Sakuraa's spectator camera at 60 FPS (experimental, opt-in):** it is the game's desktop camera and normally renders
+  the whole scene again on every headset frame (120 times a second at 120 Hz). Set
+  `[Performance] SpectatorCameraMaxFps = 60` in `com.crix.crixoptimizer.cfg`: it then renders on every 2nd headset
+  frame at 120 Hz, and the game window (and OBS) still gets a picture every frame, the camera's latest one, so nothing
+  flickers. The headset keeps its full rate. Details and limits:
+  [docs/OBS_DISCORD_RESHADE_GUIDE.md](docs/OBS_DISCORD_RESHADE_GUIDE.md#spectator-camera-limit-experimental-opt-in).
+  Not tested in Gorilla Tag yet: check the system report's *Spectator camera limit* line, and set it back to `0` if
+  the window shows the headset view, a black image, or Sakuraa's HUD disappears.
+- More GPU time for it: lower the eye resolution, limit Sakuraa's minimap/display cameras with
   `ExtraCameraMaxFps = 30`, pick a lighter GTFX preset, and if ReShade is only for viewers, keep it out of the
   headset (`Disable=1` under `[GENERAL]` in `ReShadeVR.ini`; the desktop window keeps its effects).
 - Download Sakuraa only from its official source; CRIX does not check where a copy came from.

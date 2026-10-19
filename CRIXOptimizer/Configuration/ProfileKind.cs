@@ -116,6 +116,22 @@ namespace CRIXOptimizer.Configuration
         FullReplacement,
     }
 
+    public enum SpectatorCadence
+    {
+        /// <summary>Every Nth headset frame (120 Hz and 60/s: every 2nd frame): evenly spaced, never two in a row.</summary>
+        EvenFrames,
+        /// <summary>The exact rate on a time grid; uneven spacing when the refresh rate is not a multiple of it.</summary>
+        ExactRate,
+    }
+
+    public enum SpectatorPresenterKind
+    {
+        /// <summary>A Screen Space Overlay canvas below every other overlay canvas and below all IMGUI.</summary>
+        Canvas,
+        /// <summary>Graphics.Blit into the window at the end of URP's frame (before the engine draws overlay UI).</summary>
+        Blit,
+    }
+
     public enum PotassiumCoexistence
     {
         /// <summary>When Potassium is installed, CRIX does not apply its Potassium-derived patches (no duplicate patches).</summary>

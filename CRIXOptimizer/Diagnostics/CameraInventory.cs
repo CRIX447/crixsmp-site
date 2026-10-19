@@ -63,7 +63,15 @@ namespace CRIXOptimizer.Diagnostics
 
                 var entry = new Entry { Name = SafeName(cam), Depth = cam.depth };
                 RenderTexture rt = cam.targetTexture;
-                if (rt != null)
+                if (GPU.SpectatorCameraModule.IsSpectatorTexture(rt))
+                {
+                    // CRIX's spectator limit: the camera still shows in the window, through CRIX's texture.
+                    entry.ToScreen = true;
+                    entry.Target = "desktop window (via CRIX's spectator texture, limited)";
+                    entry.Width = rt.width;
+                    entry.Height = rt.height;
+                }
+                else if (rt != null)
                 {
                     entry.Target = "render texture";
                     entry.Width = rt.width;

@@ -94,6 +94,8 @@ namespace CRIXOptimizer.UI
             sb.Append("Streaming: ").Append(StreamingLine(rt)).Append('\n');
             if (rt.DesktopCamera != null && rt.ActiveSettings != null && rt.ActiveSettings.DesktopCamera != Configuration.DesktopCameraMode.Unchanged)
                 sb.Append("Desktop camera: ").Append(rt.DesktopCamera.Status).Append('\n');
+            if (rt.Spectator != null && (rt.Spectator.Engaged || rt.Config.SpectatorCameraMaxFps.Value > 0f))
+                sb.Append("Spectator: ").Append(rt.Spectator.Status).Append('\n');
             if (rt.Cameras.ExtraCameras > 0 || rt.Sakuraa.Detected)
             {
                 sb.Append("Extra cameras ").Append(rt.Cameras.ExtraCameras).Append(" (desktop ").Append(rt.Cameras.ScreenCameras).Append(')');

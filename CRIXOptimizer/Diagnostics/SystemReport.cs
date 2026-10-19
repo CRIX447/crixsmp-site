@@ -48,6 +48,10 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Cameras: ").Append(rt.Cameras.Describe()).Append('\n');
             sb.Append("Game desktop camera (DesktopCamera setting): ").Append(rt.DesktopCamera?.Status ?? "n/a").Append('\n');
             sb.Append("Extra camera limit ([Performance] ExtraCameraMaxFps): ").Append(rt.ExtraCameras?.Status ?? "n/a").Append('\n');
+            sb.Append("Spectator camera limit ([Performance] SpectatorCameraMaxFps, experimental): ").Append(rt.Spectator?.Status ?? "n/a");
+            if (rt.Spectator != null && rt.Spectator.TextureInfo.Length > 0)
+                sb.Append(" [texture ").Append(rt.Spectator.TextureInfo).Append(']');
+            sb.Append('\n');
             if (rt.ReShadeAdvisor.Error.Length > 0)
                 sb.Append("ReShade configuration: could not be read (").Append(rt.ReShadeAdvisor.Error).Append(")\n");
             foreach (ReShade.ReShadePresetAdvisor.RuntimeConfig r in rt.ReShadeAdvisor.Runtimes)

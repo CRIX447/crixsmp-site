@@ -43,6 +43,9 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
 - **Extra-camera limit (opt-in):** `[Performance] ExtraCameraMaxFps` updates cameras that render into textures
   (minimaps, tablets, Sakuraa's display cameras) at most N times a second. Off by default because it affects other
   mods' cameras.
+- **Spectator camera limit (experimental, opt-in):** `[Performance] SpectatorCameraMaxFps = 60` renders the desktop
+  spectator view (Sakuraa's spectator camera) on every 2nd headset frame at 120 Hz, while the window still gets a new
+  picture every frame. Not tested in the game yet.
 - The log, dashboard and system report state exactly what CRIX is changing, or why it is changing nothing. The
   report's per-minute *Session trend* shows whether the frame rate falls over a long session and what changed with it.
 - **Performance notes** (`BepInEx/CRIXOptimizer/notes/`): while you play, CRIX notes frame rate, map, lobby size,
@@ -79,8 +82,9 @@ game's saved settings (PlayerPrefs), and never injects into, modifies, re-priori
 (Virtual Desktop, OBS, Streamlabs, Discord, Spotify, ReShade, SteamVR, Sakuraa, other mods). What it reads from them:
 process names, which DLLs are loaded in the game, other mods' plugin names and Harmony patch lists, the cameras in
 the scene, `ReShade.ini`, `ReShadeVR.ini` and the active ReShade presets, and (read-only, on 127.0.0.1) OBS's and Streamlabs'
-live/recording state. Two options act only when you turn them on: `ExtraCameraMaxFps` skips some renders of
-render-texture cameras (also other mods'), and `CreateLightReShadePreset` writes a new preset file next to yours.
+live/recording state. Three options act only when you turn them on: `ExtraCameraMaxFps` skips some renders of
+render-texture cameras (also other mods'), `SpectatorCameraMaxFps` points the desktop spectator camera at a texture of
+CRIX's and limits its renders, and `CreateLightReShadePreset` writes a new preset file next to yours.
 
 ## Profiles
 

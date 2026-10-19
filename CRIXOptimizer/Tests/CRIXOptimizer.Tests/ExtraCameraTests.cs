@@ -77,6 +77,80 @@ namespace CRIXOptimizer.Tests
             };
         }
 
+        /// <summary>The spectator's even-frames cadence as the limiter runs it: N from the typical frame time before this
+        /// frame (snapped to the headset's), decision by frame count. Returns the gaps (in frames) between renders.</summary>
+        private static System.Collections.Generic.Dictionary<int, int> EvenFrameGaps(double limit, double refreshHz, int frames, Func<int, double> frameTime, out int renders)
+        {
+            var gaps = new System.Collections.Generic.Dictionary<int, int>();
+            var cadence = new RenderRateSchedule.Cadence();
+            double typical = 0;
+            int last = -1;
+            renders = 0;
+            for (int f = 0; f < frames; f++)
+            {
+                double typicalBefore = typical;
+                typical = RenderRateSchedule.SmoothFrameTime(typical, frameTime(f));
+                int n = RenderRateSchedule.UpdateCadence(ref cadence, 1.0 / limit, typicalBefore, refreshHz > 0 ? 1.0 / refreshHz : 0);
+                if (!RenderRateSchedule.EveryNthDue(f, last, n, forced: f == 0))
+                    continue;
+                if (last >= 0 && f > 300)
+                {
+                    gaps.TryGetValue(f - last, out int c);
+                    gaps[f - last] = c + 1;
+                }
+                last = f;
+                renders++;
+            }
+            return gaps;
+        }
+
+        private static string Show(System.Collections.Generic.Dictionary<int, int> gaps) =>
+            string.Join(", ", gaps.OrderBy(g => g.Key).Select(g => g.Key + " frames x" + g.Value));
+
+        [Test]
+        public void SpectatorEvenFramesCadenceIsSteadyAndWithinTheLimit()
+        {
+            Assert.Equal(2, RenderRateSchedule.EveryNthFrame(1.0 / 60, 1.0 / 120), "120 Hz, 60/s: every 2nd frame");
+            Assert.Equal(2, RenderRateSchedule.EveryNthFrame(1.0 / 60, 1.0 / 90), "90 Hz: every 2nd (45/s, never above 60)");
+            Assert.Equal(3, RenderRateSchedule.EveryNthFrame(1.0 / 60, 1.0 / 144), "144 Hz: every 3rd (48/s)");
+            Assert.Equal(1, RenderRateSchedule.EveryNthFrame(1.0 / 60, 1.0 / 60), "game at the limit: every frame");
+            Assert.Equal(1, RenderRateSchedule.EveryNthFrame(1.0 / 60, 1.0 / 45), "slower game: every frame");
+            Assert.Equal(1, RenderRateSchedule.EveryNthFrame(1.0 / 60, 0), "unknown frame time: every frame");
+            Assert.Near(1.0 / 60, RenderRateSchedule.CadenceFrameTime(0.0161, 1.0 / 120), 1e-9, "half rate under reprojection snaps to 2 frames");
+            Assert.Near(0.02, RenderRateSchedule.CadenceFrameTime(0.02, 1.0 / 120), 1e-9, "50 fps is no multiple of 120 Hz: measured");
+
+            // 120 Hz headset with 1.5 ms of frame-time noise, 100 s: every gap exactly 2 frames, 60/s.
+            var gaps = EvenFrameGaps(60, 120, 12000, Jittered(120, 0.0015, 11), out int renders);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(2), "120 Hz: " + Show(gaps));
+            Assert.True(Math.Abs(renders - 6000) <= 1, "renders " + renders);
+            // Without the refresh rate known the same noise still keeps 2 frames almost always (hysteresis).
+            gaps = EvenFrameGaps(60, 0, 12000, Jittered(120, 0.0015, 12), out _);
+            int total = gaps.Values.Sum();
+            Assert.True(gaps.TryGetValue(2, out int twos) && twos >= total * 0.99, "120 Hz, refresh unknown: " + Show(gaps));
+            // 90 Hz: 45/s evenly; 144 Hz: 48/s evenly; never two renders on consecutive frames.
+            gaps = EvenFrameGaps(60, 90, 9000, Jittered(90, 0.0015, 13), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(2), "90 Hz: " + Show(gaps));
+            gaps = EvenFrameGaps(60, 144, 14400, Jittered(144, 0.001, 14), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(3), "144 Hz: " + Show(gaps));
+            // Reprojection: the game runs at 60 on a 120 Hz headset -> the spectator renders every frame.
+            gaps = EvenFrameGaps(60, 120, 6000, Jittered(60, 0.0015, 15), out _);
+            Assert.True(gaps.Count == 1 && gaps.ContainsKey(1), "60 fps under reprojection: " + Show(gaps));
+
+            // A short swing does not change N; a lasting change does, after PersistFrames frames.
+            var c = new RenderRateSchedule.Cadence();
+            Assert.Equal(2, RenderRateSchedule.UpdateCadence(ref c, 1.0 / 60, 1.0 / 120, 0));
+            for (int i = 0; i < 10; i++)
+                Assert.Equal(2, RenderRateSchedule.UpdateCadence(ref c, 1.0 / 60, 1.0 / 150, 0), "10 fast frames: still 2");
+            Assert.Equal(2, RenderRateSchedule.UpdateCadence(ref c, 1.0 / 60, 1.0 / 120, 0));
+            int final = 0;
+            for (int i = 0; i <= RenderRateSchedule.Cadence.PersistFrames; i++)
+                final = RenderRateSchedule.UpdateCadence(ref c, 1.0 / 60, 1.0 / 150, 0);
+            Assert.Equal(3, final, "a lasting change to 150 fps moves to every 3rd frame");
+            Assert.True(RenderRateSchedule.EveryNthDue(10, 9, 2, forced: true), "forced (new texture, resize) renders at once");
+            Assert.False(RenderRateSchedule.EveryNthDue(10, 9, 2, forced: false));
+            Assert.True(RenderRateSchedule.EveryNthDue(11, 9, 2, forced: false));
+        }
+
         [Test]
         public void RendersAtMostTheLimitAndCloseToIt()
         {

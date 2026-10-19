@@ -33,6 +33,9 @@ namespace CRIXOptimizer.Diagnostics
             public int AdaptiveLevel;
             public bool VrActive;
             public double RefreshHz;
+            /// <summary>The map (zone) most of the minute was spent in, "" when unknown, and that share of the minute.</summary>
+            public string Zone = "";
+            public double ZoneShare;
         }
 
         /// <summary>What the runtime knows at the end of a minute.</summary>
@@ -47,9 +50,13 @@ namespace CRIXOptimizer.Diagnostics
             public int AdaptiveLevel;
             public bool VrActive;
             public double RefreshHz;
+            public string Zone;
+            public double ZoneShare;
         }
 
         public const int MaxMinutes = 180;
+        /// <summary>A minute counts for one map when at least this share of it was spent there.</summary>
+        public const double SameMapShare = 0.8;
         private const double MinuteSeconds = 60.0;
 
         private readonly List<float> frameMs = new List<float>(8192);
@@ -116,6 +123,8 @@ namespace CRIXOptimizer.Diagnostics
                 AdaptiveLevel = ctx.AdaptiveLevel,
                 VrActive = ctx.VrActive,
                 RefreshHz = ctx.RefreshHz,
+                Zone = ctx.Zone ?? "",
+                ZoneShare = ctx.ZoneShare,
             };
             frameMs.Clear();
             Minutes.Add(m);
@@ -126,21 +135,44 @@ namespace CRIXOptimizer.Diagnostics
 
         /// <summary>
         /// Looks for a frame rate that fell over the session: the first three usable minutes (headset on, after a two
-        /// minute warm-up) against the last three. Returns a description with what changed along with it, or null.
+        /// minute warm-up) against the last three. When the map of each minute is known, only minutes spent mostly in
+        /// one map count, and the last three are compared with the first three in the same map: a heavier map is not a
+        /// drop over time. Returns a description with what changed along with it, or null.
         /// </summary>
         public string FindSlowDrop()
         {
-            var usable = Minutes.FindAll(m => m.VrActive && m.Index >= 2 && m.Frames >= 600);
+            var usable = Minutes.FindAll(m => m.VrActive && m.Index >= 2 && m.Frames >= 600 && (m.Zone.Length == 0 || m.ZoneShare >= SameMapShare));
             if (usable.Count < 8)
                 return null;
             List<Minute> first = usable.GetRange(0, 3), last = usable.GetRange(usable.Count - 3, 3);
+            string mapNow = MainZone(last);
+            if (mapNow.Length > 0 && MainZone(first) != mapNow)
+            {
+                // Compare with the first minutes in the map played now, if there are enough of them before the last three.
+                var sameMap = usable.FindAll(m => m.Zone == mapNow && m.Index < last[0].Index);
+                if (sameMap.Count >= 3)
+                {
+                    first = sameMap.GetRange(0, 3);
+                }
+                else
+                {
+                    double startFps = Median(first, m => m.AvgFps), endFps = Median(last, m => m.AvgFps);
+                    if (startFps <= 0 || startFps - endFps < 8 || (startFps - endFps) / startFps < 0.10)
+                        return null;
+                    return string.Format(CultureInfo.InvariantCulture,
+                        "The frame rate is lower now ({0:0} FPS) than at the start ({1:0} FPS), but you are in a different map ({2} then, {3} now): " +
+                        "that is the map, not a drop over time. The notes' per-map summary compares the maps.",
+                        endFps, startFps, MainZone(first), mapNow);
+                }
+            }
             double baseFps = Median(first, m => m.AvgFps), nowFps = Median(last, m => m.AvgFps);
             if (baseFps <= 0 || baseFps - nowFps < 8 || (baseFps - nowFps) / baseFps < 0.10)
                 return null;
             int span = last[2].Index - first[0].Index + 1;
             var sb = new StringBuilder();
-            sb.Append(string.Format(CultureInfo.InvariantCulture, "Frame rate fell from about {0:0} to {1:0} FPS over {2} minutes (minutes {3}-{4} against {5}-{6}).",
-                baseFps, nowFps, span, first[0].Index + 1, first[2].Index + 1, last[0].Index + 1, last[2].Index + 1));
+            sb.Append(string.Format(CultureInfo.InvariantCulture, "Frame rate fell from about {0:0} to {1:0} FPS over {2} minutes (minutes {3}-{4} against {5}-{6}{7}).",
+                baseFps, nowFps, span, first[0].Index + 1, first[2].Index + 1, last[0].Index + 1, last[2].Index + 1,
+                mapNow.Length > 0 ? ", both in " + mapNow : ""));
             var causes = new List<string>();
 
             double refreshBefore = Median(first, m => m.RefreshHz), refreshNow = Median(last, m => m.RefreshHz);
@@ -190,11 +222,56 @@ namespace CRIXOptimizer.Diagnostics
             {
                 Minute m = Minutes[i];
                 yield return string.Format(CultureInfo.InvariantCulture,
-                    "min {0,3}: {1,5:0.0} FPS, 1% low {2,5:0.0}, hitches {3,3} (big {4}), GCs {5}, heap {6}, Unity {7}{8}, adaptive {9}, {10}{11}{12}",
+                    "min {0,3}: {1,5:0.0} FPS, 1% low {2,5:0.0}, hitches {3,3} (big {4}), GCs {5}, heap {6}, Unity {7}{8}, adaptive {9}, {10}{11}{12}{13}",
                     m.Index + 1, m.AvgFps, m.Low1Fps, m.Hitches, m.BigHitches, m.Gcs, Mb(m.HeapBytes), Mb(m.UnityBytes),
                     m.GfxBytes >= 0 ? ", gfx " + Mb(m.GfxBytes) : "", m.AdaptiveLevel, m.Profile,
-                    m.Capturing ? ", recording/streaming" : "", m.VrActive ? "" : ", headset not active");
+                    m.Capturing ? ", recording/streaming" : "", m.VrActive ? "" : ", headset not active",
+                    m.Zone.Length == 0 ? "" : m.ZoneShare >= SameMapShare ? ", map " + m.Zone : ", mostly " + m.Zone);
             }
+        }
+
+        /// <summary>The map most of these minutes were spent in ("" when unknown).</summary>
+        private static string MainZone(List<Minute> minutes)
+        {
+            var counts = new Dictionary<string, int>();
+            string best = "";
+            int bestCount = 0;
+            foreach (Minute m in minutes)
+            {
+                if (m.Zone.Length == 0)
+                    continue;
+                counts.TryGetValue(m.Zone, out int c);
+                counts[m.Zone] = ++c;
+                if (c > bestCount)
+                {
+                    bestCount = c;
+                    best = m.Zone;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Which map most of the last minute was spent in: the zone whose frame time grew most since the last call, and
+        /// its share of the total. <paramref name="previous"/> holds each zone's total at the last call (updated here).
+        /// </summary>
+        public static (string zone, double share) MinuteZone(IEnumerable<KeyValuePair<string, double>> zoneTotals, Dictionary<string, double> previous)
+        {
+            string best = "";
+            double bestGain = 0, sum = 0;
+            foreach (KeyValuePair<string, double> z in zoneTotals)
+            {
+                previous.TryGetValue(z.Key, out double before);
+                double gain = Math.Max(0, z.Value - before);
+                previous[z.Key] = z.Value;
+                sum += gain;
+                if (gain > bestGain)
+                {
+                    bestGain = gain;
+                    best = z.Key;
+                }
+            }
+            return sum > 0 ? (best, bestGain / sum) : ("", 0);
         }
 
         private static double Median(List<Minute> minutes, Func<Minute, double> value)
