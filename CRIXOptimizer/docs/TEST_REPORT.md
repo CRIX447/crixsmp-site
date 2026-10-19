@@ -10,8 +10,8 @@ Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21
 | 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **171 passed, 0 failed** |
 | 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **171 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
-| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 298 type / 1310 member refs resolve |
-| - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 105 Unity type / 258 member references declared |
+| - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 298 type / 1315 member refs resolve |
+| - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 105 Unity type / 259 member references declared |
 
 **In the real game (field report, not a test run by the developers):** a user ran a 1.1.0 preview build on Gorilla
 Tag 1.1.147 (Unity 6000.2.9f1, BepInEx 5.4.23.5, Windows 11, Ryzen 5 5500, RTX 4060, Quest via a Meta/OpenXR runtime)

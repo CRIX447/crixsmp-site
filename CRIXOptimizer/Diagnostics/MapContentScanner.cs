@@ -177,7 +177,7 @@ namespace CRIXOptimizer.Diagnostics
                     case CameraType.VR:
                         if (camera.targetTexture != null && !GPU.SpectatorCameraModule.IsSpectatorTexture(camera.targetTexture))
                             Counts.Texture++;
-                        else if (camera.stereoEnabled)
+                        else if (GPU.CameraRoles.RendersToHeadset(camera))
                             Counts.Headset++;
                         else
                             Counts.Window++;

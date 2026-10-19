@@ -144,6 +144,10 @@ are claimed.
   output, another screen camera drawing after it, no render within 10 frames, errors; another owner's render target is
   left alone until the profile is re-applied, and a texture another camera still renders into is never destroyed.
   Camera inventory and render counts treat it as the window camera. Not tested in Gorilla Tag.
+- Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a
+  target texture to the headset unless its URP data turns XR off): the desktop-camera setting, the spectator limit and
+  the camera list never treat such a camera as the window's. The system report's camera line shows each camera's
+  depth, target eye, stereo flag and URP XR setting.
   render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
   (time-based: each camera on its own grid with evenly spaced phases, re-spaced when cameras come and go; earliest
   due first within a per-frame budget of cameras x rate x frame time, with the frame time capped at twice the typical

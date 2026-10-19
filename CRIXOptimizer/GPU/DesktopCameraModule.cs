@@ -89,7 +89,7 @@ namespace CRIXOptimizer.GPU
             string keepOn = null;
             if (wantOff)
             {
-                if ((cam.targetTexture != null && !IsCrixTexture(cam.targetTexture)) || cam.stereoEnabled)
+                if ((cam.targetTexture != null && !IsCrixTexture(cam.targetTexture)) || CameraRoles.RendersToHeadset(cam))
                     keepOn = "left on: it no longer draws only to the desktop window";
                 else if (UnityObjects.IsAlive(brain) && !brain.enabled)
                     keepOn = "left on: its camera controller is paused (the game's LIV camera or another mod is driving it)";
@@ -119,7 +119,7 @@ namespace CRIXOptimizer.GPU
         {
             if (!Available)
                 return null;
-            if (UnityObjects.IsAlive(tracked) && tracked.targetTexture == null && !tracked.stereoEnabled)
+            if (UnityObjects.IsAlive(tracked) && tracked.targetTexture == null && !CameraRoles.RendersToHeadset(tracked))
                 return tracked;
             return Resolve(Rig(), now);
         }
@@ -175,7 +175,7 @@ namespace CRIXOptimizer.GPU
             // Safety: only a camera that draws to the desktop window, never one rendering in stereo (VR) or into a
             // texture. (stereoTargetEye is not used: a desktop-only camera can keep its default "Both" and simply not
             // be an XR camera.)
-            if (!UnityObjects.IsAlive(cam) || cam.targetTexture != null || cam.stereoEnabled)
+            if (!UnityObjects.IsAlive(cam) || cam.targetTexture != null || CameraRoles.RendersToHeadset(cam))
                 return null;
             return cam;
         }

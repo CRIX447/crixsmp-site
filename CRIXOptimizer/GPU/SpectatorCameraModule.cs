@@ -56,6 +56,7 @@ namespace CRIXOptimizer.GPU
         private ISpectatorPresenter presenter;
         private bool engaged;
         private bool renderedSinceEngage;
+        private int enabledFramesWithoutRender;
         private int engageFrame;
         private int nextScanFrame;
         private float maxFps;
@@ -198,7 +199,8 @@ namespace CRIXOptimizer.GPU
             presenter.SetVisible(cam.isActiveAndEnabled);
 
             int frame = Time.frameCount;
-            if (!renderedSinceEngage && cam.isActiveAndEnabled && frame - engageFrame > FramesToFirstRender)
+            // Counted only on frames the camera was on (its owner may switch it off right after CRIX took it).
+            if (!renderedSinceEngage && cam.isActiveAndEnabled && frame > engageFrame && ++enabledFramesWithoutRender > FramesToFirstRender)
             {
                 stopped = "the camera did not render into CRIX's texture";
                 Release(stopped);
@@ -322,7 +324,7 @@ namespace CRIXOptimizer.GPU
         {
             if (!found.isActiveAndEnabled)
                 return "the camera is switched off by its owner";
-            if (found.targetTexture != null || found.stereoEnabled)
+            if (found.targetTexture != null || CameraRoles.RendersToHeadset(found))
                 return "the camera renders into a texture or to the headset (not CRIX's to change)";
             if (found.cameraType != CameraType.Game)
                 return "not a game camera";
@@ -389,6 +391,7 @@ namespace CRIXOptimizer.GPU
             ActiveTexture = texture;
             engaged = true;
             renderedSinceEngage = false;
+            enabledFramesWithoutRender = 0;
             engageFrame = Time.frameCount;
             nextScanFrame = engageFrame + ScanEveryFrames;
             RenderPipelineManager.endCameraRendering += endCameraRendering;
@@ -494,7 +497,7 @@ namespace CRIXOptimizer.GPU
                     sharesTexture = true;
                     conflict = $"another camera ('{SafeName(other)}') renders into CRIX's spectator texture (e.g. a recorder that copied the camera's settings)";
                 }
-                else if (target == null && !other.stereoEnabled && other.cameraType == CameraType.Game && (int)other.depth >= depth)
+                else if (target == null && other.cameraType == CameraType.Game && (int)other.depth >= depth && !CameraRoles.RendersToHeadset(other))
                 {
                     conflict = $"another camera ('{SafeName(other)}') draws to the window after it (e.g. Sakuraa's replay camera)";
                 }
@@ -627,7 +630,7 @@ namespace CRIXOptimizer.GPU
                 bool mainRender = false;
                 foreach (Camera c in cameras)
                 {
-                    if (c != null && (c.stereoEnabled || ReferenceEquals(c, spectator)))
+                    if (c != null && (ReferenceEquals(c, spectator) || CameraRoles.RendersToHeadset(c)))
                     {
                         mainRender = true;
                         break;

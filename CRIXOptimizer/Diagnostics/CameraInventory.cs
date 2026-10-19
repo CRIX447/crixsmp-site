@@ -26,6 +26,8 @@ namespace CRIXOptimizer.Diagnostics
             public int Width;
             public int Height;
             public float Depth;
+            /// <summary>How the camera is set up (depth, target eye, stereo, URP XR permission), for the system report.</summary>
+            public string Detail = "";
             public bool IsVr;
             public bool ToScreen;
             public double PixelLoad;
@@ -61,7 +63,7 @@ namespace CRIXOptimizer.Diagnostics
                 if (cam == null || !cam.enabled)
                     continue;
 
-                var entry = new Entry { Name = SafeName(cam), Depth = cam.depth };
+                var entry = new Entry { Name = SafeName(cam), Depth = cam.depth, Detail = DetailOf(cam) };
                 RenderTexture rt = cam.targetTexture;
                 if (GPU.SpectatorCameraModule.IsSpectatorTexture(rt))
                 {
@@ -77,7 +79,7 @@ namespace CRIXOptimizer.Diagnostics
                     entry.Width = rt.width;
                     entry.Height = rt.height;
                 }
-                else if (cam.stereoEnabled && cam.stereoTargetEye != StereoTargetEyeMask.None)
+                else if (GPU.CameraRoles.RendersToHeadset(cam))
                 {
                     entry.IsVr = true;
                     entry.Target = "VR headset";
@@ -122,8 +124,24 @@ namespace CRIXOptimizer.Diagnostics
                     sb.Append(' ').Append(e.Width).Append('x').Append(e.Height);
                 if (!e.IsVr && e.PixelLoad > 0)
                     sb.Append(" (pixel load ").Append((e.PixelLoad * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture)).Append("% of one eye [D])");
+                if (e.Detail.Length > 0)
+                    sb.Append(" [").Append(e.Detail).Append(']');
             }
             return sb.ToString();
+        }
+
+        private static string DetailOf(Camera cam)
+        {
+            try
+            {
+                bool? allowXr = GPU.CameraRoles.AllowXrRendering(cam);
+                return string.Format(System.Globalization.CultureInfo.InvariantCulture, "depth {0:0.#}, eye {1}, stereo {2}, URP XR {3}",
+                    cam.depth, cam.stereoTargetEye, cam.stereoEnabled ? "yes" : "no", allowXr == null ? "default" : allowXr.Value ? "on" : "off");
+            }
+            catch
+            {
+                return "";
+            }
         }
 
         private static string SafeName(Camera cam)
