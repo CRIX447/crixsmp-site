@@ -54,7 +54,8 @@ namespace CRIXOptimizer.Configuration
             { nameof(OptimizationSettings.DesktopMirror), D("[GPU] The headset view drawn into the desktop window (XR mirror). In Gorilla Tag the game's third-person camera draws over it, so it is only visible while that camera is off (DesktopCamera). LeftEye is cheaper than SideBySide; None makes the window black when the camera is off.") },
             // Frame pacing
             { nameof(OptimizationSettings.AsyncUploadTimeSliceMs), R("[CPU] Milliseconds per frame for background texture/mesh uploads (lower = fewer hitches while maps/cosmetics load, slower loading). -1 = unchanged.", -1, 33) },
-            { nameof(OptimizationSettings.BackgroundLoading), D("[CPU] Priority of background asset loading (lower = smoother frames during loads, slower loads).") },
+            { nameof(OptimizationSettings.BackgroundLoading), D("[CPU] Priority of background asset loading: Unity's time per frame for finishing loads (Low 2 ms, BelowNormal 4 ms, Normal 10 ms, High 50 ms). " +
+                "Lower = smoother frames during loads, slower loads. BelowNormal is Unity's own default on PC and the game does not change it, so in the presets it mostly keeps that value in place.") },
             { nameof(OptimizationSettings.IncrementalGcSliceMs), R("[CPU] Incremental GC time slice in ms (only if the game uses incremental GC). Smaller slices = smaller GC spikes, but too small can fall back to full collections. -1 = unchanged.", -1, 20) },
             // Potassium-derived stutter fixes
             { nameof(OptimizationSettings.DeferSharedBlocks), D("[Stutter] Do not initialise Shared Blocks until the player enters its zone. (Potassium)") },
@@ -65,7 +66,7 @@ namespace CRIXOptimizer.Configuration
             { nameof(OptimizationSettings.SkipInactiveEntityLeaveScans), D("[Stutter] Skip unused full entity scans done by inactive zones when a player leaves. (Potassium)") },
             { nameof(OptimizationSettings.RoomLeaveGc), D("[Stutter] Forced garbage collection on room leave: GameDefault, Skip (Potassium) or Incremental (time-sliced, only if the game uses incremental GC).") },
             { nameof(OptimizationSettings.SkipTimedAssetUnloads), D("[Stutter] Prevent scene components from forcing synchronous unused-asset sweeps during gameplay. May use more memory. (Potassium)") },
-            { nameof(OptimizationSettings.MapSanitizer), D("[Maps] Custom-map sanitizer optimisation: Off, SafeLookups (keeps the game's rules, only speeds up allow-list lookups) or FullReplacement (Potassium's re-implementation; bypasses any rule added by later game updates).") },
+            { nameof(OptimizationSettings.MapSanitizer), D("[Maps] Custom-map sanitizer optimisation: Off, SafeLookups (keeps the game's rules, only speeds up allow-list lookups; in the current game that is only the layer check, a small saving) or FullReplacement (Potassium's re-implementation; bypasses any rule added by later game updates).") },
             // Throttles
             { nameof(OptimizationSettings.TextureTransitionRate), R("[Visual] Texture-transition updates per second (0 = game rate). (Potassium, frame-staggered)", 0, 240) },
             { nameof(OptimizationSettings.VoiceVisualRate), R("[Visual] Voice-reactive cosmetic updates per second when they use no smoothing (0 = game rate). (Potassium, frame-staggered)", 0, 240) },

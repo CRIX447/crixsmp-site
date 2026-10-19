@@ -375,7 +375,8 @@ namespace CRIXOptimizer.Tests
         public void SafeSanitizerLookupsGiveIdenticalResults()
         {
             Fixture.Live();
-            Assert.True(MapSanitizerPatch.RewrittenLookups >= 2, "List<int>.Contains and List<Type>.Contains rewritten");
+            // As in the current game, only the layer check is a List.Contains; the component foreach is left alone.
+            Assert.Equal(1, MapSanitizerPatch.RewrittenLookups, "List<int>.Contains (layers) rewritten, nothing else");
             var candidates = new[] { typeof(string), typeof(int), typeof(Uri), typeof(Version), typeof(List<int>), typeof(System.Text.StringBuilder), typeof(DateTime), typeof(Random), typeof(Dictionary<string, int>) };
             var rng = new Random(3);
             long lookupsBefore = FastLookups.Lookups;
@@ -392,7 +393,24 @@ namespace CRIXOptimizer.Tests
             }
             Assert.True(FastLookups.Lookups > lookupsBefore, "cached lookups were used");
 
-            // The game changing its allow-list at runtime is picked up (cache invalidation).
+            // The game changing its allow-lists at runtime is picked up (cache invalidation for the layer list).
+            var layered = new FakeMapObject { Layer = 22 };
+            Assert.True(CustomMapLoader.Invoke(layered));
+            Assert.Equal(0, layered.Layer, "layer 22 not approved in the stand-in");
+            CustomMapLoader.Layers.Add(22);
+            try
+            {
+                layered.Layer = 22;
+                CustomMapLoader.Invoke(layered);
+                Assert.Equal(22, layered.Layer, "newly approved layer kept");
+            }
+            finally
+            {
+                CustomMapLoader.Layers.Remove(22);
+            }
+            layered.Layer = 22;
+            CustomMapLoader.Invoke(layered);
+            Assert.Equal(0, layered.Layer, "removed layer reset again");
             var probe = new FakeMapObject { Components = { typeof(DateTime) } };
             Assert.False(CustomMapLoader.Invoke(probe));
             CustomMapLoader.Allowlist.Add(typeof(DateTime));

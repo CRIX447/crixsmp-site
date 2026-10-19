@@ -68,6 +68,8 @@ namespace CRIXOptimizer.GPU
         public string UrpAssetValues { get; private set; } = "";
         /// <summary>True when the URP asset copies the opaque colour and/or depth texture for every camera (extra GPU work).</summary>
         public bool UrpOpaqueOrDepthCopies { get; private set; }
+        /// <summary>The URP asset can render realtime shadows at all (shadow distance above 0 and shadows supported).</summary>
+        public bool RealtimeShadowsPossible { get; private set; } = true;
         private object urpAsset;
         /// <summary>Result of the last check that the render scale actually reached the VR eye textures.</summary>
         public string RenderScaleCheck { get; private set; } = "not checked yet";
@@ -236,6 +238,19 @@ namespace CRIXOptimizer.GPU
             Add<bool>("HDR", "supportsHDR", v => v ? "on" : "off");
             Add<bool>("opaqueTexture", "supportsCameraOpaqueTexture", v => v ? "on" : "off");
             Add<bool>("depthTexture", "supportsCameraDepthTexture", v => v ? "on" : "off");
+            Add<bool>("mainLightShadows", "supportsMainLightShadows", v => v ? "on" : "off");
+            Add<bool>("additionalLightShadows", "supportsAdditionalLightShadows", v => v ? "on" : "off");
+            try
+            {
+                Func<float> distance = Accessors.BoundGetter<float>(urpAsset, "shadowDistance");
+                Func<bool> main = Accessors.BoundGetter<bool>(urpAsset, "supportsMainLightShadows");
+                Func<bool> additional = Accessors.BoundGetter<bool>(urpAsset, "supportsAdditionalLightShadows");
+                RealtimeShadowsPossible = (distance == null || distance() > 0f) && (main == null || additional == null || main() || additional());
+            }
+            catch
+            {
+                RealtimeShadowsPossible = true;
+            }
             UrpAssetValues = parts.Count > 0 ? string.Join(", ", parts.ToArray()) : "not readable";
             UrpOpaqueOrDepthCopies = UrpAssetValues.Contains("opaqueTexture on") || UrpAssetValues.Contains("depthTexture on");
         }

@@ -22,7 +22,10 @@ namespace CRIXOptimizer.CPU
     /// SafeLookups (default, new in CRIX): a transpiler replaces only the List&lt;T&gt;.Contains allow-list
     /// lookups inside the game's method with cached hash-set lookups that return identical results. All of the
     /// game's own sanitising logic stays in place, so rules added by future game updates keep working. If the
-    /// method contains no such lookups the transpiler changes nothing.
+    /// method contains no such lookups the transpiler changes nothing. In the current game only the layer check
+    /// (APPROVED_LAYERS.Contains, once per object) is such a lookup; the component check is a foreach over the
+    /// allow-list and stays as it is, so the saving is small (map loading time is dominated by the asynchronous
+    /// load, the one-frame sanitising pass itself and the game's 5-objects-per-frame processing).
     ///
     /// FullReplacement (Potassium 1.0.0 MapSanitizerPatch): replaces the whole method with Potassium's
     /// re-implementation of the rules as they were at Potassium's release. Faster, but bypasses any rule the

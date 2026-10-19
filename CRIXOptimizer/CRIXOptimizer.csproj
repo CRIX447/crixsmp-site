@@ -39,6 +39,7 @@
     <Reference Include="UnityEngine.VRModule"><HintPath>$(UnityRefPath)\UnityEngine.VRModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.SubsystemsModule"><HintPath>$(UnityRefPath)\UnityEngine.SubsystemsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.SharedInternalsModule"><HintPath>$(UnityRefPath)\UnityEngine.SharedInternalsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(UnityRefPath)\UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
   <ItemGroup>

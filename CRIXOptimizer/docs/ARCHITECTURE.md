@@ -26,7 +26,9 @@ Plugin (BepInEx entry, thin)
      ├─ PluginInventory, HarmonyFootprint (compatibility scan, once + on demand), SakuraaSupport, CameraInventory,
      │     OptimizerModsSupport (GorillaOptimizer toggles read from PlayerPrefs, I HATE ALIENS, Potassium notes)
      ├─ SessionTrend (per-minute history, slow-drop finder) ◄── frame times + memory/profile/capture each minute
-     ├─ PerformanceNotes (notes/ file per session) ◄── frame times, GameContextProbe (zone, players), events, hitches
+     ├─ PerformanceNotes (notes/ file per session) ◄── frame times, GameContextProbe (zone, players, time of day,
+     │     lightmap loads, custom map id), events, hitches, map entries (first vs later visits), CameraRenderCounter
+     │     (renders per frame by kind), MapContentScanner (custom map content, once per map, read-only)
      └─ DashboardOverlay (exists only while visible) ◄── DashboardText (rebuilt 2×/s), SystemReport
 ```
 

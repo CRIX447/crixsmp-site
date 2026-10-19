@@ -245,12 +245,21 @@ then). The notes keep that apart: the first minute counts as loading, plus 20 se
 most 5 minutes). Those spikes are marked `[loading]`, summed up under *Startup*, and left out of the per-map and
 per-lobby results.
 
+*Entering maps* shows the first 10 seconds after each map becomes active, for the first visit and for later visits. A
+spike only on the first visit is the game using shaders or textures for the first time; a spike on every visit is the
+game switching the map on (its objects, lightmaps), which a mod cannot change without changing the game. Spikes at a
+time-of-day change are named as such (the game swaps the lightmaps of every loaded map then). For custom maps the
+notes list what the map contains (lights, reflection probes, cameras into textures, particles, triangles), and the
+timeline shows how many times per frame the scene is rendered.
+
 A good test session (20-40 minutes):
 
-1. Start the game normally (with the mods you always use) and play 5 minutes in a quiet place (e.g. the stump alone).
-2. Visit the maps you play, a few minutes each, including a busy lobby (10+ players) and a custom map if you use them.
-3. Start OBS (or Streamlabs/Discord) recording or streaming for 5-10 minutes while playing.
-4. Close the game normally (the notes are finished when it closes), then send the newest notes file.
+1. Start the game normally (with the mods you always use) and wait in the stump for a minute or two (loading).
+2. Walk forest -> canyon -> forest -> canyon (or any two maps you play), so each map is entered twice.
+3. Visit the other maps you play, a few minutes each, including a busy lobby (10+ players), a water or lava map, and
+   one custom map you use (load it, play a bit, leave).
+4. Start OBS (or Streamlabs/Discord) recording or streaming for 5-10 minutes while playing.
+5. Close the game normally (the notes are finished when it closes), then send the newest notes file.
 
 ## Reporting a problem
 

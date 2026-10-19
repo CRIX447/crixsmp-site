@@ -1,9 +1,10 @@
-Checked 264 type references and 1126 member references from CRIXOptimizer.dll
+Checked 281 type references and 1215 member references from CRIXOptimizer.dll
   0Harmony: 6 type refs
   BepInEx: 18 type refs
   netstandard: 169 type refs
-  UnityEngine.CoreModule: 56 type refs
+  UnityEngine.CoreModule: 70 type refs
   UnityEngine.IMGUIModule: 7 type refs
+  UnityEngine.ParticleSystemModule: 3 type refs
   UnityEngine.SubsystemsModule: 2 type refs
   UnityEngine.TextRenderingModule: 2 type refs
   UnityEngine.VRModule: 3 type refs
@@ -14,6 +15,7 @@ Checked 264 type references and 1126 member references from CRIXOptimizer.dll
   reference UnityEngine.CoreModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.CoreModule.dll
   reference UnityEngine.IMGUIModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.IMGUIModule.dll
   reference UnityEngine.XRModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.XRModule.dll
+  reference UnityEngine.ParticleSystemModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.ParticleSystemModule.dll
   reference UnityEngine.VRModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.VRModule.dll
   reference UnityEngine.TextRenderingModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.TextRenderingModule.dll
   reference UnityEngine.SubsystemsModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.SubsystemsModule.dll

@@ -86,10 +86,13 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Big hitches (>70 ms) [M]: ").Append(rt.BigHitches).Append(" - during garbage collection ").Append(rt.BigHitchesGc)
               .Append(", during scene loads ").Append(rt.BigHitchesSceneLoad).Append(", while the game and mods were loading (startup) ").Append(rt.BigHitchesStartup)
               .Append(", at a zone change or room join/leave ").Append(rt.BigHitchesZoneOrRoom)
+              .Append(", at a time-of-day change or lightmap load ").Append(rt.BigHitchesTimeOfDay)
               .Append(", right after a CRIX settings change ").Append(rt.BigHitchesAfterCrixChange)
-              .Append(", other ").Append(rt.BigHitches - rt.BigHitchesGc - rt.BigHitchesSceneLoad - rt.BigHitchesStartup - rt.BigHitchesZoneOrRoom - rt.BigHitchesAfterCrixChange).Append('\n');
+              .Append(", other ").Append(rt.BigHitches - rt.BigHitchesGc - rt.BigHitchesSceneLoad - rt.BigHitchesStartup - rt.BigHitchesZoneOrRoom - rt.BigHitchesTimeOfDay - rt.BigHitchesAfterCrixChange).Append('\n');
             if (rt.NotesPath.Length > 0)
                 sb.Append("Performance notes for this session: ").Append(rt.NotesPath).Append('\n');
+            if (rt.LastMapContent != null)
+                sb.Append("Last custom map [M]: ").Append(rt.LastMapContent.Describe()).Append('\n');
             sb.Append("CRIX overhead [M]: ").Append(rt.OverheadMsPerFrame.ToString("0.000", Inv)).Append(" ms/frame\n");
             sb.Append("Managed heap [M]: ").Append(MemoryMonitor.FormatBytes(rt.MemoryStats.ManagedUsedBytes)).Append(", Unity allocated [R]: ")
               .Append(MemoryMonitor.FormatBytes(rt.MemoryStats.UnityAllocatedBytes)).Append(", Unity gfx estimate [R]: ")

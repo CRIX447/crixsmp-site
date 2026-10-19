@@ -62,6 +62,28 @@ namespace CRIXOptimizer.Compatibility
             }
         }
 
+        /// <summary>
+        /// Reads one bool setting of another plugin from its BepInEx config (read-only; never written). False when the
+        /// plugin or the entry is not there (for example before that plugin's Awake bound it).
+        /// </summary>
+        public static bool TryReadConfigBool(string guid, string section, string key, out bool value)
+        {
+            value = false;
+            try
+            {
+                if (!Chainloader.PluginInfos.TryGetValue(guid, out PluginInfo info) || info?.Instance == null)
+                    return false;
+                if (!info.Instance.Config.TryGetEntry(section, key, out BepInEx.Configuration.ConfigEntry<bool> entry) || entry == null)
+                    return false;
+                value = entry.Value;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static string SafeFileName(string path)
         {
             try

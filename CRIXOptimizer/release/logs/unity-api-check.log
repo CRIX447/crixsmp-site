@@ -1,5 +1,6 @@
-checked 71 Unity type references and 178 Unity member references
+checked 88 Unity type references and 204 Unity member references
 obsolete (still present): UnityEngine.GameObject.AddComponent: [Obsolete("GameObject.AddComponent with string argument has been deprecated. Use GameObject.AddCompo)]
+obsolete (still present): UnityEngine.ParticleSystem/MainModule.get_maxParticles: [Obsolete("maxParticles property is deprecated. Use main.maxParticles instead.", false)]
 obsolete (still present): UnityEngine.QualitySettings.get_masterTextureLimit: [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgrad)]
 obsolete (still present): UnityEngine.QualitySettings.set_masterTextureLimit: [Obsolete("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgrad)]
 obsolete (still present): UnityEngine.Rendering.GraphicsSettings.get_renderPipelineAsset: [Obsolete("renderPipelineAsset has been deprecated. Use defaultRenderPipeline instead (UnityUpgradab)]

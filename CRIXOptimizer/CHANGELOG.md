@@ -79,10 +79,30 @@ are claimed.
   worst hitches, and the system report. Zones and player counts are read by name (`ZoneManagement.instance.activeZones`,
   `NetworkSystem.Instance.InRoom/RoomPlayerCount`), read-only; no room codes or player names.
 - Big hitches at a zone change or a room join/leave are attributed to it (log, notes, system report).
+- Descriptions corrected: `BackgroundLoading = BelowNormal` is Unity's own default on PC and the game does not change
+  it, so in the presets it mostly keeps that value in place (Unity's per-frame budgets for finishing loads are listed).
 - Startup loading is kept apart: the first minute after the game opens, extended by 20 s after each big hitch in it
   (at most 5 minutes), counts as loading (the game and mods such as Sakuraa Client loading their content). Its hitches
   are marked `[loading]`, summarised under *Startup* and left out of the per-zone/lobby/streaming summaries and the
   worst-hitch list; the system report counts them separately.
+- **Entering maps** (notes): the first 10 s after a zone becomes active, split into the first visit this session and
+  later visits (worst frame, big hitches, hitches). A hitch only on the first visit points to first use of shaders or
+  textures; one on every visit to the game switching the map on. A visit after CRIX's deferred unload counts as a
+  first visit again. Zone change events say which visit it was.
+- More hitch causes: a time-of-day change (the game swaps the lightmaps of every loaded map;
+  `BetterDayNightManager.currentTimeIndex`), a map loading lightmaps (`PerSceneRenderData`), and "zone scenes were
+  still loading" (`ZoneManagement.AnyActiveLoadOps`, read only on hitch frames). Time-of-day changes are events. The
+  system report counts them as "at a time-of-day change or lightmap load".
+- **Custom maps** (notes): each mod.io map gets its own zone name (`customMaps:<map id>`; public map ids, nothing
+  personal), entering and leaving are events, and 3 s after a map has loaded its content is counted once, read-only:
+  renderers, triangles, LOD groups, lights (realtime, with shadows), reflection probes (realtime, every frame), cameras
+  rendering into textures, particle systems, with a note on what costs frame time. The count runs once per map and
+  its duration is written next to it. The last map's line is also in the system report.
+- **Camera renders per frame** in the notes timeline (headset, desktop window, cameras into textures, reflection
+  probes), counted in `RenderPipelineManager.beginCameraRendering`. Shows whether reflection probes still render
+  with `RealtimeReflectionProbes = Off` and how many extra renders a map or mod adds.
+- Graphics-driver and texture memory in the notes timeline (when Unity reports them); the URP asset line in the
+  system report includes main/additional light shadow support.
 - **Session trend** (system report): one line per minute with FPS, 1 % low, hitches, garbage collections, managed,
   Unity and graphics memory, profile, recording/streaming state and adaptive level, for up to three hours. When the
   frame rate falls by 10 % and 8 FPS or more over the session (first three minutes after a two-minute warm-up against
@@ -95,7 +115,13 @@ are claimed.
   Low Textures, Low LOD Bias, Disable Post Processing and Aggressive GC; I HATE ALIENS (no overlap); Potassium (its
   own config is used and CRIX's adaptive CPU savings for busy lobbies are off while it is installed).
 - A setup line when timed unused-asset unloads are skipped (profile or Potassium), `DeferredAssetUnload` is off and
-  Unity memory has grown by 1 GB or more.
+  Unity or graphics memory has grown by 1 GB or more since loading finished.
+- **Fixed: `DeferredAssetUnload` never ran while Potassium was installed** (CRIX's own patches are off then, and the
+  check looked only at them, although Potassium skips the same unloads and the setup advice recommended the option).
+  It now checks Potassium's own "Skip timed unused-asset unloads" setting (read from its config, read-only). Growth of
+  graphics memory (visited maps, other players' cosmetics) now triggers it too, the growth baseline is taken after
+  startup loading, and its hitch is named as CRIX's unload in the log and notes. It still only runs while not in a
+  room.
 - **Extra-camera limit** (`[Performance] ExtraCameraMaxFps`, default `0` = off; `ExtraCameraExclude`). Cameras that
   render into a texture (minimaps, tablets, Sakuraa's `MiniMapCam`/`DisplayCam`) render at most N times a second
   (time-based: each camera on its own grid with evenly spaced phases, re-spaced when cameras come and go; earliest
@@ -232,7 +258,9 @@ Applies to every Potassium-derived file (listed in LICENSES.md):
 - **Custom-map sanitizer:** new default `SafeLookups` keeps the game's own sanitizer and replaces only its
   `List.Contains` allow-list lookups with cached hash lookups that give identical results (verified in the tests
   against 500 random objects and runtime allow-list changes). Potassium's full re-implementation is kept as opt-in
-  `FullReplacement`, because it bypasses any rule the game adds later.
+  `FullReplacement`, because it bypasses any rule the game adds later. (Corrected in 1.1.0: in the current game only
+  the layer check is a `List.Contains`; the component check is a loop and stays as it is, so the saving is small. The
+  test stand-in now has the game's shape.)
 - **Inactive entity scans:** the active-manager lookup is a compiled delegate instead of `PropertyInfo.GetValue` per call.
 - **Distant cosmetic culling:** original values are captured per instance and restored when disabled/unloaded; new
   values reach existing instances live.

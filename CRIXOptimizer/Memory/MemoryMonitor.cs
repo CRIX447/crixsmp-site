@@ -16,6 +16,9 @@ namespace CRIXOptimizer.Memory
     ///   Unity graphics    - the "Gfx Used Memory" profiler counter: an estimate of textures/meshes/RTs Unity
     ///                       tracks, if the build exposes it. It is NOT total GPU VRAM use, which a game
     ///                       cannot read through Unity; total VRAM use is always reported as unavailable.
+    ///   Textures          - Texture.currentTextureMemory (loaded textures), when Unity fills it (0 = not available).
+    /// Growth since start-up is tracked for Unity's allocators and for graphics memory: textures of visited maps and
+    /// other players' cosmetics may only show in the second.
     /// </summary>
     internal sealed class MemoryMonitor : IDisposable
     {
@@ -25,6 +28,7 @@ namespace CRIXOptimizer.Memory
         private bool recordersStarted;
         private float nextSample;
         private long baselineTotalAllocated = -1;
+        private long baselineGfx = -1;
         private int lastGcCount = -1;
         private float lastGcSampleTime;
 
@@ -33,11 +37,15 @@ namespace CRIXOptimizer.Memory
         public long UnityAllocatedBytes { get; private set; }
         public long UnityReservedBytes { get; private set; }
         public long GfxUsedBytes { get; private set; } = -1;
+        public long TextureBytes { get; private set; } = -1;
         public long GcAllocatedLastFrameBytes { get; private set; } = -1;
         public double GcPerSecond { get; private set; }
         public double ManagedGrowthMBPerMinute { get; private set; }
         public bool GrowthWindowFull => managedTrend.IsFull;
         public long GrowthSinceBaselineBytes => baselineTotalAllocated < 0 ? 0 : UnityAllocatedBytes - baselineTotalAllocated;
+        public long GfxGrowthSinceBaselineBytes => baselineGfx < 0 || GfxUsedBytes < 0 ? 0 : GfxUsedBytes - baselineGfx;
+        /// <summary>The larger of the Unity-allocator and graphics-memory growth since start-up (or the last reset).</summary>
+        public long LargestGrowthSinceBaselineBytes => Math.Max(GrowthSinceBaselineBytes, GfxGrowthSinceBaselineBytes);
 
         public void Start()
         {
@@ -86,6 +94,9 @@ namespace CRIXOptimizer.Memory
                 baselineTotalAllocated = UnityAllocatedBytes;
 
             GfxUsedBytes = ReadRecorder(gfxRecorder);
+            if (baselineGfx < 0 && GfxUsedBytes > 0)
+                baselineGfx = GfxUsedBytes;
+            TextureBytes = ReadTextureMemory();
             GcAllocatedLastFrameBytes = ReadRecorder(gcAllocRecorder);
 
             int gc = GC.CollectionCount(0);
@@ -101,8 +112,22 @@ namespace CRIXOptimizer.Memory
 
         public void ResetGrowthBaseline()
         {
-            baselineTotalAllocated = UnityAllocatedBytes;
+            baselineTotalAllocated = UnityAllocatedBytes > 0 ? UnityAllocatedBytes : -1;
+            baselineGfx = GfxUsedBytes > 0 ? GfxUsedBytes : -1;
             managedTrend.Clear();
+        }
+
+        private static long ReadTextureMemory()
+        {
+            try
+            {
+                ulong bytes = Texture.currentTextureMemory;
+                return bytes == 0 || bytes > long.MaxValue ? -1 : (long)bytes;
+            }
+            catch
+            {
+                return -1;
+            }
         }
 
         private static long ReadRecorder(ProfilerRecorder recorder)

@@ -20,6 +20,11 @@ namespace CRIXOptimizer.Diagnostics
     /// and cause hitches that say nothing about the maps. The first minute counts as loading, extended by 20 seconds
     /// after each big hitch in it (at most 5 minutes); its frames and hitches are summarised on their own and left out
     /// of the per-zone, per-lobby and per-streaming summaries and the worst-hitch list.
+    ///
+    /// Entering a map is measured on its own: the first 10 seconds after a zone becomes active, split into the first
+    /// visit this session and later visits. A hitch on the first visit that is gone on later visits points to first use
+    /// of shaders or textures; one on every visit points to the game switching the map on (activating its objects,
+    /// swapping lightmaps), which CRIX cannot change without changing the game.
     /// </summary>
     internal sealed class PerformanceNotes
     {
@@ -93,6 +98,33 @@ namespace CRIXOptimizer.Diagnostics
             public Segment Clone() => new Segment(Key, Frames.Clone()) { Hitches = Hitches, BigHitches = BigHitches };
         }
 
+        /// <summary>The first <see cref="ZoneEntrySeconds"/> after a zone became active, for its first visit and for later visits.</summary>
+        internal sealed class ZoneEntries
+        {
+            public readonly string Zone;
+            public int Visits;
+            /// <summary>Visits since unused assets were last freed (a visit after freeing counts as a first visit again).</summary>
+            public int SinceFree;
+            public bool FirstWhileLoading;
+            public int FirstMeasured;
+            public int FirstHitches, FirstBig;
+            public float FirstWorstMs;
+            public int LaterMeasured, LaterWithBig, LaterHitches, LaterBig;
+            public float LaterWorstMs;
+            public ZoneEntries(string zone) { Zone = zone; }
+            public ZoneEntries Clone() => (ZoneEntries)MemberwiseClone();
+        }
+
+        /// <summary>One zone becoming active: which visit it was and what the frames looked like after it.</summary>
+        private sealed class Entry
+        {
+            public double Time;
+            public ZoneEntries Stats;
+            public bool First;
+            public bool HadBig;
+            public bool Counted;
+        }
+
         /// <summary>A copy of everything recorded so far, taken on the main thread in well under a millisecond, so the text
         /// can be built and written on a worker thread while recording goes on.</summary>
         internal sealed class Frozen
@@ -107,6 +139,7 @@ namespace CRIXOptimizer.Diagnostics
             public Segment Startup;
             public string StartupEnd;
             public bool StartupOver;
+            public List<ZoneEntries> Entries;
 
             public string Render(IEnumerable<string> header)
             {
@@ -121,6 +154,7 @@ namespace CRIXOptimizer.Diagnostics
                     "left out of the summaries below.\n\n",
                     StartupOver ? "Until" : "Still loading at", StartupEnd, Startup.Frames.AverageFps, Startup.Frames.MaxMs, Startup.BigHitches));
                 AppendSegments(sb, "== Per zone (map) ==", Zones);
+                AppendEntries(sb, Entries);
                 AppendSegments(sb, "== Per lobby size ==", Lobbies);
                 AppendSegments(sb, "== Recording / streaming ==", Captures);
                 sb.Append("== Worst hitches ==\n");
@@ -141,6 +175,34 @@ namespace CRIXOptimizer.Diagnostics
                 if (TimelineFull)
                     sb.Append("(timeline limit reached)\n");
                 return sb.ToString();
+            }
+
+            private static void AppendEntries(StringBuilder sb, List<ZoneEntries> list)
+            {
+                sb.Append("== Entering maps (first 10 s after a zone becomes active) ==\n");
+                list = list.FindAll(e => e.Visits > 0);
+                list.Sort((a, b) => string.CompareOrdinal(a.Zone, b.Zone));
+                if (list.Count == 0)
+                    sb.Append("no zone changes yet\n");
+                foreach (ZoneEntries e in list)
+                {
+                    string first = e.FirstMeasured > 0
+                        ? string.Format(CultureInfo.InvariantCulture, "{0}: worst {1:0} ms, {2} big hitches, {3} hitches",
+                            e.FirstMeasured == 1 && !e.FirstWhileLoading ? "first visit"
+                            : e.FirstMeasured == 1 ? "first visit after assets were freed"
+                            : "first visits (" + e.FirstMeasured.ToString(CultureInfo.InvariantCulture) + ", counting visits after assets were freed)",
+                            e.FirstWorstMs, e.FirstBig, e.FirstHitches)
+                        : e.FirstWhileLoading ? "first visit while the game was loading (not measured)"
+                        : "first visit: still being measured";
+                    string later = e.LaterMeasured == 0 ? "no later visits yet"
+                        : string.Format(CultureInfo.InvariantCulture, "later visits ({0}): worst {1:0} ms, big hitches in {2} of {0} ({3} in total), {4} hitches",
+                            e.LaterMeasured, e.LaterWorstMs, e.LaterWithBig, e.LaterBig, e.LaterHitches);
+                    sb.Append(e.Zone).Append(": ").Append(first).Append("; ").Append(later).Append('\n');
+                }
+                if (list.Count > 0)
+                    sb.Append("A big hitch on the first visit that is gone on later visits: first use of shaders/textures. On every visit: the game switching the map on " +
+                              "(activating its objects, swapping lightmaps). Freed assets (CRIX's deferred unload) make the next visit a first visit again.\n");
+                sb.Append('\n');
             }
 
             private static void AppendSegments(StringBuilder sb, string title, List<Segment> list)
@@ -170,9 +232,15 @@ namespace CRIXOptimizer.Diagnostics
             public long UnityBytes;
             public float EyeScale;
             public bool VrActive;
+            /// <summary>Graphics-driver memory and loaded texture memory; 0 or less = not available (not shown).</summary>
+            public long GfxBytes;
+            public long TextureBytes;
+            /// <summary>Camera renders per frame by kind (CameraRenderCounts.Describe); empty = not shown.</summary>
+            public string Renders;
         }
 
         public const int MaxEvents = 3000;
+        public const double ZoneEntrySeconds = 10;
         public const int MaxTimelineLines = 2160; // 6 hours at one line per 10 s
 
         private readonly Dictionary<string, Segment> zones = new Dictionary<string, Segment>();
@@ -184,6 +252,10 @@ namespace CRIXOptimizer.Diagnostics
         private readonly List<(double t, float ms, string cause, string zone, string lobby)> worstHitches = new List<(double, float, string, string, string)>();
         private Segment zone, lobby, capture;
         private readonly Segment startup = new Segment("startup");
+        private readonly Dictionary<string, ZoneEntries> entries = new Dictionary<string, ZoneEntries>();
+        private readonly List<Entry> openEntries = new List<Entry>();
+        private readonly HashSet<string> activeZones = new HashSet<string>();
+        private readonly List<string> zoneParts = new List<string>(8);
         private double startupEnd = double.NaN;
         private bool startupOver;
         public const double StartupMinSeconds = 60, StartupQuietSeconds = 20, StartupMaxSeconds = 300;
@@ -218,10 +290,50 @@ namespace CRIXOptimizer.Diagnostics
         public static string LobbyBucket(int players) =>
             players < 0 ? "lobby size unknown" : players == 0 ? "not in a room" : players <= 4 ? "1-4 players" : players <= 9 ? "5-9 players" : players <= 14 ? "10-14 players" : "15-20 players";
 
-        public void SetZone(string name)
+        /// <summary>
+        /// The active zones changed (e.g. "city+forest"). Zones that became active start an entry measurement; returns
+        /// a description such as "canyon: first visit" (empty when no zone became active or the time is not known).
+        /// </summary>
+        public string SetZone(string name, double now = double.NaN)
         {
             zoneName = string.IsNullOrEmpty(name) ? "unknown" : name;
             zone = Get(zones, zoneName);
+            if (zoneName == "unknown")
+                return ""; // unreadable for a moment: keep the previous set, so a zone is not counted as entered twice
+            zoneParts.Clear();
+            if (zoneName != "none")
+                zoneParts.AddRange(zoneName.Split('+'));
+            var described = new List<string>(2);
+            foreach (string z in zoneParts)
+            {
+                if (z.Length == 0 || activeZones.Contains(z) || double.IsNaN(now))
+                    continue;
+                if (!entries.TryGetValue(z, out ZoneEntries stats))
+                    entries[z] = stats = new ZoneEntries(z);
+                stats.Visits++;
+                stats.SinceFree++;
+                bool first = stats.SinceFree == 1;
+                if (first && !startupOver && stats.Visits == 1)
+                    stats.FirstWhileLoading = true;
+                else if (startupOver)
+                    openEntries.Add(new Entry { Time = now, Stats = stats, First = first });
+                described.Add(z + (stats.Visits == 1 ? ": first visit" : first ? ": visit " + stats.Visits.ToString(CultureInfo.InvariantCulture) + ", first since assets were freed"
+                                       : ": visit " + stats.Visits.ToString(CultureInfo.InvariantCulture)));
+            }
+            activeZones.Clear();
+            foreach (string z in zoneParts)
+                if (z.Length > 0)
+                    activeZones.Add(z);
+            return string.Join(", ", described.ToArray());
+        }
+
+        /// <summary>Unused assets were freed: maps not active now load again like a first visit next time.</summary>
+        public void AssetsFreed(double now)
+        {
+            foreach (ZoneEntries e in entries.Values)
+                if (!activeZones.Contains(e.Zone))
+                    e.SinceFree = 0;
+            AddEvent(now, "unused assets freed (CRIX's deferred unload): maps visited before load again like a first visit");
         }
 
         public void SetLobby(int players)
@@ -264,9 +376,55 @@ namespace CRIXOptimizer.Diagnostics
                 Count(startup, ms, hitch, big);
                 return;
             }
+            if (openEntries.Count > 0)
+                CountEntries(now, ms, hitch, big);
             Count(zone, ms, hitch, big);
             Count(lobby, ms, hitch, big);
             Count(capture, ms, hitch, big);
+        }
+
+        private void CountEntries(double now, float ms, bool hitch, bool big)
+        {
+            for (int i = openEntries.Count - 1; i >= 0; i--)
+            {
+                Entry e = openEntries[i];
+                ZoneEntries s = e.Stats;
+                if (now - e.Time > ZoneEntrySeconds)
+                {
+                    openEntries.RemoveAt(i);
+                    continue;
+                }
+                if (!e.Counted)
+                {
+                    e.Counted = true;
+                    if (e.First)
+                        s.FirstMeasured++;
+                    else
+                        s.LaterMeasured++;
+                }
+                if (e.First)
+                {
+                    s.FirstWorstMs = Math.Max(s.FirstWorstMs, ms);
+                    if (hitch)
+                        s.FirstHitches++;
+                    if (big)
+                        s.FirstBig++;
+                }
+                else
+                {
+                    s.LaterWorstMs = Math.Max(s.LaterWorstMs, ms);
+                    if (hitch)
+                        s.LaterHitches++;
+                    if (big)
+                    {
+                        s.LaterBig++;
+                        if (!e.HadBig)
+                            s.LaterWithBig++;
+                    }
+                }
+                if (big)
+                    e.HadBig = true;
+            }
         }
 
         private static void Count(Segment s, float ms, bool hitch, bool big)
@@ -312,10 +470,12 @@ namespace CRIXOptimizer.Diagnostics
             if (window.Count > 0 && timeline.Count < MaxTimelineLines)
             {
                 timeline.Add(string.Format(CultureInfo.InvariantCulture,
-                    "{0} {1,5:0.0} FPS, 1% low {2,5:0.0}, worst {3,4:0} ms, hitches {4,2} (big {5}) | {6} | {7} | {8} | {9}, adaptive {10}, eye scale {11:0.00} | heap {12}, Unity {13}{14}{15}",
+                    "{0} {1,5:0.0} FPS, 1% low {2,5:0.0}, worst {3,4:0} ms, hitches {4,2} (big {5}) | {6} | {7} | {8} | {9}, adaptive {10}, eye scale {11:0.00} | heap {12}, Unity {13}{14}{15}{18}{16}{17}",
                     Stamp(now), window.AverageFps, window.Low1Fps, window.MaxMs, windowHitches, windowBig, zoneName, lobbyName, captureName,
-                    s.Profile ?? "", s.AdaptiveLevel, s.EyeScale, Mb(s.HeapBytes), Mb(s.UnityBytes), s.VrActive ? "" : " | headset not active",
-                    startupOver ? "" : " | loading"));
+                    s.Profile ?? "", s.AdaptiveLevel, s.EyeScale, Mb(s.HeapBytes), Mb(s.UnityBytes),
+                    s.GfxBytes > 0 ? ", gfx " + Mb(s.GfxBytes) : "", s.TextureBytes > 0 ? ", textures " + Mb(s.TextureBytes) : "",
+                    s.VrActive ? "" : " | headset not active", startupOver ? "" : " | loading",
+                    string.IsNullOrEmpty(s.Renders) ? "" : " | " + s.Renders));
             }
             window.Clear();
             windowHitches = 0;
@@ -345,7 +505,16 @@ namespace CRIXOptimizer.Diagnostics
                 Startup = startup.Clone(),
                 StartupEnd = startTime < 0 ? "0:00:00" : Stamp(Math.Min(startupEnd, startupOver ? startupEnd : now)),
                 StartupOver = startupOver,
+                Entries = CloneEntries(),
             };
+        }
+
+        private List<ZoneEntries> CloneEntries()
+        {
+            var list = new List<ZoneEntries>(entries.Count);
+            foreach (ZoneEntries e in entries.Values)
+                list.Add(e.Clone());
+            return list;
         }
 
         private static List<Segment> CloneAll(Dictionary<string, Segment> map)

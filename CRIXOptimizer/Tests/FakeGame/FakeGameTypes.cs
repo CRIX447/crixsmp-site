@@ -9,6 +9,14 @@ public enum GTZone
     city,
     monkeBlocks,
     monkeBlocksShared,
+    customMaps,
+}
+
+/// <summary>Stand-in for mod.io's map id (a struct whose ToString is the number).</summary>
+public struct FakeModId
+{
+    public long Id;
+    public override string ToString() => Id.ToString();
 }
 
 public class ZoneManagement
@@ -18,6 +26,20 @@ public class ZoneManagement
     public List<GTZone> activeZones = new List<GTZone>(20);
     [MethodImpl(MethodImplOptions.NoInlining)]
     public bool IsZoneActive(GTZone zone) => Active.Contains(zone);
+    public bool LoadsRunning;
+    public bool AnyActiveLoadOps() => LoadsRunning;
+}
+
+public class BetterDayNightManager
+{
+    public static volatile BetterDayNightManager instance;
+    public int currentTimeIndex;
+}
+
+public class PerSceneRenderData
+{
+    public static int Populating;
+    public static int g_AllScenesPopulatingLightmapsLoadCount => Populating;
 }
 
 namespace GorillaTagScripts.Builder
@@ -210,8 +232,17 @@ public class CustomMapLoader
     private static List<string> componentTypeStringAllowList = new List<string> { "Collections.Generic", "Text.StringBuilder" };
 
     public static List<Type> Allowlist => componentAllowlist;
+    public static FakeModId Loaded;
+    public static bool Loading;
+    public static HashSet<string> Scenes = new HashSet<string>();
+    public static FakeModId LoadedMapModId => Loaded;
+    public static bool IsMapLoaded() => !Loading && Loaded.Id != 0;
+    public static bool IsMapLoaded(FakeModId id) => IsMapLoaded() && Loaded.Id == id.Id;
+    public static bool IsCustomScene(string sceneName) => Scenes.Contains(sceneName);
+    public static List<int> Layers => APPROVED_LAYERS;
 
-    // Same shape as the game's (object here instead of GameObject so it runs without Unity).
+    // Same shape as the game's (object here instead of GameObject so it runs without Unity): the layer check is a
+    // List<int>.Contains, the component check a foreach over the allow-list (as in the current game).
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static bool SanitizeObject(object gameObject, object mapRoot)
     {
@@ -220,7 +251,15 @@ public class CustomMapLoader
             obj.Layer = 0;
         foreach (Type component in obj.Components)
         {
-            bool allowed = componentAllowlist.Contains(component);
+            bool allowed = false;
+            foreach (Type item in componentAllowlist)
+            {
+                if (component == item)
+                {
+                    allowed = true;
+                    break;
+                }
+            }
             if (!allowed)
             {
                 string name = component.ToString();
