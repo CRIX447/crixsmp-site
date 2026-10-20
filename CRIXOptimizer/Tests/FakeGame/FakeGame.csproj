@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Test double for Gorilla Tag's game assembly. It is compiled under the name "Assembly-CSharp" so that
+    CRIX's production type lookup (GameTypes.FromLoadedAssemblies) is exercised unchanged.
+    The types model ONLY the members Potassium 1.0.0 references (names, kinds, signatures). They are
+    original test code written for this purpose; no game code is included.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Assembly-CSharp</AssemblyName>
+    <RootNamespace />
+    <LangVersion>10</LangVersion>
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS0067;CS0169;CS0414;CS0649</NoWarn>
+  </PropertyGroup>
+</Project>

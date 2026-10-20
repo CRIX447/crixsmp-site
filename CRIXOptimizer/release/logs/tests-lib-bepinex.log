@@ -1,0 +1,292 @@
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.27
+/home/user/crixsmp-site/CRIXOptimizer/Tests/CRIXOptimizer.Tests/StreamingTests.cs(335,33): warning CS0649: Field 'ObsWebSocketTests.FakeObs.PongsReceived' is never assigned to, and will always have its default value 0 [/home/user/crixsmp-site/CRIXOptimizer/Tests/CRIXOptimizer.Tests/CRIXOptimizer.Tests.csproj]
+
+Build succeeded.
+
+/home/user/crixsmp-site/CRIXOptimizer/Tests/CRIXOptimizer.Tests/StreamingTests.cs(335,33): warning CS0649: Field 'ObsWebSocketTests.FakeObs.PongsReceived' is never assigned to, and will always have its default value 0 [/home/user/crixsmp-site/CRIXOptimizer/Tests/CRIXOptimizer.Tests/CRIXOptimizer.Tests.csproj]
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.31
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.39
+# runtime: Mono 6.8.0.105 (Debian 6.8.0.105+dfsg-3.6ubuntu2 Sun Mar 31 02:55:28 UTC 2024)
+# BepInEx assembly: 5.4.21.0, Harmony assembly: 2.9.0.0
+ok 1 - AdaptiveControllerTests.StaysAtBaselineWhenOnTarget (2 ms)
+ok 2 - AdaptiveControllerTests.StepsDownOnlyAfterSustainedDrop (0 ms)
+ok 3 - AdaptiveControllerTests.ShortDipDoesNothing (0 ms)
+ok 4 - AdaptiveControllerTests.CooldownAndSettleLimitChangeRate (0 ms)
+ok 5 - AdaptiveControllerTests.RespectsMinimumLevel (0 ms)
+ok 6 - AdaptiveControllerTests.ProbesUpAfterLongStablePeriodWithoutGpuTiming (0 ms)
+ok 7 - AdaptiveControllerTests.FailedProbesBackOffExponentially (0 ms)
+ok 8 - AdaptiveControllerTests.GpuHeadroomAllowsUpWithoutProbingDelay (0 ms)
+ok 9 - AdaptiveControllerTests.NoUpgradeWhenGpuIsNearlyFull (0 ms)
+ok 10 - AdaptiveControllerTests.GpuHeadroomTargetStepsDownBeforeFramesDrop (0 ms)
+ok 11 - AdaptiveControllerTests.DetectsCpuBound (0 ms)
+ok 12 - AdaptiveControllerTests.ManualAndFreeze (0 ms)
+ok 13 - AdaptiveControllerTests.TighterBoundsAreEnforcedImmediately (0 ms)
+ok 14 - AdaptiveControllerTests.SensitivityChangesTolerance (0 ms)
+ok 15 - BenchmarkMathTests.ComputesBothOnePercentLowDefinitions (2 ms)
+ok 16 - BenchmarkMathTests.IgnoresInvalidSamplesAndEmpty (1 ms)
+ok 17 - CaptureStateTests.AutoUsesExactObsStateWhenConnected (1 ms)
+ok 18 - CaptureStateTests.AutoFallsBackToRunningAppWithoutWebSocket (0 ms)
+ok 19 - CaptureStateTests.RecordingOrLiveTriggerIsStrict (0 ms)
+ok 20 - CaptureStateTests.StaleHooksIgnoredOnceTheirAppHasExited (0 ms)
+ok 21 - CaptureStateTests.EscalatesImmediatelyAndHoldsBeforeDroppingBack (0 ms)
+ok 22 - CaptureStateTests.SignalReturningDuringHoldKeepsState (0 ms)
+ok 23 - CompanionAppTests.ClassifiesKnownProcesses (3 ms)
+ok 24 - CompanionAppTests.SuggestsProfilesByPriority (1 ms)
+ok 25 - CompanionAppTests.ClassifiesHookModules (1 ms)
+ok 26 - ConfigFileTests.ProfilesFileContainsEveryPresetAndResolves (66 ms)
+ok 27 - ConfigFileTests.EditedValuesSurviveReloadAndResetRestoresDefaults (32 ms)
+ok 28 - ConfigFileTests.FrozenV1PresetsMatchTheShipped100ProfilesFile (1259 ms)
+ok 29 - ConfigFileTests.UpgradeFrom100KeepsUserEditsAndAppliesNewDefaults (45 ms)
+ok 30 - ConfigFileTests.UpgradeFromPreviewRevision2AppliesOnlyTheLaterDefaultChanges (53 ms)
+ok 31 - ConfigFileTests.ResetToDefaultsDoesNotRearmTheUpgrade (16 ms)
+ok 32 - ConfigFileTests.FreshInstallNeedsNoMigration (14 ms)
+ok 33 - ConfigFileTests.OutOfRangeValuesAreClampedByBepInEx (24 ms)
+ok 34 - ConfigFileTests.MainConfigBindsAllEntriesWithDefaults (122 ms)
+ok 35 - ConfigFileTests.SettingChangedFiresForLiveUpdates (79 ms)
+ok 36 - CpuLeverTests.LadderReducesCosmeticsAndUpdateRatesFirst (0 ms)
+ok 37 - CpuLeverTests.ApplyCpuLeversScalesProfileWithoutTouchingIt (0 ms)
+cant resolve internal call to "UnityEngine.Camera::get_targetTexture" (tested without signature also)
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+cant resolve internal call to "UnityEngine.Behaviour::get_enabled" (tested without signature also)
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+cant resolve internal call to "UnityEngine.Component::get_transform" (tested without signature also)
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+cant resolve internal call to "UnityEngine.GameObject::get_transform" (tested without signature also)
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+cant resolve internal call to "UnityEngine.Transform::IsChildOf" (tested without signature also)
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+cant resolve internal call to "UnityEngine.Component::get_gameObject" (tested without signature also)
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+cant resolve internal call to "UnityEngine.GameObject::Find" (tested without signature also)
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+cant resolve internal call to "UnityEngine.GameObject::Find" (tested without signature also)
+ok 38 - DesktopCameraTests.FindsTheGameMemberAndWaitsSafelyWhileTheGameIsNotReady (41 ms)
+ok 39 - DesktopCameraTests.ReportsUnavailableWhenTheGameMemberIsMissing (0 ms)
+ok 40 - EyeResolutionTests.MeasuresMegapixelsAtScaleOne (0 ms)
+ok 41 - EyeResolutionTests.CapsRenderScaleToTheMegapixelLimit (0 ms)
+ok 42 - FramePhaseTimerTests.SplitsAFrameAndNamesTheLongestPart (2 ms)
+ok 43 - FrameStatisticsTests.AverageFpsIsFramesOverTime (0 ms)
+ok 44 - FrameStatisticsTests.WindowEvictsOldFramesByDuration (0 ms)
+ok 45 - FrameStatisticsTests.PercentilesAndOnePercentLow (0 ms)
+ok 46 - FrameStatisticsTests.InvalidSamplesAreIgnored (0 ms)
+ok 47 - FrameStatisticsTests.CapacityBoundsMemoryAndStaysConsistent (3 ms)
+ok 48 - MiniJsonTests.ParsesNestedDocuments (1 ms)
+ok 49 - MiniJsonTests.HandlesEscapesAndRoundTrips (2 ms)
+ok 50 - MiniJsonTests.RejectsMalformedInput (0 ms)
+ok 51 - OptimizerModsSupportTests.GorillaOptimizerTogglesAreSortedByWhatTheyDoUnderUrp (2 ms)
+ok 52 - OptimizerModsSupportTests.BuiltInPipelineAndEmptyAndFailingReader (0 ms)
+ok 53 - OptimizerModsSupportTests.IHateAliensAndPotassiumNotes (0 ms)
+ok 54 - PerformanceNotesTests.SummariesPerZoneLobbyAndCaptureAndATimeline (11 ms)
+ok 55 - PerformanceNotesTests.StartupLoadingIsKeptApartAndExtendedWhileItHitches (2 ms)
+ok 56 - PerformanceNotesTests.EnteringMapsIsSplitIntoFirstAndLaterVisits (1 ms)
+ok 57 - PerformanceNotesTests.EntryWindowTakesInTheActivationFrameAndQuickReentriesCountOnce (0 ms)
+ok 58 - PerformanceNotesTests.MapContentAndCameraRenderCountsDescribeThemselves (2 ms)
+ok 59 - PerformanceNotesTests.HistogramPercentilesAndLobbyBuckets (0 ms)
+ok 60 - PerformanceNotesTests.BoundedEventsAndWorstHitches (4 ms)
+ok 61 - PerformanceNotesTests.GameProbeReadsZonesAndPlayersByName (8 ms)
+ok 62 - PlayerLoopHookTests.InsertsAroundFinishFrameRenderingAndRemovesOnlyItsOwn (2 ms)
+ok 63 - PlayerLoopHookTests.MissingTargetIsReported (0 ms)
+ok 64 - ProfilePresetTests.EverySectionResolvesAndValidatesClean (2 ms)
+ok 65 - ProfilePresetTests.SectionMapping (0 ms)
+ok 66 - ProfilePresetTests.ReShadeProfileNeverTouchesRenderTargets (1 ms)
+ok 67 - ProfilePresetTests.StreamingProfilesKeepTheCapturedWindow (0 ms)
+ok 68 - ProfilePresetTests.MultiModIsConservative (0 ms)
+ok 69 - ProfilePresetTests.NoPresetUsesFullSanitizerReplacementAndMsaaIsOnlyCappedInPerformancePresets (0 ms)
+ok 70 - ProfilePresetTests.ValidationClampsAndFixesInconsistencies (0 ms)
+ok 71 - ProfilePresetTests.ReShadeGuardForcesSafeValues (0 ms)
+ok 72 - ProfilePresetTests.CatalogDescribesEveryField (0 ms)
+ok 73 - ProfilePresetTests.PresetDefaultsFitTheirConfigRanges (0 ms)
+ok 74 - QualityLadderTests.LevelZeroIsBaseline (0 ms)
+ok 75 - QualityLadderTests.CheapestReductionsComeFirst (0 ms)
+ok 76 - QualityLadderTests.MonotonicNonIncreasingCost (0 ms)
+ok 77 - QualityLadderTests.CpuBoundKeepsResolutionAndDisallowedLeversStay (0 ms)
+ok 78 - QualityLadderTests.PositiveLevelsRaiseOnlyRenderScaleUpToMax (0 ms)
+ok 79 - QualityLadderTests.BaselineBelowMinimumIsNeverRaisedByReductions (0 ms)
+ok 80 - ReShadeAdvisorTests.FlagsUsuallyExpensiveEffectsAndPerformanceMode (12 ms)
+ok 81 - ReShadeAdvisorTests.LightPresetIsACopyWithoutHeavyEffects (2 ms)
+ok 82 - ReShadeAdvisorTests.HandlesMissingFilesAndOldPresetFormat (0 ms)
+ok 83 - ReShadeAdvisorTests.HeadsetConfigOverridesPerKeyAndIsPreferred (3 ms)
+ok 84 - ReShadeAdvisorTests.ResolvesThePresetLikeReShade (3 ms)
+ok 85 - ReShadeAdvisorTests.EscapedCommasCommentsAndRepeatedKeys (1 ms)
+ok 86 - ReShadeAdvisorTests.BoolsDisableAndRepeatedKeysLikeReShade (1 ms)
+ok 87 - ReShadeAdvisorTests.HeadsetInstructionsAreValidIniLines (1 ms)
+ok 88 - ReShadeAdvisorTests.FirstVrSessionNoteOnlyWithAHeadset (1 ms)
+ok 89 - ReShadeAdvisorTests.LastSelectedPresetAndSwitchedOffDesktop (1 ms)
+ok 90 - ReShadeAdvisorTests.FollowsReShadeBasePathOverride (1 ms)
+ok 91 - RenderRateScheduleTests.SpectatorEvenFramesCadenceIsSteadyAndWithinTheLimit (18 ms)
+ok 92 - RenderRateScheduleTests.RendersAtMostTheLimitAndCloseToIt (2 ms)
+ok 93 - RenderRateScheduleTests.SlowerGameRendersEveryFrame (0 ms)
+ok 94 - RenderRateScheduleTests.IrregularFramesAndHitchesNeverBurst (1 ms)
+ok 95 - RenderRateScheduleTests.CamerasTakeTurnsWithJitterAndAfterAHitch (4 ms)
+ok 96 - RenderRateScheduleTests.FrequentLongFramesKeepTheRate (1 ms)
+ok 97 - RenderRateScheduleTests.NoBurstAfterALoadScreen (1 ms)
+ok 98 - RenderRateScheduleTests.TypicalFrameTimeBarelyMovesOnAHitchButFollowsASlowdown (0 ms)
+ok 99 - RenderRateScheduleTests.FrameBudget (0 ms)
+ok 100 - RenderRateScheduleTests.GridAndPhases (0 ms)
+ok 101 - RepeatingHitchTests.FindsAFifteenSecondTimerAmongRandomHitches (13 ms)
+ok 102 - RepeatingHitchTests.RandomHitchesAreNoPattern (100 ms)
+ok 103 - RepeatingHitchTests.ACoroutineThatDriftsAFrameARoundStillMatches (0 ms)
+ok 104 - RepeatingHitchTests.PrefersTheRealPeriodOverAMultiple (0 ms)
+ok 105 - RepeatingHitchTests.NotesShowThePatternAndItNoLongerHoldsUpLoading (3 ms)
+ok 106 - ResolutionProbeTests.DetectsIneffectiveResolutionDrop (1 ms)
+ok 107 - ResolutionProbeTests.AcceptsEffectiveDropAndIgnoresSettleSamples (0 ms)
+ok 108 - ResolutionProbeTests.HalfRateReprojectionIsInconclusive (0 ms)
+ok 109 - SakuraaSupportTests.NotDetectedWithoutSakuraa (2 ms)
+ok 110 - SakuraaSupportTests.DetectsByHarmonyOwnerAndGivesGtfxAdvice (0 ms)
+ok 111 - SakuraaSupportTests.DetectsByPluginGuid (0 ms)
+ok 112 - SessionTrendTests.AHeavierMapIsNotASlowDrop (57 ms)
+ok 113 - SessionTrendTests.SteadySessionHasNoDropAndPerMinuteLines (10 ms)
+ok 114 - SessionTrendTests.SlowDropWhileStreamingNamesWhatChanged (11 ms)
+ok 115 - SessionTrendTests.DropWithNothingVisibleNamesOutsideCauses (10 ms)
+ok 116 - SessionTrendTests.IgnoresWarmUpIdleHeadsetAndSmallChanges (32 ms)
+ok 117 - SessionTrendTests.KeepsABoundedHistory (0 ms)
+ok 118 - SpotifyDetectionTests.SpotifyIsClassifiedAndDescribed (0 ms)
+ok 119 - StatusBoardTests.TracksStatesAndVersion (1 ms)
+ok 120 - StatusBoardTests.OnceLoggerSuppressesRepeats (0 ms)
+ok 121 - StreamlabsParsingTests.ReadsLiveRecordingAndOfflineStates (1 ms)
+ok 122 - StreamlabsParsingTests.ErrorResponsesCountAsNotConnected (0 ms)
+ok 123 - StreamlabsParsingTests.DualOutputDisplaysAreCombined (0 ms)
+ok 124 - StreamlabsParsingTests.ReplayBufferIsReported (0 ms)
+ok 125 - StreamlabsParsingTests.LogsTransitionsOnce (0 ms)
+ok 126 - ThrottleMathTests.IntervalNeverThrottlesBelowRequestedRate (0 ms)
+ok 127 - ThrottleMathTests.EveryInstanceRunsExactlyOncePerCycle (0 ms)
+ok 128 - TrackedSettingTests.CapturesOriginalAppliesAndRestores (2 ms)
+ok 129 - TrackedSettingTests.ExternalChangeIsRespectedAndNotOverwritten (2 ms)
+ok 130 - TrackedSettingTests.ChangesValueOnlyWhenTheValueDiffers (0 ms)
+ok 131 - TrackedSettingTests.ReleaseSkipsWhenChangedAfterLastCheck (0 ms)
+ok 132 - TrackedSettingTests.RearmAdoptsExternalValueAsNewOriginal (0 ms)
+ok 133 - TrackedSettingTests.EngineClampingIsRecorded (0 ms)
+ok 134 - TrackedSettingTests.FailingAccessorMarksFailedWithoutThrowing (0 ms)
+ok 135 - TrackedSettingTests.ReapplyPolicyOverwritesExternalChange (0 ms)
+ok 136 - TrackedSettingTests.LedgerRestoreAllReportsOutcomes (1 ms)
+ok 137 - TrendAndDegradationTests.TrendSlopeMatchesLinearGrowth (0 ms)
+ok 138 - TrendAndDegradationTests.TrendIsFlatForNoise (0 ms)
+ok 139 - TrendAndDegradationTests.DegradationNeedsSustainAndRecovers (0 ms)
+ok 140 - TrendAndDegradationTests.DegradationAlertCooldown (0 ms)
+ok 141 - TrendAndDegradationTests.SmallDipsAreNotAlerts (0 ms)
+ok 142 - AccessorTests.CompiledAccessorsReachPrivateMembers (14 ms)
+ok 143 - AccessorTests.MissingOrIncompatibleMembersReturnNull (0 ms)
+ok 144 - ObsWebSocketTests.ReadsRecordingStateWithPasswordAndEvents (607 ms)
+ok 145 - ObsWebSocketTests.WrongPasswordIsReportedAndNotRetriedQuickly (24 ms)
+ok 146 - ObsWebSocketTests.MissingPasswordAsksUserInsteadOfFailing (24 ms)
+ok 147 - ObsWebSocketTests.NoAuthenticationAndUnreachableServer (586 ms)
+ok 148 - ObsWebSocketTests.PingDoesNotStallPolling (1378 ms)
+ok 149 - ObsWebSocketTests.FragmentedMessageWithInterleavedPingIsAssembled (568 ms)
+ok 150 - ObsWebSocketTests.ReplayBufferCountsAsCapture (558 ms)
+ok 151 - ObsWebSocketTests.KickedStateStaysVisible (370 ms)
+ok 152 - ObsWebSocketTests.RefusesNonLocalHosts (0 ms)
+ok 153 - ObsWebSocketTests.AuthenticationMatchesProtocolDefinition (0 ms)
+ok 154 - PatchApplicationTests.GameTypesResolveByFullAndSimpleName (0 ms)
+ok 155 - PatchApplicationTests.EveryGamePatchAppliesAgainstTheStandIn (243 ms)
+ok 156 - PatchApplicationTests.MissingTargetsDisableOnlyThemselves (27 ms)
+ok 157 - PatchApplicationTests.FailedPatchDoesNotPoisonTheMethodForOtherMods (5 ms)
+ok 158 - PatchApplicationTests.PotassiumInstalledMeansNoDuplicatePatches (2 ms)
+ok 159 - PatchApplicationTests.FullSanitizerReplacementRefusesNonUnitySignature (0 ms)
+ok 160 - PatchApplicationTests.HarmonyFootprintReportsOverlaps (4 ms)
+ok 161 - StreamlabsClientTests.PollsLocalApiAndSendsOnlyTheStatusRequest (22 ms)
+ok 162 - StutterPatchTests.InactiveEntityManagersSkipLeaveScans (0 ms)
+ok 163 - StutterPatchTests.RoomLeaveCollectionPolicies (5 ms)
+ok 164 - StutterPatchTests.TimedAssetUnloadsAreSkippedWhileEnabled (0 ms)
+ok 165 - StutterPatchTests.SafeSanitizerLookupsGiveIdenticalResults (5 ms)
+ok 166 - StutterPatchTests.ScoreboardRefreshIsStaggeredOnePerFrame (2 ms)
+ok 167 - StutterPatchTests.ScoreboardWorkIsFlushedWhenFeatureTurnedOff (0 ms)
+ok 168 - StutterPatchTests.ScoreboardCreationWaitsForRoomAndRunsOncePerFrame (1 ms)
+ok 169 - StutterPatchTests.SharedBlocksDeferredUntilZoneActiveAndNoneLost (1 ms)
+ok 170 - StutterPatchTests.SharedBlocksReleasedWhenDisabledLive (0 ms)
+ok 171 - StutterPatchTests.RigPoolStaggersCreationAndFillsOnDemand (3 ms)
+ok 172 - StutterPatchTests.CosmeticCullingAppliesLiveAndRestoresOriginals (0 ms)
+ok 173 - ThrottlePatchTests.VoiceReactorsRunAtRequestedRateAndSmoothedOnesAlways (1 ms)
+  # scheduling simulation: CRIX total 9000 peak/frame 10; Potassium-style total 8880 peak/frame 30
+ok 174 - ThrottlePatchTests.StaggeringLowersPerFramePeakVersusPotassiumTimers (3 ms)
+ok 175 - ThrottlePatchTests.TextureTransitionsThrottleAndToggleLive (0 ms)
+ok 176 - ThrottlePatchTests.SuspendPassesEverythingThrough (0 ms)
+ok 177 - ThrottlePatchTests.ReprojectionFrameRateDisablesThrottling (0 ms)
+1..177
+# passed 177, failed 0, 6645 ms
+
+Your mono runtime and class libraries are out of sync.
+The out of sync library is: /home/user/crixsmp-site/CRIXOptimizer/Tests/.run/UnityEngine.CoreModule.dll
+
+When you update one from git you need to update, compile and install
+the other too.
+Do not report this as a bug unless you're sure you have updated correctly:
+you probably have a broken mono install.
+If you see other errors or faults after this message they are probably related
+and you need to fix your mono install first.
+self-test passed
