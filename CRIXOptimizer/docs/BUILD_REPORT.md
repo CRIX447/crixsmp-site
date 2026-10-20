@@ -7,8 +7,8 @@ Date: 2026-10-14. Raw logs: `release/logs/` (also inside the release ZIP under `
 | | |
 |---|---|
 | Output | `bin/Release/CRIXOptimizer.dll` (copied to `release/CRIXOptimizer.dll` and into the ZIP) |
-| Size | 417,280 bytes |
-| SHA-256 | `d6685e88db816675b327b4e8951cf6f4946f64c8e910becfa506e5473f56fe71` |
+| Size | 418,304 bytes |
+| SHA-256 | `25e85d28b0d1585a91591c9a7c49bab0f117f347d583bd52c359f403b66f95d0` |
 | Warnings / errors | **0 / 0** |
 | Target | .NET Standard 2.1, AnyCPU, Release, deterministic (`ContinuousIntegrationBuild=true`) |
 | Assembly references | `netstandard 2.1`, `BepInEx 5.4.21`, `0Harmony 2.9.0`, `UnityEngine.CoreModule`, `.IMGUIModule`, `.TextRenderingModule`, `.XRModule`, `.VRModule`, `.SubsystemsModule`. **No `Assembly-CSharp`**: no game code is referenced. |

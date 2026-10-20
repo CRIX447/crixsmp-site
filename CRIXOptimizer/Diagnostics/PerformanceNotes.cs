@@ -148,7 +148,16 @@ namespace CRIXOptimizer.Diagnostics
                 sb.Append("CRIX OPTIMIZER performance notes\n");
                 foreach (string line in header)
                     sb.Append(line).Append('\n');
-                sb.Append("Recorded: ").Append(Stamp).Append(" (h:mm:ss since the game started). No room codes or player names are recorded.\n\n");
+                sb.Append("Recorded: ").Append(Stamp).Append(" (h:mm:ss since the game started). No room codes or player names are recorded.\n");
+                double playedMinutes = 0;
+                foreach (Segment z in Zones)
+                    playedMinutes += z.Frames.TotalMs / 60000.0;
+                if (!StartupOver || playedMinutes < EnoughPlayMinutes)
+                    sb.Append(string.Format(CultureInfo.InvariantCulture,
+                        "Not enough play recorded yet: {0}{1:0.0} min after loading. For per-map and lobby results play at least {2:0} minutes after loading " +
+                        "(visit your maps, a full lobby, some time recording), then send this file. It is updated every minute, so the game can stay open.\n",
+                        StartupOver ? "" : "the game is still loading; ", playedMinutes, EnoughPlayMinutes));
+                sb.Append('\n');
                 sb.Append("== Startup (game and mods loading) ==\n");
                 sb.Append(string.Format(CultureInfo.InvariantCulture,
                     "{0} {1}: {2:0.0} FPS average, worst {3:0} ms, {4} big hitches. Normal while the game and mods (e.g. Sakuraa Client) load; " +
@@ -241,6 +250,8 @@ namespace CRIXOptimizer.Diagnostics
         }
 
         public const int MaxEvents = 3000;
+        /// <summary>Play after loading needed before the summaries say much (the notes say so until then).</summary>
+        public const double EnoughPlayMinutes = 20;
         public const double ZoneEntrySeconds = 10;
         public const double ZoneEntryLookbackSeconds = 1.2;
         private const int RecentFrames = 512; // > 1.2 s at 240 Hz

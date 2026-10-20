@@ -265,7 +265,8 @@ A good test session (20-40 minutes):
 3. Visit the other maps you play, a few minutes each, including a busy lobby (10+ players), a water or lava map, and
    one custom map you use (load it, play a bit, leave).
 4. Start OBS (or Streamlabs/Discord) recording or streaming for 5-10 minutes while playing.
-5. Close the game normally (the notes are finished when it closes), then send the newest notes file.
+5. Send the newest notes file. It is updated every minute, so you can send it with the game still open; until 20
+   minutes of play after loading are in it, its first lines say there is not enough yet.
 
 ## Reporting a problem
 

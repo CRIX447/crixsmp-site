@@ -158,6 +158,8 @@ are claimed.
   (`Texture.currentTextureMemory`, reported where the graphics-memory counter is not) counts as growth too; the first
   player-count reading is "not in a room" instead of "a player joined (0 players)"; and a setup line says when adaptive
   quality has stepped down but can change little (resolution not allowed by the profile, cosmetics left to Potassium).
+  Until 20 minutes of play after loading are recorded, the notes say at the top that there is not enough yet, and that
+  the file is updated every minute while the game stays open.
 - Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a
   target texture to the headset unless its URP data turns XR off): the desktop-camera setting, the spectator limit and
   the camera list never treat such a camera as the window's. The system report's camera line shows each camera's

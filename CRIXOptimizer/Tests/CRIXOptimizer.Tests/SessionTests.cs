@@ -250,6 +250,10 @@ namespace CRIXOptimizer.Tests
             n.AddBigHitch(now, 120f, "no cause CRIX can see");
             string text = n.Build(new string[0], now);
             Assert.True(text.Contains("== Startup (game and mods loading) ==") && text.Contains("1 big hitches"), text.Substring(0, 400));
+            int note = text.IndexOf("Not enough play recorded yet: ", StringComparison.Ordinal);
+            Assert.True(note > 0 && text.IndexOf(" min after loading. For per-map and lobby results play at least 20 minutes", note, StringComparison.Ordinal) > note &&
+                        !text.Substring(note, 60).Contains("still loading"), "short sessions say so: " + (note > 0 ? text.Substring(note, 80) : "missing"));
+            Assert.True(new PerformanceNotes().Build(new string[0], 0).Contains("the game is still loading; 0.0 min"), "still loading");
             Assert.True(text.Contains("[loading] hitch 900 ms"), "loading hitches are marked");
             Assert.True(text.Contains("startup finished: game and mods loaded (1 big hitches while loading)"), "end of loading is an event");
             int worst = text.IndexOf("== Worst hitches ==", StringComparison.Ordinal);
