@@ -247,9 +247,21 @@ it), and at the top it sums everything up per map, per lobby size and per stream
 names are written. The file is updated every minute, so it is useful even if the game crashes.
 
 Lag spikes right after the game opens are normal while the game and mods load (Sakuraa Client loads its content
-then). The notes keep that apart: the first minute counts as loading, plus 20 seconds after each big spike in it (at
-most 5 minutes). Those spikes are marked `[loading]`, summed up under *Startup*, and left out of the per-map and
-per-lobby results.
+then). The notes keep that apart: the first minute counts as loading, plus 20 seconds after each spike of 200 ms or
+more in it (at most 5 minutes). Those spikes are marked `[loading]`, summed up under *Startup*, and left out of the
+per-map and per-lobby results.
+
+*Repeating hitches* shows a spike that comes back on a fixed timer (for example about 90 ms every 15 s). That is a timer
+in the game, a mod, the VR runtime or a program on the PC, never CRIX. The section also says which part of the frame
+the time went to. **Scripts' Update, LateUpdate, coroutines** mean the game or a mod. **Waiting for the previous frame,
+rendering, the VR runtime** point to the VR runtime, the GPU driver or a program running next to the game, such as
+overlays, recording, or hardware-monitor/RGB/fan software that polls sensors. To find which mod it is:
+
+1. Move one mod's DLL out of `BepInEx/plugins`, keeping CRIX in.
+2. Start the game, play 2 minutes after loading, and look at the section.
+3. Put the mod back and try the next one. When the line no longer names the timer, you have found it.
+
+If it is still there with every other mod out, close the programs running next to the game one at a time.
 
 *Entering maps* shows the first 10 seconds after each map becomes active, for the first visit and for later visits. A
 spike only on the first visit is the game using shaders or textures for the first time; a spike on every visit is the

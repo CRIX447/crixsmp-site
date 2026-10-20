@@ -77,6 +77,7 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<float> MemoryGrowthWarnMBPerMinute;
         public readonly ConfigEntry<bool> WriteSystemReport;
         public readonly ConfigEntry<bool> PerformanceNotes;
+        public readonly ConfigEntry<bool> FramePhaseTiming;
         public readonly ConfigEntry<float> CompanionScanIntervalSeconds;
 
         // [Benchmark]
@@ -231,6 +232,9 @@ namespace CRIXOptimizer.Configuration
                 "Write performance notes for each game session to BepInEx/CRIXOptimizer/notes/ (updated every minute and when the game closes): " +
                 "every 10 s the frame rate, zone, players in the room and recording/streaming state; zone changes, room joins/leaves and big hitches with their cause; " +
                 "summaries per map and per lobby size. No room codes or player names. Send the newest file when asking for tuning. The last 10 sessions are kept.");
+            FramePhaseTiming = file.Bind("Diagnostics", "FramePhaseTiming", true,
+                "Time the parts of each frame (scripts, loading, physics, rendering, waiting for the VR runtime) with CRIX's own markers in Unity's " +
+                "player loop, so the notes can say where a hitch was spent. Read-only: nothing of the game or other mods is changed. Takes effect at the next start.");
             CompanionScanIntervalSeconds = file.Bind("Diagnostics", "CompanionScanIntervalSeconds", 30f,
                 new ConfigDescription("How often to re-check running companion apps (0 = only at startup).", new AcceptableValueRange<float>(0f, 600f)));
 

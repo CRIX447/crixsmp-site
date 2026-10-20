@@ -93,7 +93,15 @@ namespace CRIXOptimizer.Diagnostics
               .Append(", at a zone change or room join/leave ").Append(rt.BigHitchesZoneOrRoom)
               .Append(", at a time-of-day change or lightmap load ").Append(rt.BigHitchesTimeOfDay)
               .Append(", right after a CRIX settings change ").Append(rt.BigHitchesAfterCrixChange)
-              .Append(", other ").Append(rt.BigHitches - rt.BigHitchesDeferredUnload - rt.BigHitchesGc - rt.BigHitchesSceneLoad - rt.BigHitchesStartup - rt.BigHitchesZoneOrRoom - rt.BigHitchesTimeOfDay - rt.BigHitchesAfterCrixChange).Append('\n');
+              .Append(", on a repeating timer ").Append(rt.BigHitchesRepeating)
+              .Append(", other ").Append(rt.BigHitches - rt.BigHitchesDeferredUnload - rt.BigHitchesGc - rt.BigHitchesSceneLoad - rt.BigHitchesStartup - rt.BigHitchesZoneOrRoom - rt.BigHitchesTimeOfDay - rt.BigHitchesAfterCrixChange - rt.BigHitchesRepeating).Append('\n');
+            RepeatingHitchDetector.Pattern rep = rt.RepeatingHitches.Current;
+            if (rep != null)
+                sb.Append("Repeating hitch [D]: about ").Append(rep.TypicalMs.ToString("0", Inv)).Append(" ms every ").Append(rep.Period.ToString("0.0", Inv))
+                  .Append(" s (").Append(rep.Matched).Append(" of ").Append(rep.Slots).Append(" times)")
+                  .Append(rep.PhaseMeasured > 0 ? ", mostly in " + FramePhaseTimer.Describe(rep.TopPhase) : "")
+                  .Append(". Not a CRIX timer; the performance notes say how to find it.\n");
+            sb.Append("Frame phase timing: ").Append(rt.FramePhases == null ? "off or unavailable" : rt.FramePhases.FramesCompleted > 0 ? "on" : "installed, no frames measured (another mod may have replaced the player loop)").Append('\n');
             if (rt.NotesPath.Length > 0)
                 sb.Append("Performance notes for this session: ").Append(rt.NotesPath).Append('\n');
             if (rt.LastMapContent != null)

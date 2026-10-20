@@ -160,6 +160,26 @@ are claimed.
   quality has stepped down but can change little (resolution not allowed by the profile, cosmetics left to Potassium).
   Until 20 minutes of play after loading are recorded, the notes say at the top that there is not enough yet, and that
   the file is updated every minute while the game stays open.
+- From a 23-minute field session: a 75-107 ms hitch came back every 15 s for the whole session (96 of 97 rounds, from
+  9 s after start). Nothing in CRIX runs on that timer. Because it was shorter than 20 s apart, it also kept the notes'
+  "loading" phase going until the 5-minute limit. Now:
+  - Only hitches of 200 ms or more extend the loading phase.
+  - **Repeating hitches** are found from the big-hitch times: candidate periods come from the time differences, then a
+    walk along the timeline checks them, re-anchoring on each match so a coroutine that drifts by a frame a round
+    still matches. A pattern needs 10 matches over at least 2 minutes, covering 70 % of its slots and clearly more
+    than random hitches at the session's rate would. The search runs on a worker thread every 10 s.
+  - The notes get a *Repeating hitches* section with the period, how often it hit, its length, and how to find it by
+    taking mods out one at a time. Matching hitches are named "the repeating hitch" instead of "no cause". The system
+    report counts them and shows the pattern.
+  - **Frame phase timing** (`[Diagnostics] FramePhaseTiming`, default on): CRIX adds its own timestamp markers to
+    Unity's player loop. They go at the start of each phase and around 12 systems: scripts' Update, LateUpdate and
+    FixedUpdate, coroutines, async tasks, loading, physics, the VR runtime update, rendering, presenting, and the wait
+    for the previous frame. That is at most 33 markers per frame; nothing of the game or other mods is changed, and
+    shutdown removes only CRIX's markers.
+  - Each big hitch now says which part of the frame took the time, e.g. "82 ms of it in scripts' Update (the game or
+    mods)". The repeating-hitch section says whether the hitch points to a mod or the game, or to the VR runtime,
+    driver or a PC program.
+  - Built and unit-tested (the player-loop markers only against Unity 6's API source); not yet run in the game.
 - Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a
   target texture to the headset unless its URP data turns XR off): the desktop-camera setting, the spectator limit and
   the camera list never treat such a camera as the window's. The system report's camera line shows each camera's

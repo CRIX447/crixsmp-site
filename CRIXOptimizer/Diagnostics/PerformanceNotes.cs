@@ -18,8 +18,10 @@ namespace CRIXOptimizer.Diagnostics
     ///
     /// Startup is kept apart: right after the game opens, the game and mods (e.g. Sakuraa Client) load their content
     /// and cause hitches that say nothing about the maps. The first minute counts as loading, extended by 20 seconds
-    /// after each big hitch in it (at most 5 minutes); its frames and hitches are summarised on their own and left out
-    /// of the per-zone, per-lobby and per-streaming summaries and the worst-hitch list.
+    /// after each loading-sized hitch (<see cref="StartupExtendMs"/> or more) in it (at most 5 minutes); its frames and
+    /// hitches are summarised on their own and left out of the per-zone, per-lobby and per-streaming summaries and the
+    /// worst-hitch list. Shorter hitches do not extend it: a hitch on a timer (every 15 s in one user's session) kept
+    /// "loading" going until the 5-minute limit.
     ///
     /// Entering a map is measured on its own: the first 10 seconds after a zone becomes active, split into the first
     /// visit this session and later visits. The game switches a zone on inside one long frame and CRIX sees the change
@@ -141,6 +143,8 @@ namespace CRIXOptimizer.Diagnostics
             public string StartupEnd;
             public bool StartupOver;
             public List<ZoneEntries> Entries;
+            public RepeatingHitchDetector.Pattern Repeating;
+            public string RepeatingFirst, RepeatingLast;
 
             public string Render(IEnumerable<string> header)
             {
@@ -173,6 +177,7 @@ namespace CRIXOptimizer.Diagnostics
                 foreach (var h in Worst)
                     sb.Append(string.Format(CultureInfo.InvariantCulture, "{0} {1:0} ms: {2} (zone {3}, {4})\n", h.stamp, h.ms, h.cause, h.zone, h.lobby));
                 sb.Append('\n');
+                AppendRepeating(sb);
                 sb.Append("== Events ==\n");
                 foreach (string e in Events)
                     sb.Append(e).Append('\n');
@@ -185,6 +190,39 @@ namespace CRIXOptimizer.Diagnostics
                 if (TimelineFull)
                     sb.Append("(timeline limit reached)\n");
                 return sb.ToString();
+            }
+
+            private void AppendRepeating(StringBuilder sb)
+            {
+                sb.Append("== Repeating hitches ==\n");
+                RepeatingHitchDetector.Pattern p = Repeating;
+                if (p == null)
+                {
+                    sb.Append("none: no big hitch comes back on a fixed timer\n\n");
+                    return;
+                }
+                sb.Append(string.Format(CultureInfo.InvariantCulture,
+                    "Every {0:0.0} s: {1} of {2} times from {3} to {4}, typically {5:0} ms ({6:0}-{7:0} ms). Nothing CRIX does runs on a timer like this.\n",
+                    p.Period, p.Matched, p.Slots, RepeatingFirst, RepeatingLast, p.TypicalMs, p.MinMs, p.MaxMs));
+                string where;
+                if (p.PhaseMeasured == 0)
+                {
+                    where = "Where in the frame it is spent was not measured ([Diagnostics] FramePhaseTiming off or unavailable). ";
+                }
+                else
+                {
+                    where = string.Format(CultureInfo.InvariantCulture, "Most of the frame went to {0} in {1} of {2} measured. ",
+                        FramePhaseTimer.Describe(p.TopPhase), p.TopPhaseCount, p.PhaseMeasured);
+                    bool clear = p.TopPhaseCount * 2 > p.PhaseMeasured;
+                    if (clear && FramePhaseTimer.IsScripts(p.TopPhase))
+                        where += "That is code of the game or a mod running on a timer, not the PC or the VR runtime. ";
+                    else if (clear && FramePhaseTimer.IsWaitOrRender(p.TopPhase))
+                        where += "That points to the VR runtime, the GPU driver or a program on the PC (overlays, recording, hardware monitors or " +
+                                 "RGB/fan software that polls sensors) rather than a mod's script. ";
+                }
+                sb.Append(where).Append(
+                    "To find it: move one mod's DLL out of BepInEx/plugins (CRIX's excepted), play 2 minutes after loading and check this line; " +
+                    "it names the timer for as long as the hitch is there. With every other mod out, close programs running next to the game one at a time.\n\n");
             }
 
             private static void AppendEntries(StringBuilder sb, List<ZoneEntries> list)
@@ -276,6 +314,12 @@ namespace CRIXOptimizer.Diagnostics
         private double startupEnd = double.NaN;
         private bool startupOver;
         public const double StartupMinSeconds = 60, StartupQuietSeconds = 20, StartupMaxSeconds = 300;
+        /// <summary>Only hitches this long keep the startup phase going.</summary>
+        public const float StartupExtendMs = 200;
+        private RepeatingHitchDetector.Pattern repeating;
+
+        /// <summary>The repeating-hitch pattern the runtime found (null = none), shown in its own section.</summary>
+        public void SetRepeating(RepeatingHitchDetector.Pattern pattern) => repeating = pattern;
 
         /// <summary>True while the game and mods are still loading (see the class comment).</summary>
         public bool InStartup => !startupOver;
@@ -494,8 +538,9 @@ namespace CRIXOptimizer.Diagnostics
         {
             if (!startupOver)
             {
-                // Still loading: keep loading going while big hitches continue (bounded), and keep them out of the worst list.
-                if (startTime >= 0)
+                // Still loading: keep loading going while loading-sized hitches continue (bounded), and keep them out of
+                // the worst list.
+                if (startTime >= 0 && ms >= StartupExtendMs)
                     startupEnd = Math.Min(startTime + StartupMaxSeconds, Math.Max(startupEnd, now + StartupQuietSeconds));
                 AddEvent(now, string.Format(CultureInfo.InvariantCulture, "[loading] hitch {0:0} ms: {1}", ms, cause));
                 return;
@@ -549,6 +594,9 @@ namespace CRIXOptimizer.Diagnostics
                 StartupEnd = startTime < 0 ? "0:00:00" : Stamp(Math.Min(startupEnd, startupOver ? startupEnd : now)),
                 StartupOver = startupOver,
                 Entries = CloneEntries(),
+                Repeating = repeating,
+                RepeatingFirst = repeating != null ? Stamp(repeating.First) : "",
+                RepeatingLast = repeating != null ? Stamp(repeating.Last) : "",
             };
         }
 

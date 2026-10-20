@@ -1,4 +1,4 @@
-Checked 298 type references and 1314 member references from CRIXOptimizer.dll
+Checked 298 type references and 1340 member references from CRIXOptimizer.dll
   0Harmony: 6 type refs
   BepInEx: 18 type refs
   netstandard: 169 type refs
@@ -11,8 +11,8 @@ Checked 298 type references and 1314 member references from CRIXOptimizer.dll
   UnityEngine.VRModule: 3 type refs
   UnityEngine.XRModule: 1 type refs
   reference netstandard 2.1.0.0 -> 2.1.0.0 /usr/lib/mono/4.5/Facades/netstandard.dll
-  reference BepInEx 5.4.21.0 -> 0.0.0.0 lib/bepinex-5.4.23.5/BepInEx.dll
-  reference 0Harmony 2.9.0.0 -> 2.9.0.0 lib/bepinex-5.4.23.5/0Harmony.dll
+  reference BepInEx 5.4.21.0 -> 0.0.0.0 /tmp/claude-0/-home-user-crixsmp-site/5bf6fea2-acf5-53d1-b951-8c2a86e934cd/scratchpad/ref-5.4.23.5/BepInEx.dll
+  reference 0Harmony 2.9.0.0 -> 2.9.0.0 /tmp/claude-0/-home-user-crixsmp-site/5bf6fea2-acf5-53d1-b951-8c2a86e934cd/scratchpad/ref-5.4.23.5/0Harmony.dll
   reference UnityEngine.CoreModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.CoreModule.dll
   reference UnityEngine.IMGUIModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.IMGUIModule.dll
   reference UnityEngine.XRModule 0.0.0.0 -> 0.0.0.0 /home/user/crixsmp-site/CRIXOptimizer/lib/unity/UnityEngine.XRModule.dll

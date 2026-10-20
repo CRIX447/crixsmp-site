@@ -150,6 +150,16 @@ namespace CRIXOptimizer.Optimization
         public int BigHitchesGc { get; private set; }
         public int BigHitchesSceneLoad { get; private set; }
         public int BigHitchesAfterCrixChange { get; private set; }
+        public int BigHitchesRepeating { get; private set; }
+        /// <summary>Big hitches on a fixed timer (the game, a mod, the VR runtime or a program on the PC).</summary>
+        public RepeatingHitchDetector RepeatingHitches { get; } = new RepeatingHitchDetector();
+        /// <summary>Where each frame's time goes (null = [Diagnostics] FramePhaseTiming off or not available).</summary>
+        public FramePhaseTimer FramePhases { get; private set; }
+        private FramePhaseHooks framePhaseHooks;
+        private long framePhasesSeen;
+        private bool framePhasesFresh;
+        private int nextRepeatingUpdate;
+        private int repeatingSearchRunning;
         private float nextCameraInventory;
         private bool vrWasActive;
         private bool statusLogPending;
@@ -238,6 +248,7 @@ namespace CRIXOptimizer.Optimization
             });
             Guard("Desktop camera", () => DesktopCamera = new DesktopCameraModule(Types, Ledger, log));
             Guard("Performance notes", StartNotes);
+            StartFramePhases();
             ExtraCameras = new ExtraCameraLimiter(log);
             ConfigureExtraCameras();
             Spectator = new SpectatorCameraModule(ExtraCameras, now => DesktopCamera?.FindShoulderCamera(now), cam => DesktopCamera?.OwnerLabel(cam) ?? "",
@@ -298,6 +309,8 @@ namespace CRIXOptimizer.Optimization
             try { Spectator?.Dispose(); } catch (Exception e) { log.Warn("Spectator camera shutdown: " + e.Message); }
             try { ExtraCameras?.Dispose(); } catch (Exception e) { log.Warn("Extra camera limit shutdown: " + e.Message); }
             try { renderCounter?.Dispose(); } catch (Exception e) { log.Warn("Camera render counter shutdown: " + e.Message); }
+            try { framePhaseHooks?.Dispose(); } catch (Exception e) { log.Warn("Frame phase timing shutdown: " + e.Message); }
+            framePhaseHooks = null;
             Guard("Memory monitor", MemoryStats.Dispose);
             StopObsClient();
             StopStreamlabsClient();
@@ -318,6 +331,12 @@ namespace CRIXOptimizer.Optimization
             float now = Time.unscaledTime;
 
             Frames.Sample(dt);
+            if (FramePhases != null)
+            {
+                // Markers that stopped running (another mod set its own player loop) must not explain later hitches.
+                framePhasesFresh = FramePhases.FramesCompleted != framePhasesSeen;
+                framePhasesSeen = FramePhases.FramesCompleted;
+            }
             if (cfg.Diagnostics.Value)
             {
                 Trend.AddFrame(dt, now);
@@ -392,6 +411,12 @@ namespace CRIXOptimizer.Optimization
         private void NoteBigHitch(float ms, float now)
         {
             BigHitches++;
+            string phase = "";
+            double phaseMs = 0;
+            if (FramePhases != null && framePhasesFresh)
+                FramePhases.Largest(ms, out phase, out phaseMs);
+            bool repeating = RepeatingHitches.Matches(now);
+            RepeatingHitches.Add(now, ms, phase);
             string cause;
             if (now - lastDeferredUnload <= ms / 1000f + 0.2f)
             {
@@ -408,6 +433,12 @@ namespace CRIXOptimizer.Optimization
             {
                 BigHitchesSceneLoad++;
                 cause = "a scene/map was loading";
+            }
+            else if (repeating)
+            {
+                BigHitchesRepeating++;
+                cause = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "the repeating hitch (every {0:0.0} s; see Repeating hitches)", RepeatingHitches.Current.Period);
             }
             else if (Notes != null && Notes.InStartup)
             {
@@ -443,6 +474,8 @@ namespace CRIXOptimizer.Optimization
             }
             if (probe != null && probe.ReadZoneLoadsRunning() == 1)
                 cause += "; zone scenes were still loading";
+            if (phase.Length > 0)
+                cause += string.Format(System.Globalization.CultureInfo.InvariantCulture, "; {0:0} ms of it in {1}", phaseMs, FramePhaseTimer.Describe(phase));
             Notes?.AddBigHitch(now, ms, cause);
             if (hitchesLogged < 15)
             {
@@ -587,6 +620,34 @@ namespace CRIXOptimizer.Optimization
             }
 
             UpdateCaptureState(now);
+            if (--nextRepeatingUpdate <= 0)
+            {
+                nextRepeatingUpdate = 10;
+                if (System.Threading.Interlocked.CompareExchange(ref repeatingSearchRunning, 1, 0) == 0)
+                {
+                    // The search takes tens of milliseconds in a long session: off the game thread.
+                    Func<RepeatingHitchDetector.Pattern> search = RepeatingHitches.Snapshot();
+                    System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        RepeatingHitchDetector.Pattern found = null;
+                        try { found = search(); }
+                        catch (Exception e) { log.Debug("Repeating hitch search: " + e.Message); }
+                        mainThread.Post(() =>
+                        {
+                            System.Threading.Interlocked.Exchange(ref repeatingSearchRunning, 0);
+                            if (shutDown)
+                                return;
+                            RepeatingHitchDetector.Pattern before = RepeatingHitches.Current;
+                            RepeatingHitches.Publish(found);
+                            Notes?.SetRepeating(found);
+                            if (found != null && (before == null || Math.Abs(before.Period - found.Period) > RepeatingHitchDetector.Tolerance(found.Period)))
+                                log.Info(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                                    "Repeating hitch: about {0:0} ms every {1:0.0} s ({2} times so far). Nothing CRIX does runs on this timer; see the performance notes.",
+                                    found.TypicalMs, found.Period, found.Matched));
+                        });
+                    });
+                }
+            }
             if (hitchesUnlogged > 0 && now >= nextHitchSummary)
             {
                 log.Info($"Hitches: {hitchesUnlogged} more frame(s) over {BigHitchMs:0} ms in the last minute. Totals: {BigHitches} " +
@@ -1289,6 +1350,26 @@ namespace CRIXOptimizer.Optimization
         }
 
         // ------------------------------------------------------------------ performance notes
+
+        private void StartFramePhases()
+        {
+            if (!cfg.Diagnostics.Value || !cfg.FramePhaseTiming.Value)
+                return;
+            try
+            {
+                FramePhases = new FramePhaseTimer(Stopwatch.Frequency);
+                framePhaseHooks = new FramePhaseHooks(FramePhases);
+                framePhaseHooks.Install();
+                log.Debug($"Frame phase timing: {framePhaseHooks.MarkerCount} markers in the player loop.");
+            }
+            catch (Exception e)
+            {
+                try { framePhaseHooks?.Dispose(); } catch { /* nothing installed */ }
+                framePhaseHooks = null;
+                FramePhases = null;
+                log.Debug("Frame phase timing unavailable: " + e.Message);
+            }
+        }
 
         private void StartNotes()
         {
