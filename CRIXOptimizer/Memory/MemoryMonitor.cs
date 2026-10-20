@@ -29,6 +29,7 @@ namespace CRIXOptimizer.Memory
         private float nextSample;
         private long baselineTotalAllocated = -1;
         private long baselineGfx = -1;
+        private long baselineTextures = -1;
         private int lastGcCount = -1;
         private float lastGcSampleTime;
 
@@ -44,8 +45,10 @@ namespace CRIXOptimizer.Memory
         public bool GrowthWindowFull => managedTrend.IsFull;
         public long GrowthSinceBaselineBytes => baselineTotalAllocated < 0 ? 0 : UnityAllocatedBytes - baselineTotalAllocated;
         public long GfxGrowthSinceBaselineBytes => baselineGfx < 0 || GfxUsedBytes < 0 ? 0 : GfxUsedBytes - baselineGfx;
-        /// <summary>The larger of the Unity-allocator and graphics-memory growth since start-up (or the last reset).</summary>
-        public long LargestGrowthSinceBaselineBytes => Math.Max(GrowthSinceBaselineBytes, GfxGrowthSinceBaselineBytes);
+        public long TextureGrowthSinceBaselineBytes => baselineTextures < 0 || TextureBytes < 0 ? 0 : TextureBytes - baselineTextures;
+        /// <summary>The largest of the Unity-allocator, graphics-memory and texture-memory growth since start-up (or the last
+        /// reset). The graphics counter is not available in every build; the texture counter is.</summary>
+        public long LargestGrowthSinceBaselineBytes => Math.Max(GrowthSinceBaselineBytes, Math.Max(GfxGrowthSinceBaselineBytes, TextureGrowthSinceBaselineBytes));
 
         public void Start()
         {
@@ -97,6 +100,8 @@ namespace CRIXOptimizer.Memory
             if (baselineGfx < 0 && GfxUsedBytes > 0)
                 baselineGfx = GfxUsedBytes;
             TextureBytes = ReadTextureMemory();
+            if (baselineTextures < 0 && TextureBytes > 0)
+                baselineTextures = TextureBytes;
             GcAllocatedLastFrameBytes = ReadRecorder(gcAllocRecorder);
 
             int gc = GC.CollectionCount(0);
@@ -115,6 +120,7 @@ namespace CRIXOptimizer.Memory
         {
             baselineTotalAllocated = -1;
             baselineGfx = -1;
+            baselineTextures = -1;
             managedTrend.Clear();
         }
 
@@ -122,6 +128,7 @@ namespace CRIXOptimizer.Memory
         {
             baselineTotalAllocated = UnityAllocatedBytes > 0 ? UnityAllocatedBytes : -1;
             baselineGfx = GfxUsedBytes > 0 ? GfxUsedBytes : -1;
+            baselineTextures = TextureBytes > 0 ? TextureBytes : -1;
             managedTrend.Clear();
         }
 

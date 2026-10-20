@@ -290,9 +290,11 @@ namespace CRIXOptimizer.Optimization
                 // already detached
             }
 
+            // The last notes (with the system report) first, so they show what CRIX was doing while the game ran, not the
+            // restored state.
+            try { FlushNotes(Time.unscaledTime, synchronous: true); } catch (Exception e) { log.Warn("Performance notes: " + e.Message); }
             Guard("Game patches", () => GamePatches?.Shutdown());
             RestoreEverything("shutdown");
-            try { FlushNotes(Time.unscaledTime, synchronous: true); } catch (Exception e) { log.Warn("Performance notes: " + e.Message); }
             try { Spectator?.Dispose(); } catch (Exception e) { log.Warn("Spectator camera shutdown: " + e.Message); }
             try { ExtraCameras?.Dispose(); } catch (Exception e) { log.Warn("Extra camera limit shutdown: " + e.Message); }
             try { renderCounter?.Dispose(); } catch (Exception e) { log.Warn("Camera render counter shutdown: " + e.Message); }
@@ -1486,7 +1488,8 @@ namespace CRIXOptimizer.Optimization
             {
                 if (notesPlayers != -2)
                 {
-                    string text = notesPlayers <= 0 && players > 0 ? $"joined a room ({players} players)"
+                    string text = notesPlayers == -1 ? (players == 0 ? "not in a room" : players > 0 ? $"in a room ({players} players)" : "player count not readable")
+                        : notesPlayers <= 0 && players > 0 ? $"joined a room ({players} players)"
                         : players == 0 && notesPlayers > 0 ? "left the room"
                         : players > notesPlayers ? $"a player joined ({players} players)"
                         : players >= 0 ? $"a player left ({players} players)" : "player count no longer readable";
@@ -1653,7 +1656,7 @@ namespace CRIXOptimizer.Optimization
                 {
                     lastDeferredUnload = now;
                     log.Info($"Deferred unused-asset unload (memory grew: Unity {MemoryMonitor.FormatBytes(MemoryStats.GrowthSinceBaselineBytes)}, " +
-                             $"graphics {MemoryMonitor.FormatBytes(MemoryStats.GfxGrowthSinceBaselineBytes)}; not in a room).");
+                             $"graphics {MemoryMonitor.FormatBytes(MemoryStats.GfxGrowthSinceBaselineBytes)}, textures {MemoryMonitor.FormatBytes(MemoryStats.TextureGrowthSinceBaselineBytes)}; not in a room).");
                     Resources.UnloadUnusedAssets();
                     MemoryStats.ResetGrowthBaselineAtNextSample();
                     Notes?.AssetsFreed(now, "CRIX's deferred unload");
@@ -1982,9 +1985,17 @@ namespace CRIXOptimizer.Optimization
             SetupAdvice.AddRange(optimizerModAdvice);
 
             // Timed unused-asset unloads skipped (by CRIX's profile or by Potassium) and memory has really grown.
-            if (TimedUnloadsSkipped && !cfg.DeferredAssetUnload.Value && MemoryStats.LargestGrowthSinceBaselineBytes >= 1024L * 1024 * 1024)
+            // Adaptive mode stepped down, but here its big levers are not available: say so instead of looking busy.
+            if (AdaptiveActive && Adaptive.Level <= -2 && ActiveSettings != null && !ActiveSettings.AdaptiveMayChangeRenderScale && PotassiumInstalled)
+                SetupAdvice.Add($"Adaptive quality has lowered its level because frames run late, but here it can change little: the {ActiveSection} profile does not let it " +
+                                "lower the resolution, and Potassium handles the cosmetic savings for busy lobbies. The eye resolution (see the line about megapixels per eye, if shown) " +
+                                "decides most of the frame time.");
+
+            // Only once loading is over: before that the growth is the game and mods loading.
+            if (TimedUnloadsSkipped && !cfg.DeferredAssetUnload.Value && memoryBaselineAfterLoading && MemoryStats.LargestGrowthSinceBaselineBytes >= 1024L * 1024 * 1024)
                 SetupAdvice.Add($"Memory has grown since the game finished loading (Unity {MemoryMonitor.FormatBytes(MemoryStats.GrowthSinceBaselineBytes)}, " +
-                                $"graphics {MemoryMonitor.FormatBytes(MemoryStats.GfxGrowthSinceBaselineBytes)}). " +
+                                $"graphics {(MemoryStats.GfxUsedBytes >= 0 ? MemoryMonitor.FormatBytes(MemoryStats.GfxGrowthSinceBaselineBytes) : "n/a")}, " +
+                                $"textures {(MemoryStats.TextureBytes >= 0 ? MemoryMonitor.FormatBytes(MemoryStats.TextureGrowthSinceBaselineBytes) : "n/a")}). " +
                                 (Live.SkipTimedAssetUnloads ? "The profile" : "Potassium") + " skips the game's timed unused-asset unloads (they cause hitches), so assets such as " +
                                 "other players' cosmetics and visited maps stay in memory. Set [Memory] DeferredAssetUnload = true in com.crix.crixoptimizer.cfg: " +
                                 "CRIX then frees them once memory has grown by DeferredAssetUnloadGrowthMB, and only while you are not in a room.");

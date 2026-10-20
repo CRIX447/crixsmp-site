@@ -152,6 +152,12 @@ are claimed.
   renders into is never destroyed. The limit keeps working if the desktop-camera module fails, and nothing of the
   limiter stays installed once nothing is pinned or limited.
   Camera inventory and render counts treat it as the window camera. Not tested in Gorilla Tag.
+- From a field session (notes file): the last notes written when the game closes now show what CRIX was doing while the
+  game ran (they were written after the restore, so they read "0 engine settings changed" and "desktop camera: on
+  (restored)"); the memory-growth advice waits until loading is over (it counted the loading itself); texture memory
+  (`Texture.currentTextureMemory`, reported where the graphics-memory counter is not) counts as growth too; the first
+  player-count reading is "not in a room" instead of "a player joined (0 players)"; and a setup line says when adaptive
+  quality has stepped down but can change little (resolution not allowed by the profile, cosmetics left to Potassium).
 - Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a
   target texture to the headset unless its URP data turns XR off): the desktop-camera setting, the spectator limit and
   the camera list never treat such a camera as the window's. The system report's camera line shows each camera's
