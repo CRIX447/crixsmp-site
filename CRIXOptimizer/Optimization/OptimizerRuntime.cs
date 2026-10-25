@@ -160,6 +160,9 @@ namespace CRIXOptimizer.Optimization
         private bool framePhasesFresh;
         private int nextRepeatingUpdate;
         private int repeatingSearchRunning;
+        private readonly SteadyThrottleDetector throttle = new SteadyThrottleDetector();
+        /// <summary>Frames are held at a fixed slow rate (the VR runtime throttling the game, e.g. headset off).</summary>
+        public bool Throttled => throttle.Throttled;
         private float nextCameraInventory;
         private bool vrWasActive;
         private bool statusLogPending;
@@ -278,7 +281,7 @@ namespace CRIXOptimizer.Optimization
             EnsureObsClient();
             UpdateStatus();
 
-            log.Info($"{ModInfo.Name} {ModInfo.Version} loaded. Profile: {ActiveSection}. " +
+            log.Info($"{ModInfo.Name} {ModInfo.VersionAndBuild} loaded. Profile: {ActiveSection}. " +
                      $"Patches active: {Status.Count(ModuleState.Active)}, unavailable: {Status.Count(ModuleState.Unavailable)}, deferred: {Status.Count(ModuleState.Deferred)}. " +
                      "Unofficial mod - not endorsed by Another Axiom.");
         }
@@ -337,6 +340,19 @@ namespace CRIXOptimizer.Optimization
                 framePhasesFresh = FramePhases.FramesCompleted != framePhasesSeen;
                 framePhasesSeen = FramePhases.FramesCompleted;
             }
+            int throttleChange = dt > 0f && dt < 5f ? throttle.AddFrame(dt * 1000f, now) : 0;
+            if (throttleChange > 0)
+            {
+                // Its frames so far were reported as hitches: take them back.
+                RepeatingHitches.RemoveSince(throttle.RunStart);
+                Notes?.ThrottleStarted(throttle.RunStart, throttle.FrameMs);
+                log.Info($"Frames are held at a steady {1000f / throttle.FrameMs:0.0} FPS: a throttle, not load (usually the VR runtime while the headset is off or its menu is open). Not counted as hitches; adaptive quality ignores it.");
+            }
+            else if (throttleChange < 0)
+            {
+                Notes?.ThrottleEnded(now, throttle.EndedSeconds);
+                log.Info($"The steady {1000f / throttle.EndedFrameMs:0.0} FPS throttle ended after {throttle.EndedSeconds:0} s.");
+            }
             if (cfg.Diagnostics.Value)
             {
                 Trend.AddFrame(dt, now);
@@ -345,7 +361,7 @@ namespace CRIXOptimizer.Optimization
             }
             if (renderCounter != null)
                 renderCounter.Counting = cfg.Diagnostics.Value;
-            if (dt * 1000f >= BigHitchMs && dt < 5f && cfg.Diagnostics.Value)
+            if (dt * 1000f >= BigHitchMs && dt < 5f && cfg.Diagnostics.Value && !throttle.Throttled)
                 NoteBigHitch(dt * 1000f, now);
 
             bool wantGpu = Benchmark.WantsGpuSamples || (cfg.AdaptiveEnabled && !Suspended) || dashboard != null;
@@ -359,7 +375,7 @@ namespace CRIXOptimizer.Optimization
                 try { Benchmark.Sample(dt, Gpu.LastGpuMs, Gpu.DroppedFramesTotal); } catch (Exception e) { Fail("Benchmark", e); }
             }
 
-            if (dt > 0f && dt < 5f)
+            if (dt > 0f && dt < 5f && !throttle.Throttled)
             {
                 adaptiveFrameSum += dt * 1000.0;
                 adaptiveFrameCount++;
@@ -1591,7 +1607,7 @@ namespace CRIXOptimizer.Optimization
                 return;
             var header = new List<string>
             {
-                "CRIX OPTIMIZER " + ModInfo.Version + ", game " + Safe(() => Application.version) + ", Unity " + Application.unityVersion,
+                "CRIX OPTIMIZER " + ModInfo.VersionAndBuild + ", game " + Safe(() => Application.version) + ", Unity " + Application.unityVersion,
                 "CPU " + SystemInfo.processorType + " (" + SystemInfo.processorCount + " threads), RAM " + SystemInfo.systemMemorySize + " MB, GPU " + SystemInfo.graphicsDeviceName,
                 "VR: " + (Xr.IsVrActive ? Xr.OpenXRRuntimeName + ", " + Xr.RefreshRate.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " Hz, eye texture " + Xr.EyeTextureWidth + "x" + Xr.EyeTextureHeight : "not active"),
                 "What CRIX is doing: " + ChangesSummary(),

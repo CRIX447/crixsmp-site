@@ -263,6 +263,13 @@ overlays, recording, or hardware-monitor/RGB/fan software that polls sensors. To
 
 If it is still there with every other mod out, close the programs running next to the game one at a time.
 
+*Frames held at a steady N FPS* means every frame took the same long time: the game was being throttled, not slowed
+down by load. That usually happens while the headset is off or the Quest/Link menu is open. Those frames are left
+out of the results.
+
+The first line of the notes shows the CRIX version and a build ID (`1.1.0 (build 1a2b3c4d)`). If a fix is
+"not working", check that the build ID matches the DLL you were sent.
+
 *Entering maps* shows the first 10 seconds after each map becomes active, for the first visit and for later visits. A
 spike only on the first visit is the game using shaders or textures for the first time; a spike on every visit is the
 game switching the map on (its objects, lightmaps), which a mod cannot change without changing the game. Spikes at a

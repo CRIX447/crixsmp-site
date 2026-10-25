@@ -180,6 +180,15 @@ are claimed.
     mods)". The repeating-hitch section says whether the hitch points to a mod or the game, or to the VR runtime,
     driver or a PC program.
   - Built and unit-tested (the player-loop markers only against Unity 6's API source); not yet run in the game.
+- From another field session: after the headset was put down, every frame took 100 ms (+-3 %) for 9 s. CRIX logged
+  about 60 "no cause" hitches and fed the frames to adaptive quality. Frames held at one fixed slow rate are now
+  recognised as a throttle (`SteadyThrottleDetector`): 20 frames in a row of 66 ms or more, each within 4 % of the
+  run's average. Load never paces frames that evenly, and 66 ms is below any reprojection rate. While throttled:
+  - the hitches already reported for the run are taken back from the notes and the repeating-hitch search;
+  - frames are left out of the summaries; one event marks the start and one the end;
+  - adaptive quality does not count the frames.
+- The notes header, the system report and the log show a build ID next to the version: the first 8 hex digits of the
+  DLL's SHA-256. A notes file now shows which build wrote it, even when the version number is unchanged.
 - Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a
   target texture to the headset unless its URP data turns XR off): the desktop-camera setting, the spectator limit and
   the camera list never treat such a camera as the window's. The system report's camera line shows each camera's

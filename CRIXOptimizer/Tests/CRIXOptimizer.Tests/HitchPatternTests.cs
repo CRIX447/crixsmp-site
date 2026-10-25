@@ -168,3 +168,87 @@ namespace CRIXOptimizer.Tests
         }
     }
 }
+
+namespace CRIXOptimizer.Tests
+{
+    public sealed class SteadyThrottleTests
+    {
+        [Test]
+        public void TenFpsHeldEvenlyIsAThrottleAndUnevenSlowFramesAreNot()
+        {
+            var d = new SteadyThrottleDetector();
+            var r = new Random(5);
+            double now = 100;
+            int started = 0, ended = 0;
+            for (int i = 0; i < 90; i++)
+            {
+                float ms = 100f + (float)(r.NextDouble() - 0.5) * 6f; // like the session: 97-103 ms
+                now += ms / 1000.0;
+                int c = d.AddFrame(ms, now);
+                if (c > 0) { started++; Assert.Equal(SteadyThrottleDetector.ConfirmFrames - 1, i, "recognised after 20 frames"); }
+            }
+            Assert.True(d.Throttled && started == 1, "throttled");
+            Assert.Near(100, d.FrameMs, 1.5);
+            Assert.Near(100.0, d.RunStart, 0.01, "from the start of the first slow frame");
+            now += 0.011;
+            ended = d.AddFrame(11f, now);
+            Assert.True(ended < 0 && !d.Throttled, "a normal frame ends it");
+            Assert.Equal(90, d.EndedFrames);
+            Assert.Near(9.0, d.EndedSeconds, 0.2);
+
+            // Real slow loading frames vary far more than 4 %, and reprojection rates are faster than 66 ms.
+            var load = new SteadyThrottleDetector();
+            for (int i = 0; i < 200; i++)
+                Assert.False(load.AddFrame(80f + (float)r.NextDouble() * 60f, i) > 0, "uneven slow frames");
+            var reproj = new SteadyThrottleDetector();
+            for (int i = 0; i < 200; i++)
+                Assert.False(reproj.AddFrame(33.3f, i) > 0, "30 FPS reprojection");
+        }
+
+        [Test]
+        public void NotesTakeTheThrottledHitchesBackAndLeaveItsFramesOut()
+        {
+            var n = new PerformanceNotes();
+            n.SetRefreshRate(120);
+            n.SetZone("city");
+            n.SetLobby(2);
+            var d = new SteadyThrottleDetector();
+            double now = 0;
+            while (now < 70)
+            {
+                n.AddFrame(1f / 110, now);
+                now += 1.0 / 110;
+            }
+            n.AddFrame(0.25f, now);
+            now += 0.25;
+            n.AddBigHitch(now, 250f, "the zone changed"); // a real hitch before the throttle stays
+            n.AddFrame(1f / 110, now);
+            now += 1.0 / 110;
+            for (int i = 0; i < 80; i++)
+            {
+                now += 0.1;
+                int c = d.AddFrame(100f, now);
+                if (c > 0)
+                    n.ThrottleStarted(d.RunStart, d.FrameMs);
+                n.AddFrame(0.1f, now);
+                if (!d.Throttled)
+                    n.AddBigHitch(now, 100f, "no cause CRIX can see");
+                if (i == 5)
+                    n.AddEvent(now, "a player left (1 players)"); // non-hitch events inside the run stay
+            }
+            now += 0.009;
+            Assert.True(d.AddFrame(9f, now) < 0, "ended");
+            n.ThrottleEnded(now, d.EndedSeconds);
+            n.AddFrame(0.009f, now);
+            string text = n.Build(new string[0], now);
+            Assert.False(text.Contains("100 ms: no cause"), "the throttled frames are no hitches");
+            Assert.True(text.Contains("250 ms: the zone changed"), "the earlier hitch stays");
+            Assert.True(text.Contains("frames held at a steady 10.0 FPS: a throttle, not load") && text.Contains("a player left (1 players)"), "events");
+            Assert.True(text.Contains("the steady-rate throttle ended after 8 s (61 more frames left out)"), text.Substring(text.IndexOf("== Events", StringComparison.Ordinal)).Replace("\n", " | "));
+            int held = text.IndexOf("frames held at", StringComparison.Ordinal), left = text.IndexOf("a player left", StringComparison.Ordinal);
+            Assert.True(held < left, "the throttle event is placed at its start time, before the events inside it");
+            var city = n.Zones.First(z => z.Key == "city");
+            Assert.True(city.Frames.AverageFps > 60, "the map's frame rate is not pulled down by the throttle: " + city.Frames.AverageFps);
+        }
+    }
+}

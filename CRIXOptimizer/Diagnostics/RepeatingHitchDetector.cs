@@ -72,6 +72,17 @@ namespace CRIXOptimizer.Diagnostics
             phases.Add(phase ?? "");
         }
 
+        /// <summary>Takes back the hitches from t on (they turned out to be a steady-rate throttle).</summary>
+        public void RemoveSince(double t)
+        {
+            int keep = times.Count;
+            while (keep > 0 && times[keep - 1] >= t)
+                keep--;
+            times.RemoveRange(keep, times.Count - keep);
+            durations.RemoveRange(keep, durations.Count - keep);
+            phases.RemoveRange(keep, phases.Count - keep);
+        }
+
         /// <summary>True when a hitch at t falls on the current pattern's timer (call before <see cref="Add"/>).</summary>
         public bool Matches(double t)
         {

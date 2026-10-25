@@ -301,6 +301,10 @@ namespace CRIXOptimizer.Diagnostics
         private readonly FrameHistogram window = new FrameHistogram();
         private readonly List<string> timeline = new List<string>();
         private readonly List<string> events = new List<string>();
+        private readonly List<double> eventTimes = new List<double>();
+        private readonly List<bool> eventIsHitch = new List<bool>();
+        private bool throttled;
+        private int throttledFrames;
         private readonly List<(double t, float ms, string cause, string zone, string lobby)> worstHitches = new List<(double, float, string, string, string)>();
         private Segment zone, lobby, capture;
         private readonly Segment startup = new Segment("startup");
@@ -440,6 +444,11 @@ namespace CRIXOptimizer.Diagnostics
             }
             if (dtSeconds <= 0f || dtSeconds >= 5f)
                 return;
+            if (throttled)
+            {
+                throttledFrames++;
+                return;
+            }
             float ms = dtSeconds * 1000f;
             bool hitch = ms > hitchBudgetMs * 2;
             bool big = ms > 70f;
@@ -523,15 +532,58 @@ namespace CRIXOptimizer.Diagnostics
                 s.BigHitches++;
         }
 
-        public void AddEvent(double now, string text)
+        public void AddEvent(double now, string text) => AddEvent(now, text, false);
+
+        private void AddEvent(double now, string text, bool hitch)
         {
             if (events.Count >= MaxEvents)
             {
                 droppedEvents++;
                 return;
             }
-            events.Add(Stamp(now) + " " + text);
+            // In time order (a throttle is reported from when it began, after events that came in meanwhile).
+            int at = events.Count;
+            while (at > 0 && eventTimes[at - 1] > now)
+                at--;
+            events.Insert(at, Stamp(now) + " " + text);
+            eventTimes.Insert(at, now);
+            eventIsHitch.Insert(at, hitch);
         }
+
+        /// <summary>
+        /// The runtime recognised frames held at a fixed slow rate since <paramref name="since"/>
+        /// (<see cref="SteadyThrottleDetector"/>): the hitches reported for them are taken back, and later frames stay
+        /// out of the summaries until <see cref="ThrottleEnded"/>.
+        /// </summary>
+        public void ThrottleStarted(double since, float frameMs)
+        {
+            if (throttled)
+                return;
+            throttled = true;
+            throttledFrames = 0;
+            for (int i = events.Count - 1; i >= 0 && eventTimes[i] >= since; i--)
+            {
+                if (!eventIsHitch[i])
+                    continue;
+                events.RemoveAt(i);
+                eventTimes.RemoveAt(i);
+                eventIsHitch.RemoveAt(i);
+            }
+            worstHitches.RemoveAll(h => h.t >= since);
+            AddEvent(since, string.Format(CultureInfo.InvariantCulture,
+                "frames held at a steady {0:0.0} FPS: a throttle, not load (usually the VR runtime while the headset is off or its menu is open); " +
+                "left out of the summaries and hitches until it ends", 1000.0 / frameMs));
+        }
+
+        public void ThrottleEnded(double now, double seconds)
+        {
+            if (!throttled)
+                return;
+            throttled = false;
+            AddEvent(now, string.Format(CultureInfo.InvariantCulture, "the steady-rate throttle ended after {0:0} s ({1} more frames left out)", seconds, throttledFrames));
+        }
+
+        public bool Throttled => throttled;
 
         /// <summary>A frame over 70 ms with what CRIX thinks caused it; the ten worst are kept for the summary.</summary>
         public void AddBigHitch(double now, float ms, string cause)
@@ -542,10 +594,10 @@ namespace CRIXOptimizer.Diagnostics
                 // the worst list.
                 if (startTime >= 0 && ms >= StartupExtendMs)
                     startupEnd = Math.Min(startTime + StartupMaxSeconds, Math.Max(startupEnd, now + StartupQuietSeconds));
-                AddEvent(now, string.Format(CultureInfo.InvariantCulture, "[loading] hitch {0:0} ms: {1}", ms, cause));
+                AddEvent(now, string.Format(CultureInfo.InvariantCulture, "[loading] hitch {0:0} ms: {1}", ms, cause), true);
                 return;
             }
-            AddEvent(now, string.Format(CultureInfo.InvariantCulture, "hitch {0:0} ms: {1} (zone {2}, {3})", ms, cause, zoneName, lobbyName));
+            AddEvent(now, string.Format(CultureInfo.InvariantCulture, "hitch {0:0} ms: {1} (zone {2}, {3})", ms, cause, zoneName, lobbyName), true);
             worstHitches.Add((now, ms, cause, zoneName, lobbyName));
             worstHitches.Sort((a, b) => b.ms.CompareTo(a.ms));
             if (worstHitches.Count > 10)

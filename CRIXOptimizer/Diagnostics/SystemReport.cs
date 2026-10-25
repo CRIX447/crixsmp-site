@@ -171,7 +171,7 @@ namespace CRIXOptimizer.Diagnostics
         public static string EnvironmentBlock(OptimizerRuntime rt)
         {
             var sb = new StringBuilder(1024);
-            Line(sb, "CRIX OPTIMIZER", ModInfo.Version);
+            Line(sb, "CRIX OPTIMIZER", ModInfo.VersionAndBuild);
             Line(sb, "Game version", Safe(() => Application.version));
             Line(sb, "Unity version", Safe(() => Application.unityVersion));
             Line(sb, "BepInEx version", Safe(() => typeof(BaseUnityPlugin).Assembly.GetName().Version.ToString()));
