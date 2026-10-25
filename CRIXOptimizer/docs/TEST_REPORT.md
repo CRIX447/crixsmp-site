@@ -7,8 +7,8 @@ Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21
 
 | Run | Runtime | BepInEx | HarmonyX | Result |
 |---|---|---|---|---|
-| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **179 passed, 0 failed** |
-| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **179 passed, 0 failed** |
+| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **182 passed, 0 failed** |
+| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **182 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
 | - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 298 type / 1314 member refs resolve |
 | - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 105 Unity type / 259 member references declared |
@@ -33,7 +33,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
   engine calls those methods directly and they cannot be inlined.
 - Pure logic (`Core/`, `Adaptive/`, configuration) is tested directly.
 
-## What was tested (179 tests)
+## What was tested (182 tests)
 
 | Area | Tests | What they establish |
 |---|---|---|
@@ -57,6 +57,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
 | OBS WebSocket client (integration, fake OBS server over TCP) | 10 | v5 handshake and SHA-256 authentication; password missing/rejected (close 4009); events and polled state; only the four read-only status requests are ever sent; non-local hosts refused; **a ping no longer stalls polling**; fragmented messages with an interleaved ping are reassembled; "kicked" (close 4011) stays visible; replay buffer counts as capture; auth formula matches the protocol |
 | Streamlabs client | 6 | live/reconnecting/recording/transitional states; "busy"/error answers count as not connected; dual-output displays combined; replay buffer read; transitions logged once; real TCP poll sends only `StreamingService.getModel` |
 | Resolution probe | 3 | ineffective drop detected; effective drop accepted with settle samples ignored; half-rate (reprojection) lock reported as inconclusive |
+| Mod code timing (opt-in) | 3 | the slowest call of a frame is named, a method slow every 15 s is found on the 15 s timer and not on another, the summary lists slow calls with spacing; **with real Harmony** a fake mod's postfix on a method is wrapped, its result and run count stay the same, a second pass adds nothing, the call is timed, and after removal only the fake mod's patch is left and still works; the notes say when timing is off, when nothing was slow, and name the culprit in Repeating hitches |
 | Steady-rate throttle | 2 | 97-103 ms frames are recognised after 20 frames, from the first one, and end at the first normal frame (duration and frame count kept); uneven slow loading frames and 30 FPS reprojection are not; in the notes the run's hitches are taken back, an earlier real hitch and the non-hitch events inside it stay, start and end events sit in time order, and the map's frame rate is not pulled down |
 | Repeating hitches / frame phases | 6 | a 15 s timer with jitter, a missing round and random hitches around it is found (period within 0.05 s, 90+ of 91 rounds); 30 seeds of random hitches with a loading burst give no pattern; a coroutine drifting a frame a round still matches every round; the real period wins over its multiples; 90 ms hitches every 15 s no longer keep loading going (it ends at 1:00) and the notes section names the period, rounds, length and frame phase; the frame-phase timer adds repeated segments, names the longest part, and refuses to explain a frame other than the measured hitch (the player-loop markers themselves need Unity and are checked only against Unity's API source) |
 | CPU levers / eye resolution | 4 | adaptive cosmetic/update-rate levers scale the profile without changing it and keep disabled throttles disabled; eye megapixels measured from the report's real numbers (4992x5376 at 0.85 -> 37 MP); cap computes the largest render scale within the limit, never below 0.35, off at 0 |

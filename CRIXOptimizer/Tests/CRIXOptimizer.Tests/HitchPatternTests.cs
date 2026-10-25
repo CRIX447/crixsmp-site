@@ -252,3 +252,101 @@ namespace CRIXOptimizer.Tests
         }
     }
 }
+
+namespace CRIXOptimizer.Tests
+{
+    public sealed class ModCodeTimingTests
+    {
+        [Test]
+        public void StatsNameTheSlowMethodOfAFrameAndATimer()
+        {
+            var s = new ModCodeStats();
+            int menu = s.Register("OculusReportMenu", "Menu.Update");
+            int rig = s.Register("GorillaRigUtil", "RigHandler.LateUpdate");
+            double now = 0;
+            for (int frame = 1; frame <= 120 * 300; frame++)
+            {
+                now += 1.0 / 120;
+                s.Record(rig, 0.05, frame, now);
+                bool timer = frame % (120 * 15) == 0; // every 15 s
+                s.Record(menu, timer ? 75 + frame % 7 : 0.02, frame, now);
+                if (frame == 120 * 100)
+                    s.Record(rig, 30, frame, now); // one slow call, not on a timer
+            }
+            Assert.True(s.Slowest(120 * 15 * 3, out string label, out double ms) && label == "OculusReportMenu: Menu.Update" && ms >= 75, label);
+            Assert.False(s.Slowest(17, out _, out _), "nothing slow in an ordinary frame");
+            ModCodeStats.Method onTimer = s.OnTimer(15.0, 4);
+            Assert.True(onTimer != null && onTimer.Label == "OculusReportMenu: Menu.Update", onTimer?.Label ?? "null");
+            Assert.True(s.OnTimer(7.3, 4) == null, "a different period names nothing");
+            var lines = s.Describe(10);
+            Assert.Equal(2, lines.Count);
+            Assert.True(lines[0].StartsWith("OculusReportMenu: Menu.Update: 20 slow calls (20+ ms)") && lines[0].Contains(", every 15.0 s;"), lines[0]);
+            Assert.True(lines[1].StartsWith("GorillaRigUtil: RigHandler.LateUpdate: 1 slow calls") && !lines[1].Contains("every"), lines[1]);
+        }
+
+        public static int TargetCalls;
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public static int Target(int x)
+        {
+            TargetCalls++;
+            return x + 1;
+        }
+
+        public static int OtherModPostfixRuns;
+
+        public static void OtherModPostfix(ref int __result)
+        {
+            OtherModPostfixRuns++;
+            __result *= 10;
+        }
+
+        [Test]
+        public void WrapsOtherModsPatchesWithoutChangingThemAndRemovesTheWrappers()
+        {
+            var otherMod = new HarmonyLib.Harmony("tests.othermod");
+            var target = typeof(ModCodeTimingTests).GetMethod(nameof(Target));
+            otherMod.Patch(target, postfix: new HarmonyLib.HarmonyMethod(typeof(ModCodeTimingTests).GetMethod(nameof(OtherModPostfix))));
+            var timer = new ModCodeTimer();
+            try
+            {
+                Assert.Equal(4 * 10, Target(3), "the other mod's patch works");
+                int wrapped = timer.Install("CRIXOptimizer", null);
+                Assert.True(wrapped >= 1 && timer.Failed == 0, $"wrapped {wrapped}, failed {timer.Failed}");
+                var entry = timer.Stats.Methods.First(m => m.Mod == "tests.othermod");
+                Assert.Equal("patch on ModCodeTimingTests.Target (OtherModPostfix)", entry.Name);
+                Assert.Equal(0, timer.Install("CRIXOptimizer", null), "a second pass adds nothing new");
+                int runs = OtherModPostfixRuns;
+                Assert.Equal(6 * 10, Target(5), "results unchanged while timed");
+                Assert.Equal(runs + 1, OtherModPostfixRuns, "the other mod's postfix still runs once");
+                Assert.Equal(1L, entry.Calls, "the call was timed");
+            }
+            finally
+            {
+                timer.Dispose();
+            }
+            var info = HarmonyLib.Harmony.GetPatchInfo(typeof(ModCodeTimingTests).GetMethod(nameof(OtherModPostfix)));
+            Assert.True(info == null || !info.Owners.Contains(ModCodeTimer.HarmonyId), "wrappers removed");
+            Assert.Equal(8 * 10, Target(7), "the other mod's patch still works after");
+            otherMod.UnpatchSelf();
+        }
+
+        [Test]
+        public void NotesSayWhetherModCodeWasTimedAndNameTheCulprit()
+        {
+            var n = new PerformanceNotes();
+            Assert.True(n.Build(new string[0], 0).Contains("not timed ([Diagnostics] ModCodeTiming = false)"), "off");
+            n.SetModCode(new string[0]);
+            Assert.True(n.Build(new string[0], 0).Contains("most likely the game's own code"), "timed, nothing slow");
+            n.SetModCode(new[] { "OculusReportMenu: Menu.Update: 20 slow calls" });
+            var d = new RepeatingHitchDetector();
+            for (int k = 0; k < 12; k++)
+                d.Add(9 + 15 * k, 80f, "Update.ScriptRunBehaviourUpdate");
+            d.Update();
+            n.SetRepeating(d.Current, "OculusReportMenu: Menu.Update (12 slow calls on the same timer)");
+            string text = n.Build(new string[0], 200);
+            Assert.True(text.Contains("CRIX's timing of mods' code names it: OculusReportMenu: Menu.Update (12 slow calls on the same timer)"), text);
+            Assert.True(text.Contains("== Mods' code ==\nOculusReportMenu: Menu.Update: 20 slow calls"), "section");
+        }
+    }
+}

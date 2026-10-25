@@ -187,6 +187,22 @@ are claimed.
   - the hitches already reported for the run are taken back from the notes and the repeating-hitch search;
   - frames are left out of the summaries; one event marks the start and one the end;
   - adaptive quality does not count the frames.
+- First field result with the frame-phase timing: the 15 s hitch (38 of 38 rounds, about 82 ms) is spent in scripts'
+  Update in 37 of 38 rounds, so it is the game's or a mod's code, not the PC or the VR runtime. Room joins spend
+  70-370 ms in scripts' FixedUpdate (where the game's networking delivers the join to the game and mods), and leaving a
+  custom map spends about 1.1 s finishing the map loads.
+- **Mod code timing** (`[Diagnostics] ModCodeTiming`, **off by default**, opt-in because it adds code around other
+  mods' methods): times other plugins' (and Sakuraa's) MonoBehaviour Update, LateUpdate, FixedUpdate, OnJoinedRoom,
+  OnLeftRoom, OnPlayerEnteredRoom and OnPlayerLeftRoom, and every Harmony prefix and postfix other mods put on the game.
+  - The wrappers are a timing prefix and postfix under CRIX's own Harmony id `com.crix.crixoptimizer.modtiming`. They
+    only read a timestamp, and only calls on the game thread are recorded. Results and skipped originals are unchanged.
+  - Wrapping starts 20 s after start, with a second pass at 90 s for mods injected late. Everything is removed when the
+    setting is switched off (checked every second) or the game closes.
+  - Each big hitch names the slowest timed method in its frame. A *Mods' code* section lists methods with slow calls
+    (20 ms or more), their typical and longest time, and their spacing. If one is on the repeating hitch's timer,
+    *Repeating hitches* names it.
+  - Tested on Mono with real Harmony: a fake mod's postfix is wrapped, its result and run count are unchanged, and the
+    wrappers are removed. Not yet run in the game.
 - The notes header, the system report and the log show a build ID next to the version: the first 8 hex digits of the
   DLL's SHA-256. A notes file now shows which build wrote it, even when the version number is unchanged.
 - Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a

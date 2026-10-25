@@ -257,6 +257,12 @@ the time went to. **Scripts' Update, LateUpdate, coroutines** mean the game or a
 rendering, the VR runtime** point to the VR runtime, the GPU driver or a program running next to the game, such as
 overlays, recording, or hardware-monitor/RGB/fan software that polls sensors. To find which mod it is:
 
+The quickest way: set `[Diagnostics] ModCodeTiming = true` in `BepInEx/config/com.crix.crixoptimizer.cfg` for one
+session. CRIX then times other mods' Update/LateUpdate/FixedUpdate, room callbacks and Harmony patches. It only
+measures and doesn't change what they do. *Repeating hitches* names the method on the timer, and *Mods' code* lists
+the slow ones. Set it back to `false` afterwards. If nothing is listed, the hitch is most likely the game's own code.
+Without it, find the mod by hand:
+
 1. Move one mod's DLL out of `BepInEx/plugins`, keeping CRIX in.
 2. Start the game, play 2 minutes after loading, and look at the section.
 3. Put the mod back and try the next one. When the line no longer names the timer, you have found it.

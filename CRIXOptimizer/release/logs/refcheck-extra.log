@@ -1,7 +1,7 @@
-Checked 300 type references and 1354 member references from CRIXOptimizer.dll
+Checked 303 type references and 1414 member references from CRIXOptimizer.dll
   0Harmony: 6 type refs
   BepInEx: 18 type refs
-  netstandard: 171 type refs
+  netstandard: 174 type refs
   UnityEngine.CoreModule: 84 type refs
   UnityEngine.IMGUIModule: 7 type refs
   UnityEngine.ParticleSystemModule: 3 type refs

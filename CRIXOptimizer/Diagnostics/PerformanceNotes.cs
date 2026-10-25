@@ -144,7 +144,8 @@ namespace CRIXOptimizer.Diagnostics
             public bool StartupOver;
             public List<ZoneEntries> Entries;
             public RepeatingHitchDetector.Pattern Repeating;
-            public string RepeatingFirst, RepeatingLast;
+            public string RepeatingFirst, RepeatingLast, RepeatingCulprit;
+            public string[] ModCode;
 
             public string Render(IEnumerable<string> header)
             {
@@ -178,6 +179,7 @@ namespace CRIXOptimizer.Diagnostics
                     sb.Append(string.Format(CultureInfo.InvariantCulture, "{0} {1:0} ms: {2} (zone {3}, {4})\n", h.stamp, h.ms, h.cause, h.zone, h.lobby));
                 sb.Append('\n');
                 AppendRepeating(sb);
+                AppendModCode(sb);
                 sb.Append("== Events ==\n");
                 foreach (string e in Events)
                     sb.Append(e).Append('\n');
@@ -220,9 +222,31 @@ namespace CRIXOptimizer.Diagnostics
                         where += "That points to the VR runtime, the GPU driver or a program on the PC (overlays, recording, hardware monitors or " +
                                  "RGB/fan software that polls sensors) rather than a mod's script. ";
                 }
+                if (RepeatingCulprit.Length > 0)
+                {
+                    sb.Append(where).Append("CRIX's timing of mods' code names it: ").Append(RepeatingCulprit)
+                      .Append(". Ask that mod's author about it, or play without it to check.\n\n");
+                    return;
+                }
                 sb.Append(where).Append(
-                    "To find it: move one mod's DLL out of BepInEx/plugins (CRIX's excepted), play 2 minutes after loading and check this line; " +
+                    "To find it: set [Diagnostics] ModCodeTiming = true in com.crix.crixoptimizer.cfg for one session (the section 'Mods' code' then names " +
+                    "the mod), or move one mod's DLL out of BepInEx/plugins (CRIX's excepted), play 2 minutes after loading and check this line; " +
                     "it names the timer for as long as the hitch is there. With every other mod out, close programs running next to the game one at a time.\n\n");
+            }
+
+            private void AppendModCode(StringBuilder sb)
+            {
+                sb.Append("== Mods' code ==\n");
+                if (ModCode == null)
+                    sb.Append("not timed ([Diagnostics] ModCodeTiming = false). Turn it on for a session to name the mod behind a hitch in scripts' code.\n\n");
+                else if (ModCode.Length == 0)
+                    sb.Append("timed; no call of other mods' timed methods took 20 ms or more. A hitch in scripts' code is then most likely the game's own code (mods' coroutines and event handlers are not timed).\n\n");
+                else
+                {
+                    foreach (string line in ModCode)
+                        sb.Append(line).Append('\n');
+                    sb.Append('\n');
+                }
             }
 
             private static void AppendEntries(StringBuilder sb, List<ZoneEntries> list)
@@ -322,8 +346,19 @@ namespace CRIXOptimizer.Diagnostics
         public const float StartupExtendMs = 200;
         private RepeatingHitchDetector.Pattern repeating;
 
-        /// <summary>The repeating-hitch pattern the runtime found (null = none), shown in its own section.</summary>
-        public void SetRepeating(RepeatingHitchDetector.Pattern pattern) => repeating = pattern;
+        private string repeatingCulprit = "";
+        private string[] modCode;
+
+        /// <summary>The repeating-hitch pattern the runtime found (null = none), shown in its own section, and the
+        /// timed mod method on the same timer ("" = none or not timed).</summary>
+        public void SetRepeating(RepeatingHitchDetector.Pattern pattern, string culprit = "")
+        {
+            repeating = pattern;
+            repeatingCulprit = culprit ?? "";
+        }
+
+        /// <summary>The "Mods' code" section: what [Diagnostics] ModCodeTiming measured (null = off).</summary>
+        public void SetModCode(IEnumerable<string> lines) => modCode = lines == null ? null : new List<string>(lines).ToArray();
 
         /// <summary>True while the game and mods are still loading (see the class comment).</summary>
         public bool InStartup => !startupOver;
@@ -647,6 +682,8 @@ namespace CRIXOptimizer.Diagnostics
                 StartupOver = startupOver,
                 Entries = CloneEntries(),
                 Repeating = repeating,
+                RepeatingCulprit = repeatingCulprit,
+                ModCode = modCode,
                 RepeatingFirst = repeating != null ? Stamp(repeating.First) : "",
                 RepeatingLast = repeating != null ? Stamp(repeating.Last) : "",
             };

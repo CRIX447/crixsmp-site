@@ -161,6 +161,10 @@ namespace CRIXOptimizer.Optimization
         private int nextRepeatingUpdate;
         private int repeatingSearchRunning;
         private readonly SteadyThrottleDetector throttle = new SteadyThrottleDetector();
+        /// <summary>Opt-in timing of other mods' code ([Diagnostics] ModCodeTiming); null while off.</summary>
+        public ModCodeTimer ModTimer { get; private set; }
+        private float modTimerSecondPass = float.MaxValue;
+        private string repeatingCulprit = "";
         /// <summary>Frames are held at a fixed slow rate (the VR runtime throttling the game, e.g. headset off).</summary>
         public bool Throttled => throttle.Throttled;
         private float nextCameraInventory;
@@ -313,6 +317,8 @@ namespace CRIXOptimizer.Optimization
             try { ExtraCameras?.Dispose(); } catch (Exception e) { log.Warn("Extra camera limit shutdown: " + e.Message); }
             try { renderCounter?.Dispose(); } catch (Exception e) { log.Warn("Camera render counter shutdown: " + e.Message); }
             try { framePhaseHooks?.Dispose(); } catch (Exception e) { log.Warn("Frame phase timing shutdown: " + e.Message); }
+            try { ModTimer?.Dispose(); } catch (Exception e) { log.Warn("Mod code timing shutdown: " + e.Message); }
+            ModTimer = null;
             framePhaseHooks = null;
             Guard("Memory monitor", MemoryStats.Dispose);
             StopObsClient();
@@ -492,6 +498,8 @@ namespace CRIXOptimizer.Optimization
                 cause += "; zone scenes were still loading";
             if (phase.Length > 0)
                 cause += string.Format(System.Globalization.CultureInfo.InvariantCulture, "; {0:0} ms of it in {1}", phaseMs, FramePhaseTimer.Describe(phase));
+            if (ModTimer != null && ModTimer.Stats.Slowest(Time.frameCount - 1, out string modMethod, out double modMs) && modMs >= ms * 0.3)
+                cause += string.Format(System.Globalization.CultureInfo.InvariantCulture, "; {0:0} ms in {1}", modMs, modMethod);
             Notes?.AddBigHitch(now, ms, cause);
             if (hitchesLogged < 15)
             {
@@ -636,9 +644,11 @@ namespace CRIXOptimizer.Optimization
             }
 
             UpdateCaptureState(now);
+            UpdateModTimer(now);
             if (--nextRepeatingUpdate <= 0)
             {
                 nextRepeatingUpdate = 10;
+                Notes?.SetModCode(ModTimer?.Stats.Describe(10));
                 if (System.Threading.Interlocked.CompareExchange(ref repeatingSearchRunning, 1, 0) == 0)
                 {
                     // The search takes tens of milliseconds in a long session: off the game thread.
@@ -655,7 +665,9 @@ namespace CRIXOptimizer.Optimization
                                 return;
                             RepeatingHitchDetector.Pattern before = RepeatingHitches.Current;
                             RepeatingHitches.Publish(found);
-                            Notes?.SetRepeating(found);
+                            ModCodeStats.Method culprit = found != null ? ModTimer?.Stats.OnTimer(found.Period, Math.Max(4, found.Matched / 3)) : null;
+                            repeatingCulprit = culprit == null ? "" : culprit.Label + " (" + culprit.SlowTimes.Count + " slow calls on the same timer)";
+                            Notes?.SetRepeating(found, repeatingCulprit);
                             if (found != null && (before == null || Math.Abs(before.Period - found.Period) > RepeatingHitchDetector.Tolerance(found.Period)))
                                 log.Info(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                                     "Repeating hitch: about {0:0} ms every {1:0.0} s ({2} times so far). Nothing CRIX does runs on this timer; see the performance notes.",
@@ -1366,6 +1378,51 @@ namespace CRIXOptimizer.Optimization
         }
 
         // ------------------------------------------------------------------ performance notes
+
+        /// <summary>Once a second: [Diagnostics] ModCodeTiming on starts the timing 20 s after start (mods are loaded
+        /// by then) and adds methods once more at 90 s (Sakuraa is injected late); off removes it.</summary>
+        private void UpdateModTimer(float now)
+        {
+            bool want = cfg.Diagnostics.Value && cfg.ModCodeTiming.Value && !IsFaulted("Mod code timing");
+            if (!want)
+            {
+                if (ModTimer != null)
+                {
+                    Guard("Mod code timing", ModTimer.Dispose);
+                    ModTimer = null;
+                    Notes?.SetModCode(null);
+                    log.Info("Mod code timing off: CRIX's timing wrappers on other mods' methods were removed.");
+                }
+                return;
+            }
+            if (now < 20f)
+                return;
+            try
+            {
+                if (ModTimer == null)
+                {
+                    ModTimer = new ModCodeTimer();
+                    int n = ModTimer.Install(typeof(ModInfo).Assembly.GetName().Name, log.Debug);
+                    modTimerSecondPass = now + 70f;
+                    log.Info($"Mod code timing on ([Diagnostics] ModCodeTiming): timing wrappers on {n} methods of {ModTimer.Mods.Count} mod(s) " +
+                             $"({string.Join(", ", ModTimer.Mods)}) and other mods' Harmony patches ({ModTimer.Failed} could not be wrapped). " +
+                             "What they do is unchanged; switch the setting off to remove them.");
+                }
+                else if (now >= modTimerSecondPass)
+                {
+                    modTimerSecondPass = float.MaxValue;
+                    int n = ModTimer.Install(typeof(ModInfo).Assembly.GetName().Name, log.Debug);
+                    if (n > 0)
+                        log.Info($"Mod code timing: {n} more methods wrapped (mods loaded later).");
+                }
+            }
+            catch (Exception e)
+            {
+                Fail("Mod code timing", e);
+                try { ModTimer?.Dispose(); } catch { /* best effort */ }
+                ModTimer = null;
+            }
+        }
 
         private void StartFramePhases()
         {

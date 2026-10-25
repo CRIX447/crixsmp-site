@@ -78,6 +78,7 @@ namespace CRIXOptimizer.Configuration
         public readonly ConfigEntry<bool> WriteSystemReport;
         public readonly ConfigEntry<bool> PerformanceNotes;
         public readonly ConfigEntry<bool> FramePhaseTiming;
+        public readonly ConfigEntry<bool> ModCodeTiming;
         public readonly ConfigEntry<float> CompanionScanIntervalSeconds;
 
         // [Benchmark]
@@ -235,6 +236,11 @@ namespace CRIXOptimizer.Configuration
             FramePhaseTiming = file.Bind("Diagnostics", "FramePhaseTiming", true,
                 "Time the parts of each frame (scripts, loading, physics, rendering, waiting for the VR runtime) with CRIX's own markers in Unity's " +
                 "player loop, so the notes can say where a hitch was spent. Read-only: nothing of the game or other mods is changed. Takes effect at the next start.");
+            ModCodeTiming = file.Bind("Diagnostics", "ModCodeTiming", false,
+                "Off by default. When on, CRIX times other mods' Update, LateUpdate, FixedUpdate and room callbacks and the Harmony patches " +
+                "they put on the game, so the notes can name the mod behind a hitch (section 'Mods' code'). It adds a timing wrapper around " +
+                "those methods (Harmony prefix and postfix under its own id); what they do is unchanged. Turn it on to find a hitch, then off: " +
+                "the wrappers are removed when it is switched off or the game closes. Wrapping starts 20 s after the game starts.");
             CompanionScanIntervalSeconds = file.Bind("Diagnostics", "CompanionScanIntervalSeconds", 30f,
                 new ConfigDescription("How often to re-check running companion apps (0 = only at startup).", new AcceptableValueRange<float>(0f, 600f)));
 
