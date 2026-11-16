@@ -120,6 +120,12 @@ namespace CRIXOptimizer.Diagnostics
             segment == "Update.ScriptRunDelayedDynamicFrameRate" || segment == "Update.ScriptRunDelayedTasks" ||
             segment == "PreLateUpdate.ScriptRunBehaviourLateUpdate" || segment == "PostLateUpdate.TriggerEndOfFrameCallbacks";
 
+        /// <summary>True for segments where Unity only waits (for the VR runtime or the previous frame), doing no work of
+        /// its own: where a throttled frame spends its time.</summary>
+        public static bool IsWait(string segment) =>
+            segment == "TimeUpdate.WaitForLastPresentationAndUpdateTime" || segment == "EarlyUpdate.XRUpdate" ||
+            segment == "PostLateUpdate.PresentAfterDraw" || segment == "between frames";
+
         /// <summary>True for segments where Unity waits on, or hands work to, the GPU or the VR runtime.</summary>
         public static bool IsWaitOrRender(string segment) =>
             segment == "TimeUpdate.WaitForLastPresentationAndUpdateTime" || segment == "PostLateUpdate.FinishFrameRendering" ||

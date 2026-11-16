@@ -11,7 +11,10 @@ namespace CRIXOptimizer.Diagnostics
     /// adaptive quality. Load never paces frames that evenly; a fixed rate is a throttle, usually the VR runtime's while
     /// the headset is off or its menu is open. <see cref="ConfirmFrames"/> frames in a row of at least
     /// <see cref="MinFrameMs"/> (15 FPS or slower, below any reprojection rate), each within <see cref="Spread"/> of the
-    /// run's average, make a throttle; the first frame outside ends it.
+    /// run's average, make a throttle; the first frame outside ends it. Frames held at a steady rate by work are no
+    /// throttle: in later sessions the same 10 FPS was spent in scripts' Update (84 of 100 ms) while the game was
+    /// closing, so a frame counts only when the runtime's frame-phase timing says it was mostly spent waiting
+    /// (<c>idle</c>), or cannot tell.
     /// </summary>
     internal sealed class SteadyThrottleDetector
     {
@@ -35,9 +38,9 @@ namespace CRIXOptimizer.Diagnostics
 
         /// <summary>One frame of ms milliseconds that ended at now (seconds). +1 when a throttle was just recognised,
         /// -1 when one just ended (this frame is not part of it), 0 otherwise.</summary>
-        public int AddFrame(float ms, double now)
+        public int AddFrame(float ms, double now, bool idle = true)
         {
-            if (ms >= MinFrameMs && run > 0 && Math.Abs(ms - runMs) <= runMs * Spread)
+            if (idle && ms >= MinFrameMs && run > 0 && Math.Abs(ms - runMs) <= runMs * Spread)
             {
                 run++;
                 runMs += (ms - runMs) / run;
@@ -56,7 +59,7 @@ namespace CRIXOptimizer.Diagnostics
                 EndedSeconds = now - ms / 1000.0 - RunStart;
             }
             Throttled = false;
-            if (ms >= MinFrameMs && ms < 5000f)
+            if (idle && ms >= MinFrameMs && ms < 5000f)
             {
                 run = 1;
                 runMs = ms;

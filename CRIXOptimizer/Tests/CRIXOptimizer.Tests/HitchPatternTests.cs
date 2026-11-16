@@ -350,3 +350,82 @@ namespace CRIXOptimizer.Tests
         }
     }
 }
+
+namespace CRIXOptimizer.Tests
+{
+    public sealed class RefreshRateCheckTests
+    {
+        private static float Play(RefreshRateCheck c, int seconds, float reported, Func<int, float> frameMs)
+        {
+            float rate = reported;
+            for (int s = 0; s < seconds; s++)
+            {
+                double t = 0;
+                int f = 0;
+                while (t < 1.0)
+                {
+                    float ms = frameMs(f++);
+                    c.AddFrame(ms);
+                    t += ms / 1000.0;
+                }
+                rate = c.EndSecond(reported);
+            }
+            return rate;
+        }
+
+        [Test]
+        public void FramesFasterThanTheReportedRateRevealTheRealRefresh()
+        {
+            // Like the 1.1.150 sessions: the runtime reports 72 Hz, the game runs at 112-117 FPS with hitches.
+            var c = new RefreshRateCheck();
+            Assert.Equal(72f, Play(c, RefreshRateCheck.ConfirmSeconds - 1, 72f, f => f % 40 == 0 ? 30f : 8.4f), "not before 20 s");
+            Assert.Equal(120f, Play(c, 1, 72f, f => f % 40 == 0 ? 30f : 8.4f), "then the standard rate the frames fit");
+            Assert.Equal(120f, Play(c, 30, 72f, f => 16.7f), "reprojection at 60 FPS does not lower it again");
+            Assert.Equal(90f, Play(c, 1, 90f, f => 8.4f), "a new reported rate starts the check over");
+        }
+
+        [Test]
+        public void MatchingOrSlowerFramesKeepTheReportedRate()
+        {
+            Assert.Equal(72f, Play(new RefreshRateCheck(), 60, 72f, f => 13.9f), "72 Hz really");
+            Assert.Equal(120f, Play(new RefreshRateCheck(), 60, 120f, f => f % 2 == 0 ? 8.3f : 25f), "GPU-bound at 120 Hz");
+            Assert.Equal(90f, Play(new RefreshRateCheck(), 60, 90f, f => 10.9f), "90 Hz with timing noise");
+            var gaps = new RefreshRateCheck();
+            float r = 0;
+            for (int s = 0; s < 60; s++)
+            {
+                Play(gaps, 1, 72f, f => 8.4f);
+                r = Play(gaps, 1, 72f, f => 13.9f); // never 20 fast seconds in a row
+            }
+            Assert.Equal(72f, r, "short bursts are not enough");
+            Assert.Equal(72f, RefreshRateCheck.Standard(70.5));
+            Assert.Equal(90f, RefreshRateCheck.Standard(88));
+            Assert.Equal(120f, RefreshRateCheck.Standard(117.6));
+            Assert.Equal(144f, RefreshRateCheck.Standard(140));
+        }
+
+        [Test]
+        public void SteadySlowFramesSpentWorkingAreNoThrottle()
+        {
+            // 11-16: 100 ms frames, 84 ms of each in scripts' Update, while the game closed.
+            var d = new SteadyThrottleDetector();
+            double now = 0;
+            for (int i = 0; i < 60; i++)
+            {
+                now += 0.1;
+                Assert.False(d.AddFrame(100f, now, idle: false) > 0, "busy frames");
+            }
+            Assert.False(d.Throttled, "not a throttle");
+            for (int i = 0; i < 25; i++)
+            {
+                now += 0.1;
+                d.AddFrame(100f, now, idle: true);
+            }
+            Assert.True(d.Throttled, "waiting frames are");
+            now += 0.1;
+            Assert.True(d.AddFrame(100f, now, idle: false) < 0, "a busy frame ends it");
+            Assert.True(FramePhaseTimer.IsWait("TimeUpdate.WaitForLastPresentationAndUpdateTime") && !FramePhaseTimer.IsWait("Update.ScriptRunBehaviourUpdate") &&
+                        !FramePhaseTimer.IsWait("PostLateUpdate.FinishFrameRendering"), "wait segments");
+        }
+    }
+}

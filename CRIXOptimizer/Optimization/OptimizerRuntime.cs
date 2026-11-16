@@ -346,7 +346,13 @@ namespace CRIXOptimizer.Optimization
                 framePhasesFresh = FramePhases.FramesCompleted != framePhasesSeen;
                 framePhasesSeen = FramePhases.FramesCompleted;
             }
-            int throttleChange = dt > 0f && dt < 5f ? throttle.AddFrame(dt * 1000f, now) : 0;
+            Xr.Check.AddFrame(dt * 1000f);
+            // A slow frame counts toward a throttle only if it was mostly spent waiting (or the phases are not measured).
+            bool idleFrame = true;
+            if (dt * 1000f >= SteadyThrottleDetector.MinFrameMs && FramePhases != null && framePhasesFresh &&
+                FramePhases.Largest(dt * 1000f, out string slowPart, out _))
+                idleFrame = FramePhaseTimer.IsWait(slowPart);
+            int throttleChange = dt > 0f && dt < 5f ? throttle.AddFrame(dt * 1000f, now, idleFrame) : 0;
             if (throttleChange > 0)
             {
                 // Its frames so far were reported as hitches: take them back.
@@ -628,6 +634,11 @@ namespace CRIXOptimizer.Optimization
 
         private void OnSecond(float now)
         {
+            float measuredBefore = Xr.RefreshRate;
+            Xr.Check.EndSecond(Xr.ReportedRefreshRate);
+            if (Xr.RefreshRateFromVr && Xr.Check.Measured > 0f && Xr.RefreshRate != measuredBefore && Xr.RefreshRate == Xr.Check.Measured)
+                log.Info($"Refresh rate: frames arrive at about {Xr.Check.Measured:0} Hz although the VR runtime reports {Xr.ReportedRefreshRate:0} Hz; " +
+                         $"CRIX plans with {Xr.Check.Measured:0} Hz (target frame rate, hitch threshold).");
             // Overhead of CRIX's own per-frame work (measured with Stopwatch, includes dashboard drawing).
             if (framesAccumulated > 0)
                 OverheadMsPerFrame = ticksAccumulated * TicksToMs / framesAccumulated;
@@ -1315,7 +1326,7 @@ namespace CRIXOptimizer.Optimization
             if (!Gpu.HasGpuTime)
             {
                 // Only a refresh rate the VR runtime reported can tell a half-rate lock apart.
-                bool runtimeRate = Xr.RefreshRateSource == "XR display subsystem" || Xr.RefreshRateSource == "XRDevice";
+                bool runtimeRate = Xr.RefreshRateFromVr;
                 resolutionProbe.Begin(now, adaptiveEmaMs, runtimeRate && Xr.RefreshRate > 1f ? 1000.0 / Xr.RefreshRate : 0);
             }
             return true;
@@ -2099,11 +2110,14 @@ namespace CRIXOptimizer.Optimization
                 : steamvr ? "in SteamVR (Settings > Video > render resolution)"
                 : "in your VR app (Virtual Desktop, Meta Quest Link or SteamVR)";
 
-            bool runtimeRate = Xr.RefreshRateSource == "XR display subsystem" || Xr.RefreshRateSource == "XRDevice";
+            bool runtimeRate = Xr.RefreshRateFromVr;
             if (Xr.IsVrActive && runtimeRate && Xr.RefreshRate > 1f && Xr.RefreshRate < 70f)
                 SetupAdvice.Add($"The VR runtime runs the game at {Xr.RefreshRate:0} Hz, so it can never exceed {Xr.RefreshRate:0} FPS. Set 72, 80 or 90 Hz {whereRate}.");
             else if (Xr.IsVrActive && runtimeRate && ActiveSection == "HighRefresh" && Xr.RefreshRate > 1f && Xr.RefreshRate < 110f)
                 SetupAdvice.Add($"HighRefresh profile: the headset reports {Xr.RefreshRate:0} Hz ({Xr.RefreshRateSource}), so the game cannot run faster than {Xr.RefreshRate:0} FPS. Set 120 Hz {whereRate}.");
+            if (Xr.IsVrActive && Xr.RefreshRateFromVr && Xr.RefreshRate > Xr.ReportedRefreshRate + 1f)
+                SetupAdvice.Add($"Refresh rate: the VR runtime reports {Xr.ReportedRefreshRate:0} Hz, but frames arrive at about {Xr.RefreshRate:0} Hz, " +
+                                $"so CRIX plans with {Xr.RefreshRate:0} Hz (target frame rate and hitch threshold). The headset's refresh rate is set in the Meta Quest Link app (Devices > Graphics Preferences).");
 
             if (Xr.IsVrActive && loadedLink && VirtualDesktop.Detected == VirtualDesktopSupport.Path.VirtualDesktopOpenXR)
                 SetupAdvice.Add("Windows' active OpenXR runtime is Virtual Desktop's, but the game is running on Meta Quest Link's runtime (Oculus), " +

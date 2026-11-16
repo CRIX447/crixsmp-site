@@ -67,7 +67,7 @@ namespace CRIXOptimizer.UI
                 sb.Append("  ").Append(rt.Xr.EyeTextureWidth).Append('x').Append(rt.Xr.EyeTextureHeight)
                   .Append(" x").Append(F2(rt.Xr.EyeTextureScale)).Append(" MSAA ").Append(rt.Xr.EyeTextureMsaa)
                   .Append(' ').Append(rt.Xr.StereoMode);
-            bool runtimeRate = rt.Xr.RefreshRateSource == "XR display subsystem" || rt.Xr.RefreshRateSource == "XRDevice";
+            bool runtimeRate = rt.Xr.RefreshRateFromVr;
             sb.Append("  ").Append(F0(rt.Xr.RefreshRate)).Append(runtimeRate ? " Hz [R]\n" : " Hz [R: " + rt.Xr.RefreshRateSource + "]\n");
 
             // Memory

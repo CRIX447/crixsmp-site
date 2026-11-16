@@ -15,8 +15,8 @@ Discord, Spotify, ReShade, Sakuraa Client and multi-mod setups.
 | | Status |
 |---|---|
 | Builds | **Yes.** `CRIXOptimizer.dll` compiles with 0 warnings/0 errors against BepInEx 5.4.21, HarmonyX 2.9.0 and Unity 2021.3 engine modules; every Unity member it uses is declared in Unity 6000.1.9f1 and 6000.2.9f1 (see [docs/BUILD_REPORT.md](docs/BUILD_REPORT.md)). |
-| Automated tests | **131/131 pass** on Mono 6.8 with the real HarmonyX 2.9.0 and real BepInEx 5.4.21 *and* 5.4.23.5 code, including every game patch applied to a stand-in game assembly and the OBS/Streamlabs clients against fake servers ([docs/TEST_REPORT.md](docs/TEST_REPORT.md)). |
-| Tested inside Gorilla Tag | **One field report** (not by the developers): a 1.1.0 preview loaded and ran on Gorilla Tag 1.1.147 / Unity 6000.2.9f1 / BepInEx 5.4.23.5, changed the URP render scale and confirmed the VR eye textures followed it. The development environment has no game, GPU or headset; most in-game behaviour and every performance effect are **unmeasured**. |
+| Automated tests | **185/185 pass** on Mono 6.8 with the real HarmonyX 2.9.0 and real BepInEx 5.4.21 *and* 5.4.23.5 code, including every game patch applied to a stand-in game assembly and the OBS/Streamlabs clients against fake servers ([docs/TEST_REPORT.md](docs/TEST_REPORT.md)). |
+| Tested inside Gorilla Tag | **Field reports from one user** (not by the developers), from Gorilla Tag 1.1.147 to **1.1.151** (Unity 6000.2.9f1, BepInEx 5.4.23.5). On 1.1.150 and 1.1.151, with Potassium removed, **all 13 game patches applied** and the zone, player and custom-map readers worked. Earlier reports show the URP render scale reaching the VR eye textures, and the performance notes with frame-phase timing working. The development environment has no game, GPU or headset; performance effects are **unmeasured** (no A/B benchmark yet). |
 | Benchmarks | **None yet.** No performance numbers are claimed. The mod ships a benchmark recorder and a reproducible protocol ([docs/BENCHMARKING.md](docs/BENCHMARKING.md)) so results can be measured honestly on real hardware. |
 
 ## New in 1.1.0

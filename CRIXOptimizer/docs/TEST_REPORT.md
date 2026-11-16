@@ -7,11 +7,19 @@ Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21
 
 | Run | Runtime | BepInEx | HarmonyX | Result |
 |---|---|---|---|---|
-| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **182 passed, 0 failed** |
-| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **182 passed, 0 failed** |
+| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **185 passed, 0 failed** |
+| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **185 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
 | - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 298 type / 1314 member refs resolve |
 | - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 105 Unity type / 259 member references declared |
+
+**Field reports on later game versions (performance notes sent by the same user):**
+- Gorilla Tag 1.1.150 and 1.1.151 (Unity 6000.2.9f1, BepInEx 5.4.23.5) with Potassium removed: "13 game patch(es) active",
+  every patch `Active` on its target (`GameEntityManager.OnRigDeactivated` ... `CosmeticsThrottler.Awake`), zone,
+  player and custom-map readers "ok", 5,047-5,092 game types indexed. Two sessions of 47 and 49 minutes ran on 1.1.150.
+- They showed two CRIX faults, fixed since:
+  - The VR runtime reported 72 Hz while frames arrived at 112-117 FPS. `RefreshRateCheck` now uses the measured rate.
+  - Steady 10 FPS spent in scripts' Update was taken for a VR-runtime throttle. Only frames spent waiting count now.
 
 **In the real game (field report, not a test run by the developers):** a user ran a 1.1.0 preview build on Gorilla
 Tag 1.1.147 (Unity 6000.2.9f1, BepInEx 5.4.23.5, Windows 11, Ryzen 5 5500, RTX 4060, Quest via a Meta/OpenXR runtime)
@@ -33,7 +41,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
   engine calls those methods directly and they cannot be inlined.
 - Pure logic (`Core/`, `Adaptive/`, configuration) is tested directly.
 
-## What was tested (182 tests)
+## What was tested (185 tests)
 
 | Area | Tests | What they establish |
 |---|---|---|
@@ -57,6 +65,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
 | OBS WebSocket client (integration, fake OBS server over TCP) | 10 | v5 handshake and SHA-256 authentication; password missing/rejected (close 4009); events and polled state; only the four read-only status requests are ever sent; non-local hosts refused; **a ping no longer stalls polling**; fragmented messages with an interleaved ping are reassembled; "kicked" (close 4011) stays visible; replay buffer counts as capture; auth formula matches the protocol |
 | Streamlabs client | 6 | live/reconnecting/recording/transitional states; "busy"/error answers count as not connected; dual-output displays combined; replay buffer read; transitions logged once; real TCP poll sends only `StreamingService.getModel` |
 | Resolution probe | 3 | ineffective drop detected; effective drop accepted with settle samples ignored; half-rate (reprojection) lock reported as inconclusive |
+| Refresh rate / busy frames | 3 | a reported 72 Hz with frames at about 119 FPS becomes 120 Hz after 20 s (not before), stays there through reprojection, and resets when the reported rate changes; matching or slower frames, GPU-bound frames and short bursts keep the reported rate; standard-rate rounding; steady 100 ms frames spent working are no throttle, waiting frames are, and a busy frame ends one |
 | Mod code timing (opt-in) | 3 | the slowest call of a frame is named, a method slow every 15 s is found on the 15 s timer and not on another, the summary lists slow calls with spacing; **with real Harmony** a fake mod's postfix on a method is wrapped, its result and run count stay the same, a second pass adds nothing, the call is timed, and after removal only the fake mod's patch is left and still works; the notes say when timing is off, when nothing was slow, and name the culprit in Repeating hitches |
 | Steady-rate throttle | 2 | 97-103 ms frames are recognised after 20 frames, from the first one, and end at the first normal frame (duration and frame count kept); uneven slow loading frames and 30 FPS reprojection are not; in the notes the run's hitches are taken back, an earlier real hitch and the non-hitch events inside it stay, start and end events sit in time order, and the map's frame rate is not pulled down |
 | Repeating hitches / frame phases | 6 | a 15 s timer with jitter, a missing round and random hitches around it is found (period within 0.05 s, 90+ of 91 rounds); 30 seeds of random hitches with a loading burst give no pattern; a coroutine drifting a frame a round still matches every round; the real period wins over its multiples; 90 ms hitches every 15 s no longer keep loading going (it ends at 1:00) and the notes section names the period, rounds, length and frame phase; the frame-phase timer adds repeated segments, names the longest part, and refuses to explain a frame other than the measured hitch (the player-loop markers themselves need Unity and are checked only against Unity's API source) |

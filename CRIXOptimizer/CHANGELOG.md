@@ -203,6 +203,20 @@ are claimed.
     *Repeating hitches* names it.
   - Tested on Mono with real Harmony: a fake mod's postfix is wrapped, its result and run count are unchanged, and the
     wrappers are removed. Not yet run in the game.
+- **Gorilla Tag 1.1.150 / 1.1.151:** field notes show CRIX loading on both. With Potassium removed, all 13 game
+  patches applied and the zone, player and custom-map readers worked, so no code change was needed for the update. They
+  did show two CRIX faults, fixed here:
+  - **Refresh rate:** the VR runtime (Meta Quest Link, OpenXR) reported 72 Hz for whole sessions in which the game ran
+    at 112-117 FPS. CRIX aimed at 72 FPS, counted hitches against a 72 Hz frame, and said the game "cannot exceed"
+    72 FPS. `RefreshRateCheck` compares the reported rate with the median frame time each second. After 20 seconds in
+    a row clearly faster (more than 10 %), CRIX plans with the standard rate the frames fit (72/80/90/96/100/120/144/
+    165/240) and says so in the report, log and advice. It only ever raises the rate, and a new reported rate starts
+    the check over.
+  - **Steady but busy is not a throttle:** steady 10 FPS stretches right before the game closed were spent in scripts'
+    Update (84 of 100 ms per frame), yet were taken for a VR-runtime throttle and left out. A slow frame now counts
+    toward a throttle only when frame-phase timing says it was mostly spent waiting (or cannot tell).
+  - The 15 s repeating hitch is still there without Potassium (147 of 193 rounds over 49 minutes, all in scripts'
+    Update), so Potassium is not its cause.
 - The notes header, the system report and the log show a build ID next to the version: the first 8 hex digits of the
   DLL's SHA-256. A notes file now shows which build wrote it, even when the version number is unchanged.
 - Headset cameras are recognised also when `Camera.stereoEnabled` reports false (URP renders every Game camera without a

@@ -28,8 +28,21 @@ namespace CRIXOptimizer.Diagnostics
         public string DeviceName { get; private set; } = "";
         public string OpenXRRuntimeName { get; private set; } = "";
         public string OpenXRRuntimeVersion { get; private set; } = "";
-        public float RefreshRate { get; private set; }
-        public string RefreshRateSource { get; private set; } = "unavailable";
+        /// <summary>The refresh rate to plan with: the one the VR runtime reports, or the one the frames show when they
+        /// clearly arrive faster than that (<see cref="RefreshRateCheck"/>; fed by the runtime).</summary>
+        public float RefreshRate => UsesMeasured ? Check.Measured : ReportedRefreshRate;
+        public string RefreshRateSource => UsesMeasured
+            ? string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "measured: frames arrive at about {0:0} Hz although the {1} reports {2:0} Hz", Check.Measured, reportedSource, ReportedRefreshRate)
+            : reportedSource;
+        /// <summary>What the runtime (or the monitor) reports.</summary>
+        public float ReportedRefreshRate { get; private set; }
+        public RefreshRateCheck Check { get; } = new RefreshRateCheck();
+        /// <summary>The rate comes from the VR runtime (reported, or measured against what it reported), not the monitor.</summary>
+        public bool RefreshRateFromVr => reportedByVr;
+        private string reportedSource = "unavailable";
+        private bool reportedByVr;
+        private bool UsesMeasured => reportedByVr && Check.Measured > ReportedRefreshRate && Check.Reported == ReportedRefreshRate;
         public int EyeTextureWidth { get; private set; }
         public int EyeTextureHeight { get; private set; }
         public float EyeTextureScale { get; private set; }
@@ -108,39 +121,42 @@ namespace CRIXOptimizer.Diagnostics
                 // keep the XRSettings value
             }
 
-            RefreshRate = 0f;
-            RefreshRateSource = "unavailable";
+            ReportedRefreshRate = 0f;
+            reportedSource = "unavailable";
+            reportedByVr = false;
             try
             {
                 if (Display != null && Display.TryGetDisplayRefreshRate(out float rate) && rate > 1f)
                 {
-                    RefreshRate = rate;
-                    RefreshRateSource = "XR display subsystem";
+                    ReportedRefreshRate = rate;
+                    reportedSource = "XR display subsystem";
+                    reportedByVr = true;
                 }
                 else if (IsVrActive && XRDevice.refreshRate > 1f)
                 {
-                    RefreshRate = XRDevice.refreshRate;
-                    RefreshRateSource = "XRDevice";
+                    ReportedRefreshRate = XRDevice.refreshRate;
+                    reportedSource = "XRDevice";
+                    reportedByVr = true;
                 }
             }
             catch
             {
                 // fall through to the monitor refresh rate
             }
-            if (RefreshRate <= 1f)
+            if (ReportedRefreshRate <= 1f)
             {
                 try
                 {
                     int monitor = Screen.currentResolution.refreshRate;
                     if (monitor > 1)
                     {
-                        RefreshRate = monitor;
-                        RefreshRateSource = IsVrActive ? "monitor (VR runtime did not report)" : "monitor";
+                        ReportedRefreshRate = monitor;
+                        reportedSource = IsVrActive ? "monitor (VR runtime did not report)" : "monitor";
                     }
                 }
                 catch
                 {
-                    RefreshRate = 0f;
+                    ReportedRefreshRate = 0f;
                 }
             }
 
