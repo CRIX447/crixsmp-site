@@ -203,6 +203,18 @@ are claimed.
     *Repeating hitches* names it.
   - Tested on Mono with real Harmony: a fake mod's postfix is wrapped, its result and run count are unchanged, and the
     wrappers are removed. Not yet run in the game.
+- From 11-23 notes (Gorilla Tag 1.1.151):
+  - **A disabled Potassium got the stutter fixes.** `Potassium.dll (disabled)` was installed but patched 1 method
+    instead of 13. CRIX still left all 14 of its game patches to it, so none ran. Now CRIX defers only to a Potassium
+    that is enabled and has at least 5 methods patched, and checks again 15 s after start (Potassium could disable
+    itself later). If Potassium is not patching, CRIX applies its own fixes then. The system report says "yes, but
+    disabled or not patching". Advice, the timed-unload check and the adaptive note follow the same rule.
+  - **The 8 MP eye cap stopped working once Sakuraa had loaded.** The eye textures went back to 0.95 while CRIX's
+    ledger still showed 0.51 applied, consistent with another URP asset becoming active (CRIX's URP settings are bound
+    to the asset found at start-up). CRIX now checks the active asset every few seconds and names a switch in the
+    render-scale check, the log and the notes. `[Compatibility] FollowPipelineAssetSwap` (off by default, because the
+    new asset may belong to the mod) lets CRIX restore its values on the old asset and apply the profile to the new
+    one. Not yet run in the game; the next notes will show whether a switch is what happens.
 - **Gorilla Tag 1.1.150 / 1.1.151:** field notes show CRIX loading on both. With Potassium removed, all 13 game
   patches applied and the zone, player and custom-map readers worked, so no code change was needed for the update. They
   did show two CRIX faults, fixed here:

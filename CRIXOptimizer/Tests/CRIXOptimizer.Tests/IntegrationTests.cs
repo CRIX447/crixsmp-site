@@ -172,6 +172,25 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void ADisabledPotassiumIsNoReasonToSkipTheStutterFixes()
+        {
+            // 11-23: Potassium.dll "(disabled)" patched 1 method; CRIX deferred all 14 patches to it, so nothing ran.
+            // (No patch group is switched on here: the shared fixture's game patches must stay as they are.)
+            var status = new StatusBoard();
+            var set = new PatchSet(new Harmony("crix.tests.undefer"), new MemoryLogSink(), status);
+            var catalog = new GamePatchCatalog(set, GameTypes.FromLoadedAssemblies(), new MemoryLogSink());
+            catalog.Initialize(ProfilePresets.Balanced(), new PatchGroups(), potassiumInstalled: true, PotassiumCoexistence.DeferToPotassium, applyNow: true);
+            Assert.True(catalog.DeferredToPotassium);
+            Assert.Equal(GamePatchCatalog.AllPatchIds.Length, status.Count(ModuleState.Deferred));
+            catalog.StopDeferring(ProfilePresets.Balanced(), new PatchGroups());
+            Assert.False(catalog.DeferredToPotassium, "CRIX applies its own patches from now on");
+            Assert.Equal(0, status.Count(ModuleState.Deferred), "no patch is left marked deferred");
+            catalog.StopDeferring(ProfilePresets.Balanced(), new PatchGroups()); // a second call is harmless
+            Assert.Equal(0, CRIXOptimizer.Compatibility.PluginInventory.PatchedMethodCount("crix.tests.undefer"), "nothing patched for groups that are off");
+            Assert.True(CRIXOptimizer.Compatibility.PluginInventory.PatchedMethodCount(Fixture.HarmonyId) >= 10, "Harmony patch count is readable");
+        }
+
+        [Test]
         public void FullSanitizerReplacementRefusesNonUnitySignature()
         {
             var set = new PatchSet(new Harmony("crix.tests.full"), new MemoryLogSink(), new StatusBoard());

@@ -43,7 +43,7 @@ namespace CRIXOptimizer.Diagnostics
             sb.Append("Streaming: ").Append(rt.Streaming.Describe()).Append('\n');
             sb.Append("Discord: ").Append(rt.Discord.Describe()).Append('\n');
             sb.Append("ReShade: ").Append(rt.ReShade.Describe()).Append('\n');
-            sb.Append("Potassium installed: ").Append(rt.PotassiumInstalled ? "yes" : "no").Append('\n');
+            sb.Append("Potassium installed: ").Append(!rt.PotassiumInstalled ? "no" : rt.PotassiumActive ? "yes" : "yes, but disabled or not patching (CRIX applies its own stutter fixes)").Append('\n');
             sb.Append("Sakuraa Client: ").Append(rt.Sakuraa.Detected ? rt.Sakuraa.Detail : "not detected").Append('\n');
             sb.Append("Cameras: ").Append(rt.Cameras.Describe()).Append('\n');
             sb.Append("Game desktop camera (DesktopCamera setting): ").Append(rt.DesktopCamera?.Status ?? "n/a").Append('\n');

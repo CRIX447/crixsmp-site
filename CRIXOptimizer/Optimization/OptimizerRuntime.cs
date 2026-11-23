@@ -81,6 +81,11 @@ namespace CRIXOptimizer.Optimization
         public readonly List<string> Warnings = new List<string>();
         public bool Suspended { get; private set; }
         public bool PotassiumInstalled { get; private set; }
+        /// <summary>Potassium is installed, enabled and has its patches in (a disabled Potassium patches almost nothing,
+        /// so CRIX must not leave its stutter fixes to it).</summary>
+        public bool PotassiumActive { get; private set; }
+        public const int PotassiumMinPatches = 5;
+        private bool potassiumRechecked;
         public List<PluginInventory.Entry> Plugins { get; private set; } = new List<PluginInventory.Entry>();
         public HarmonyFootprint.Report Footprint { get; private set; }
         public double OverheadMsPerFrame { get; private set; }
@@ -181,7 +186,7 @@ namespace CRIXOptimizer.Optimization
         private bool potassiumSkipsUnloads = true;
 
         /// <summary>The game's timed unused-asset unloads are skipped, by CRIX's profile or by Potassium.</summary>
-        private bool TimedUnloadsSkipped => Live.SkipTimedAssetUnloads || (PotassiumInstalled && potassiumSkipsUnloads);
+        private bool TimedUnloadsSkipped => Live.SkipTimedAssetUnloads || (PotassiumActive && potassiumSkipsUnloads);
         private float lastMemoryWarning = -1e9f;
 
         // adaptive accumulation (per frame)
@@ -245,6 +250,11 @@ namespace CRIXOptimizer.Optimization
             Guard("Memory monitor", MemoryStats.Start);
 
             PotassiumInstalled = PluginInventory.IsLoaded(ModInfo.PotassiumGuid);
+            PotassiumActive = PotassiumInstalled && PluginInventory.IsEnabled(ModInfo.PotassiumGuid) &&
+                              PluginInventory.PatchedMethodCount(ModInfo.PotassiumGuid) >= PotassiumMinPatches;
+            if (PotassiumInstalled && !PotassiumActive)
+                log.Warn("Potassium is installed but disabled or not patching (" + PluginInventory.PatchedMethodCount(ModInfo.PotassiumGuid) +
+                         " methods patched): CRIX applies its own stutter fixes.");
             Guard("Game patches", () =>
             {
                 var sw = Stopwatch.StartNew();
@@ -270,7 +280,7 @@ namespace CRIXOptimizer.Optimization
             ResolveProfile();
             lastUserProfileKey = UserProfileKey();
             // With the master switch off nothing is patched now; patches are applied when CRIX is enabled.
-            Guard("Game patches", () => GamePatches?.Initialize(ActiveSettings, Groups(), PotassiumInstalled, cfg.WhenPotassiumInstalled.Value, cfg.Enabled.Value));
+            Guard("Game patches", () => GamePatches?.Initialize(ActiveSettings, Groups(), PotassiumActive, cfg.WhenPotassiumInstalled.Value, cfg.Enabled.Value));
             ApplyAll("startup");
 
             cfg.File.SettingChanged += OnSettingChanged;
@@ -580,6 +590,16 @@ namespace CRIXOptimizer.Optimization
                 if (Graphics != null && !Suspended && cfg.Enabled.Value)
                 {
                     Guard("Graphics settings", () => Graphics.CheckCamera(ActiveSettings, cfg.GraphicsSettings.Value));
+                    Guard("Graphics settings", () =>
+                    {
+                        string swap = Graphics.CheckPipelineAsset(cfg.FollowPipelineAssetSwap.Value);
+                        if (swap == null)
+                            return;
+                        log.Warn("Render pipeline: " + swap + ".");
+                        Notes?.AddEvent(now, "render pipeline: " + swap);
+                        if (cfg.FollowPipelineAssetSwap.Value)
+                            MarkDirty();
+                    });
                     Guard("Graphics settings", Graphics.VerifyRenderScale);
                 }
                 if (ExtraCameras != null && ExtraCameras.Wanted && !Suspended && cfg.Enabled.Value && !IsFaulted("Extra cameras"))
@@ -656,6 +676,23 @@ namespace CRIXOptimizer.Optimization
 
             UpdateCaptureState(now);
             UpdateModTimer(now);
+            if (!potassiumRechecked && now >= 15f)
+            {
+                // Potassium may disable itself after CRIX started: then nothing would patch the game at all.
+                potassiumRechecked = true;
+                int potassiumPatches = PluginInventory.PatchedMethodCount(ModInfo.PotassiumGuid);
+                bool active = PotassiumInstalled && PluginInventory.IsEnabled(ModInfo.PotassiumGuid) && potassiumPatches >= PotassiumMinPatches;
+                if (GamePatches != null && GamePatches.DeferredToPotassium && !active)
+                {
+                    PotassiumActive = false;
+                    Guard("Game patches", () =>
+                    {
+                        GamePatches.StopDeferring(ActiveSettings, Groups());
+                        GamePatches.UpdateLive(ActiveSettings, Groups(), Suspended || !cfg.Enabled.Value);
+                    });
+                    log.Warn($"Potassium is disabled or not patching ({potassiumPatches} methods): CRIX applied its own stutter fixes instead.");
+                }
+            }
             if (--nextRepeatingUpdate <= 0)
             {
                 nextRepeatingUpdate = 10;
@@ -1744,8 +1781,8 @@ namespace CRIXOptimizer.Optimization
             Func<string, bool> toggle = null;
             if (gorillaOptimizer)
                 toggle = key => ReadPlayerPrefsInt(OptimizerModsSupport.GorillaOptimizerPrefsPrefix + key) == 1;
-            optimizerModAdvice = OptimizerModsSupport.Describe(toggle, Graphics != null && Graphics.UsesUrpAsset, aliens, PotassiumInstalled);
-            if (PotassiumInstalled && PluginInventory.TryReadConfigBool(ModInfo.PotassiumGuid, "Stutter", "Skip timed unused-asset unloads", out bool skips))
+            optimizerModAdvice = OptimizerModsSupport.Describe(toggle, Graphics != null && Graphics.UsesUrpAsset, aliens, PotassiumActive);
+            if (PotassiumActive && PluginInventory.TryReadConfigBool(ModInfo.PotassiumGuid, "Stutter", "Skip timed unused-asset unloads", out bool skips))
                 potassiumSkipsUnloads = skips;
         }
 
@@ -2154,7 +2191,7 @@ namespace CRIXOptimizer.Optimization
 
             // Timed unused-asset unloads skipped (by CRIX's profile or by Potassium) and memory has really grown.
             // Adaptive mode stepped down, but here its big levers are not available: say so instead of looking busy.
-            if (AdaptiveActive && Adaptive.Level <= -2 && ActiveSettings != null && !ActiveSettings.AdaptiveMayChangeRenderScale && PotassiumInstalled)
+            if (AdaptiveActive && Adaptive.Level <= -2 && ActiveSettings != null && !ActiveSettings.AdaptiveMayChangeRenderScale && PotassiumActive)
                 SetupAdvice.Add($"Adaptive quality has lowered its level because frames run late, but here it can change little: the {ActiveSection} profile does not let it " +
                                 "lower the resolution, and Potassium handles the cosmetic savings for busy lobbies. The eye resolution (see the line about megapixels per eye, if shown) " +
                                 "decides most of the frame time.");

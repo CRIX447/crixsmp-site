@@ -258,6 +258,77 @@ namespace CRIXOptimizer.GPU
         /// <summary>Re-reads the URP asset values (another mod may change them after start-up). Every few seconds at most.</summary>
         public void RefreshUrpAssetValues() => ReadUrpAssetValues();
 
+        private object swappedTo;
+
+        /// <summary>The active render pipeline asset is no longer the one CRIX's URP settings are on ("" = it still is).</summary>
+        public string PipelineAssetSwap { get; private set; } = "";
+
+        /// <summary>
+        /// Every few seconds: notices when the game or a mod (Sakuraa/GTFX did, after loading) makes another URP asset
+        /// active. CRIX's URP settings are bound to the asset found at start-up, so they then stop reaching the eye
+        /// textures. With <paramref name="follow"/> ([Compatibility] FollowPipelineAssetSwap) CRIX restores its values on
+        /// the old asset and binds to the new one, so the next apply writes the profile there; otherwise it only
+        /// reports. Returns a sentence when something changed, else null.
+        /// </summary>
+        public string CheckPipelineAsset(bool follow)
+        {
+            if (Pipeline != PipelineKind.Universal || urpAsset == null)
+                return null;
+            RenderPipelineInfo.Detect(out object current, out string type);
+            if (current == null || ReferenceEquals(current, urpAsset))
+            {
+                PipelineAssetSwap = "";
+                swappedTo = null;
+                return null;
+            }
+            string name = AssetName(current) + " (" + type + ")";
+            if (!follow)
+            {
+                if (ReferenceEquals(current, swappedTo))
+                    return null;
+                swappedTo = current;
+                PipelineAssetSwap = "another render pipeline asset became active after start-up (" + name + "; was " + AssetName(urpAsset) +
+                                    "), probably from the game or a mod such as Sakuraa/GTFX: CRIX's URP settings (render scale, eye cap, shadows, lights) " +
+                                    "stay on the previous asset and no longer apply. [Compatibility] FollowPipelineAssetSwap = true lets CRIX apply its profile " +
+                                    "to the new asset as well (restored when CRIX stops)";
+                return PipelineAssetSwap;
+            }
+            string old = AssetName(urpAsset);
+            foreach (ITrackedSetting s in new ITrackedSetting[] { renderScale, shadowDistance, shadowCascades, msaa, pixelLights })
+            {
+                if (s == null)
+                    continue;
+                try { s.Release(); } catch { /* the old asset may be gone */ }
+                ledger.Unregister(s);
+            }
+            var approx = ApproxFloatComparer.Default;
+            urpAsset = current;
+            renderScale = UrpSetting<float>(current, "renderScale", "Render scale (URP asset, sets the VR eye resolution)", approx, F2);
+            shadowDistance = UrpSetting<float>(current, "shadowDistance", "Shadow distance (URP asset)", approx, F1);
+            shadowCascades = UrpSetting<int>(current, "shadowCascadeCount", "Shadow cascades (URP asset)", null, null);
+            msaa = UrpSetting<int>(current, "msaaSampleCount", "MSAA samples (URP asset)", null, null);
+            pixelLights = UrpSetting<int>(current, "maxAdditionalLightsCount", "Additional lights per object (URP asset)", null, null);
+            UsesUrpAsset = renderScale != null;
+            PipelineAssetType = type;
+            swappedTo = null;
+            PipelineAssetSwap = "";
+            ReadUrpAssetValues();
+            return "another render pipeline asset became active (" + name + "; was " + old + "): CRIX restored its values on the old one and now applies " +
+                   "its profile to the new one ([Compatibility] FollowPipelineAssetSwap)";
+        }
+
+        private static string AssetName(object asset)
+        {
+            try
+            {
+                return asset is UnityEngine.Object o && o != null ? "'" + o.name + "'" : "?";
+            }
+            catch
+            {
+                return "?";
+            }
+        }
+
         /// <summary>
         /// Confirms the managed render scale reached the VR eye textures (URP ignores changes within 0.05 of 1.0).
         /// Reads the XR display's render-target scale, which is what URP writes. Read-only; called every few seconds.
@@ -289,6 +360,7 @@ namespace CRIXOptimizer.GPU
             if (!ok && renderScaleMismatches < 2)
                 return;
             string text = ok ? $"eye textures at {F2(actual)} as intended"
+                : PipelineAssetSwap.Length > 0 ? $"eye textures report {F2(actual)}, expected {F2(wanted)}: {PipelineAssetSwap}"
                 : $"eye textures report {F2(actual)}, expected {F2(wanted)} (the game, the VR runtime or another mod may be setting it)";
             if (!ok && RenderScaleCheck != text)
                 log.Warn("Render scale check: " + text);

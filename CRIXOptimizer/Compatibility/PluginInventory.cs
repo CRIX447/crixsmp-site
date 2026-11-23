@@ -50,6 +50,39 @@ namespace CRIXOptimizer.Compatibility
             return list;
         }
 
+        /// <summary>The plugin is loaded and its component is enabled (BepInEx lists a disabled one as "(disabled)").</summary>
+        public static bool IsEnabled(string guid)
+        {
+            try
+            {
+                return Chainloader.PluginInfos.TryGetValue(guid, out PluginInfo info) && info?.Instance != null && info.Instance.enabled;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>How many methods Harmony instances whose id is <paramref name="harmonyId"/> have patched (read-only).</summary>
+        public static int PatchedMethodCount(string harmonyId)
+        {
+            int n = 0;
+            try
+            {
+                foreach (System.Reflection.MethodBase m in HarmonyLib.Harmony.GetAllPatchedMethods())
+                {
+                    HarmonyLib.Patches info = HarmonyLib.Harmony.GetPatchInfo(m);
+                    if (info?.Owners != null && info.Owners.Contains(harmonyId))
+                        n++;
+                }
+            }
+            catch
+            {
+                // Harmony not readable: count what was found
+            }
+            return n;
+        }
+
         public static bool IsLoaded(string guid)
         {
             try

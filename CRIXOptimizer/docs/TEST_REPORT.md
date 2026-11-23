@@ -7,8 +7,8 @@ Date: 2026-10-14. Raw logs: `release/logs/tests-lib-bepinex.log` (BepInEx 5.4.21
 
 | Run | Runtime | BepInEx | HarmonyX | Result |
 |---|---|---|---|---|
-| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **185 passed, 0 failed** |
-| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **185 passed, 0 failed** |
+| 1 | Mono 6.8.0.105 | 5.4.21 (built from tag `v5.4.21`) | 2.9.0 (net35, as shipped with BepInEx) | **186 passed, 0 failed** |
+| 2 | Mono 6.8.0.105 | 5.4.23.5 (built from `v5-lts`; the log shows assembly version 0.0.0.0 because the scratch build omitted the version stamp) | 2.9.0 | **186 passed, 0 failed** |
 | - | `tools/compare_benchmarks.py --self-test` (synthetic data) | | | passed |
 | - | Reference check of the shipped DLL (see BUILD_REPORT.md) | 5.4.21 and 5.4.23.5 | 2.9.0 | all 298 type / 1314 member refs resolve |
 | - | `tools/check_unity_api.py` against Unity's published C# source | Unity 6000.1.9f1 and 6000.2.9f1 | | all 105 Unity type / 259 member references declared |
@@ -41,7 +41,7 @@ VR runtime asking for about 37 megapixels per eye at 60 Hz, which led to the eye
   engine calls those methods directly and they cannot be inlined.
 - Pure logic (`Core/`, `Adaptive/`, configuration) is tested directly.
 
-## What was tested (185 tests)
+## What was tested (186 tests)
 
 | Area | Tests | What they establish |
 |---|---|---|

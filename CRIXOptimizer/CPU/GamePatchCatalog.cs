@@ -71,6 +71,17 @@ namespace CRIXOptimizer.CPU
                 Ensure(settings, groups);
         }
 
+        /// <summary>Potassium turned out not to patch anything (disabled, or it failed): apply CRIX's own patches after all.</summary>
+        public void StopDeferring(OptimizationSettings settings, PatchGroups groups)
+        {
+            if (!DeferredToPotassium)
+                return;
+            DeferredToPotassium = false;
+            foreach (string id in AllPatchIds)
+                patches.MarkUnavailable(id, "not applied yet");
+            Ensure(settings, groups);
+        }
+
         /// <summary>Applies any patch group that became needed (patching is skipped entirely while a group is off).</summary>
         public void Ensure(OptimizationSettings settings, PatchGroups groups)
         {
