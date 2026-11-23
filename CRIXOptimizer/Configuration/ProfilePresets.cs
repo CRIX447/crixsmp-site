@@ -223,6 +223,10 @@ namespace CRIXOptimizer.Configuration
         /// </summary>
         public static OptimizationSettings ObsStreaming() => new OptimizationSettings
         {
+            // Field notes: runtimes asking for 27-30 MP per eye ran at ~100 FPS uncapped and 112-117 FPS at 8 MP. 10 MP
+            // keeps most of that gain while the recorded desktop window (scaled by URP's render scale too) stays usable;
+            // a runtime set to a sane resolution is never capped.
+            MaxEyeMegapixels = 10f,
             ShadowDistanceLimit = 30f,
             ShadowCascadesLimit = 2,
             PixelLightLimit = 1,

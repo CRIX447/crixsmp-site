@@ -314,6 +314,29 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void UpgradeFromRevision3CapsTheObsStreamingEyeResolutionUnlessEdited()
+        {
+            foreach (float stored in new[] { 0f, 14f })
+            {
+                string dir = TempDir();
+                string profilesPath = Path.Combine(dir, "profiles.cfg");
+                string mainPath = Path.Combine(dir, "main.cfg");
+                var p1 = new ConfigFile(profilesPath, true);
+                var m1 = new ConfigFile(mainPath, true);
+                new ProfileStore(p1, m1);
+                p1.Bind("Meta", "PresetRevision", 0).Value = 3;
+                m1.Bind("Meta", "PresetRevision", 0).Value = 3;
+                p1.Bind("OBSStreaming", nameof(OptimizationSettings.MaxEyeMegapixels), 10f).Value = stored; // 0 = the 1.1.0 default
+                p1.Save();
+                m1.Save();
+                var store = new ProfileStore(new ConfigFile(profilesPath, true), new ConfigFile(mainPath, true));
+                float expected = stored == 0f ? 10f : stored;
+                Assert.Equal(expected, store.Resolve("OBSStreaming").MaxEyeMegapixels, stored == 0f ? "the old default is upgraded" : "a user edit is kept");
+                Assert.Equal(stored == 0f ? 1 : 0, store.MigratedEntries);
+            }
+        }
+
+        [Test]
         public void ResetToDefaultsDoesNotRearmTheUpgrade()
         {
             string dir = TempDir();

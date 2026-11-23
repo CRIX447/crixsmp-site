@@ -31,8 +31,9 @@ namespace CRIXOptimizer.Configuration
 
         private readonly Dictionary<string, List<Binding>> sections = new Dictionary<string, List<Binding>>(StringComparer.Ordinal);
 
-        /// <summary>Revision of the built-in preset values. 1 = CRIX 1.0.0, 2 = 1.1.0 previews, 3 = CRIX 1.1.0.</summary>
-        public const int CurrentPresetRevision = 3;
+        /// <summary>Revision of the built-in preset values. 1 = CRIX 1.0.0, 2 = 1.1.0 previews, 3 = CRIX 1.1.0,
+        /// 4 = OBSStreaming caps the eye resolution.</summary>
+        public const int CurrentPresetRevision = 4;
 
         /// <summary>
         /// Default changes between revision 2 (1.1.0 preview builds) and 3. Only entries that still hold the old value
@@ -43,6 +44,12 @@ namespace CRIXOptimizer.Configuration
             ("HighRefresh", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), true, false),
             ("OBSStreaming", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), true, false),
             ("VirtualDesktop.Streaming", nameof(OptimizationSettings.AdaptiveMayChangeRenderScale), true, false),
+        };
+
+        /// <summary>Default changes between revision 3 and 4.</summary>
+        private static readonly (string Section, string Field, object From, object To)[] Revision4Changes =
+        {
+            ("OBSStreaming", nameof(OptimizationSettings.MaxEyeMegapixels), 0f, 10f),
         };
 
         public ConfigFile ProfilesFile { get; }
@@ -117,7 +124,12 @@ namespace CRIXOptimizer.Configuration
                 }
                 else
                 {
-                    foreach (var change in Revision3Changes)
+                    var changes = new List<(string Section, string Field, object From, object To)>();
+                    if (from < 3)
+                        changes.AddRange(Revision3Changes);
+                    if (from < 4)
+                        changes.AddRange(Revision4Changes);
+                    foreach (var change in changes)
                     {
                         if (change.Section != section.Key)
                             continue;

@@ -7,7 +7,7 @@ Conventions: `-1` / `Unchanged` = CRIX does not touch the setting. *Limit* setti
 | Setting | Balanced | MaximumPerformance | HighRefresh | VirtualDesktop | VD.Performance | VD.Quality | VD.Streaming | OBSStreaming | DiscordCall | ReShadeCompatible | MultiMod |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `RenderScale` | 0 | **0.8** | 0 | 0 | **0.85** | 0 | 0 | 0 | 0 | 0 | 0 |
-| `MaxEyeMegapixels` | 8 | **5** | **6** | **7** | **5** | **10** | **0** | **0** | 8 | **0** | **0** |
+| `MaxEyeMegapixels` | 8 | **5** | **6** | **7** | **5** | **10** | **0** | **10** | 8 | **0** | **0** |
 | `ShadowQuality` | Unchanged | **HardOnly** | Unchanged | Unchanged | **HardOnly** | Unchanged | Unchanged | Unchanged | Unchanged | Unchanged | Unchanged |
 | `ShadowDistanceLimit` | 50 | **25** | **20** | **40** | **25** | **-1** | **30** | **30** | **35** | 50 | **-1** |
 | `ShadowResolution` | Unchanged | **Medium** | Unchanged | Unchanged | **Medium** | Unchanged | Unchanged | Unchanged | Unchanged | Unchanged | Unchanged |
@@ -57,7 +57,7 @@ Bold = differs from Balanced.
 ## Setting descriptions
 
 - **`RenderScale`** (number) - [GPU] VR eye-texture resolution scale (0 = leave the game/runtime value; 0.5-2.0 = set). Under URP it is set through the URP asset's render scale, which URP ignores within 0.05 of 1.0. Recreates eye textures when changed (brief hitch). Range 0 to 2.
-- **`MaxEyeMegapixels`** (number) - [GPU] Upper limit for the pixels CRIX lets the game render per eye, in megapixels (0 = no limit). VR runtimes set the eye resolution (Virtual Desktop's quality preset, Meta Quest Link's render resolution, SteamVR's slider); when that is far above what the GPU can draw, CRIX lowers the game's render scale until one eye is at most this many megapixels (a Quest 3 at default settings renders about 4.6 MP per eye). Under URP this also sets the desktop window's resolution, so streaming profiles leave it off. Range 0 to 50.
+- **`MaxEyeMegapixels`** (number) - [GPU] Upper limit for the pixels CRIX lets the game render per eye, in megapixels (0 = no limit). VR runtimes set the eye resolution (Virtual Desktop's quality preset, Meta Quest Link's render resolution, SteamVR's slider); when that is far above what the GPU can draw, CRIX lowers the game's render scale until one eye is at most this many megapixels (a Quest 3 at default settings renders about 4.6 MP per eye). Under URP this also sets the desktop window's resolution: OBSStreaming caps at 10 MP (a softer recording for a faster headset), VirtualDesktop.Streaming leaves it off. Range 0 to 50.
 - **`ShadowQuality`** (choice) - [GPU] Upper limit for shadow quality (built-in pipeline). HardOnly removes soft-shadow filtering, Disable turns realtime shadows off. Values: Unchanged, HardOnly, Disable.
 - **`ShadowDistanceLimit`** (number) - [GPU] Maximum realtime shadow distance in metres; kept if the game already uses less. -1 = unchanged. Range -1 to 1000.
 - **`ShadowResolution`** (choice) - [GPU] Upper limit for shadow-map resolution (built-in pipeline only; no effect under URP). Values: Unchanged, Low, Medium, High.

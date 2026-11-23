@@ -203,6 +203,12 @@ are claimed.
     *Repeating hitches* names it.
   - Tested on Mono with real Harmony: a fake mod's postfix is wrapped, its result and run count are unchanged, and the
     wrappers are removed. Not yet run in the game.
+- **OBSStreaming caps the eye resolution at 10 MP** (preset revision 4; an existing profiles file still at the old
+  0 is upgraded, a value the user set is kept). Field notes: a runtime asking for 27-30 MP per eye ran at about 100
+  FPS uncapped, and at 112-117 FPS with the Discord profile's 8 MP. Under URP this also softens the recorded desktop
+  window; lowering the resolution in the Meta Quest Link app avoids both, and then the cap never engages.
+- Checked for Gorilla Tag's 20-player rooms on OG and rotating maps (October updates): the rig-pool staggering reads
+  the game's own pool size (`rigAmount`), so it follows the larger rooms unchanged.
 - From 11-23 notes (Gorilla Tag 1.1.151):
   - **A disabled Potassium got the stutter fixes.** `Potassium.dll (disabled)` was installed but patched 1 method
     instead of 13. CRIX still left all 14 of its game patches to it, so none ran. Now CRIX defers only to a Potassium

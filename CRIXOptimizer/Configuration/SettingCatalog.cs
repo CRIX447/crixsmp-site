@@ -32,7 +32,7 @@ namespace CRIXOptimizer.Configuration
             { nameof(OptimizationSettings.MaxEyeMegapixels), R("[GPU] Upper limit for the pixels CRIX lets the game render per eye, in megapixels (0 = no limit). " +
                 "VR runtimes set the eye resolution (Virtual Desktop's quality preset, Meta Quest Link's render resolution, SteamVR's slider); when that is far above what the GPU can draw, " +
                 "CRIX lowers the game's render scale until one eye is at most this many megapixels (a Quest 3 at default settings renders about 4.6 MP per eye). " +
-                "Under URP this also sets the desktop window's resolution, so streaming profiles leave it off.", 0, 50) },
+                "Under URP this also sets the desktop window's resolution: OBSStreaming caps at 10 MP (a softer recording for a faster headset), VirtualDesktop.Streaming leaves it off.", 0, 50) },
             { nameof(OptimizationSettings.ShadowDistanceLimit), R("[GPU] Maximum realtime shadow distance in metres; kept if the game already uses less. -1 = unchanged.", -1, 1000) },
             { nameof(OptimizationSettings.ShadowResolution), D("[GPU] Upper limit for shadow-map resolution (built-in pipeline only; no effect under URP).") },
             { nameof(OptimizationSettings.ShadowCascadesLimit), R("[GPU] Maximum shadow cascades (1, 2 or 4; built-in pipeline or URP asset). Kept if the game already uses fewer. -1 = unchanged.", -1, 4) },
