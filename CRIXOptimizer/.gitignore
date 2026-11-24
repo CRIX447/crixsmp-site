@@ -1,0 +1,13 @@
+bin/
+obj/
+lib/
+.vs/
+.idea/
+*.user
+*.suo
+Tests/**/bin/
+Tests/**/obj/
+tools/**/bin/
+tools/**/obj/
+Tests/.run/
+release/.stage/

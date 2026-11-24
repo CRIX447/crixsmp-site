@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tiny launcher executed with `mono`. It loads CRIXOptimizer.Tests.dll by reflection, because a
+       net472 executable cannot reference a netstandard2.1 library at build time (Mono runs it fine). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>Runner</AssemblyName>
+    <LangVersion>10</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

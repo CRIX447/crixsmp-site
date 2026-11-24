@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!--
+    Reference resolution for CRIX OPTIMIZER.
+
+    CRIX OPTIMIZER does NOT reference Gorilla Tag's game assembly (Assembly-CSharp.dll).
+    Every game type is resolved by name at runtime, so the only compile-time references are
+    Unity engine modules, BepInEx and HarmonyX.
+
+    RefMode=Game : use the DLLs from your local Gorilla Tag + BepInEx install (GamePath below).
+    RefMode=Lib  : use ./lib, populated by tools/setup-references.sh (no game install needed).
+    If RefMode is not given, Game is used when the install is found, otherwise Lib.
+  -->
+  <PropertyGroup>
+    <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Gorilla Tag</GamePath>
+    <GameManagedPath>$(GamePath)\Gorilla Tag_Data\Managed</GameManagedPath>
+    <BepInExCorePath>$(GamePath)\BepInEx\core</BepInExCorePath>
+    <PluginsPath>$(GamePath)\BepInEx\plugins</PluginsPath>
+    <LibPath>$(MSBuildThisFileDirectory)lib</LibPath>
+
+    <RefMode Condition="'$(RefMode)' == '' and Exists('$(GameManagedPath)\UnityEngine.CoreModule.dll') and Exists('$(BepInExCorePath)\BepInEx.dll')">Game</RefMode>
+    <RefMode Condition="'$(RefMode)' == ''">Lib</RefMode>
+
+    <UnityRefPath Condition="'$(RefMode)' == 'Game'">$(GameManagedPath)</UnityRefPath>
+    <BepInExRefPath Condition="'$(RefMode)' == 'Game'">$(BepInExCorePath)</BepInExRefPath>
+    <UnityRefPath Condition="'$(RefMode)' == 'Lib'">$(LibPath)\unity</UnityRefPath>
+    <BepInExRefPath Condition="'$(RefMode)' == 'Lib'">$(LibPath)\bepinex</BepInExRefPath>
+  </PropertyGroup>
+</Project>

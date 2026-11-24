@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CRIXOptimizer", "CRIXOptimizer.csproj", "{916E800A-1032-4EF3-A567-2E2AF5EA6EEA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{AC9B9639-2C63-4A8A-980A-B192AEF402D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FakeGame", "Tests\FakeGame\FakeGame.csproj", "{5BCBD66A-6D39-4EBB-AB47-1E8EC642937F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CRIXOptimizer.Tests", "Tests\CRIXOptimizer.Tests\CRIXOptimizer.Tests.csproj", "{9B7FDC65-AAD4-4F01-858A-443852C5951A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Runner", "Tests\Runner\Runner.csproj", "{67C2AF82-58DD-46F1-9C53-1831251C6044}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{37537A9C-0B98-4B69-A1A5-04558F04E521}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RefCheck", "tools\RefCheck\RefCheck.csproj", "{3CA4AA89-A3E2-4E7D-BC35-957E34033EEF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{916E800A-1032-4EF3-A567-2E2AF5EA6EEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{916E800A-1032-4EF3-A567-2E2AF5EA6EEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{916E800A-1032-4EF3-A567-2E2AF5EA6EEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{916E800A-1032-4EF3-A567-2E2AF5EA6EEA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BCBD66A-6D39-4EBB-AB47-1E8EC642937F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BCBD66A-6D39-4EBB-AB47-1E8EC642937F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BCBD66A-6D39-4EBB-AB47-1E8EC642937F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BCBD66A-6D39-4EBB-AB47-1E8EC642937F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B7FDC65-AAD4-4F01-858A-443852C5951A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B7FDC65-AAD4-4F01-858A-443852C5951A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B7FDC65-AAD4-4F01-858A-443852C5951A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B7FDC65-AAD4-4F01-858A-443852C5951A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67C2AF82-58DD-46F1-9C53-1831251C6044}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67C2AF82-58DD-46F1-9C53-1831251C6044}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67C2AF82-58DD-46F1-9C53-1831251C6044}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67C2AF82-58DD-46F1-9C53-1831251C6044}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3CA4AA89-A3E2-4E7D-BC35-957E34033EEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3CA4AA89-A3E2-4E7D-BC35-957E34033EEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3CA4AA89-A3E2-4E7D-BC35-957E34033EEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3CA4AA89-A3E2-4E7D-BC35-957E34033EEF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5BCBD66A-6D39-4EBB-AB47-1E8EC642937F} = {AC9B9639-2C63-4A8A-980A-B192AEF402D8}
+		{9B7FDC65-AAD4-4F01-858A-443852C5951A} = {AC9B9639-2C63-4A8A-980A-B192AEF402D8}
+		{67C2AF82-58DD-46F1-9C53-1831251C6044} = {AC9B9639-2C63-4A8A-980A-B192AEF402D8}
+		{3CA4AA89-A3E2-4E7D-BC35-957E34033EEF} = {37537A9C-0B98-4B69-A1A5-04558F04E521}
+	EndGlobalSection
+EndGlobal
