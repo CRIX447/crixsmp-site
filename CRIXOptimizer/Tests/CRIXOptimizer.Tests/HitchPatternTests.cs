@@ -429,3 +429,44 @@ namespace CRIXOptimizer.Tests
         }
     }
 }
+
+namespace CRIXOptimizer.Tests
+{
+    public sealed class FrameBreakdownTests
+    {
+        [Test]
+        public void TheAverageFrameSaysWhetherTheGpuOrTheScriptsLimitIt()
+        {
+            var t = new FramePhaseTimer(1000.0); // 1 tick = 1 ms
+            int start = t.Segment("TimeUpdate (other)");
+            int update = t.Segment("Update.ScriptRunBehaviourUpdate");
+            int render = t.Segment("PostLateUpdate.FinishFrameRendering");
+            int wait = t.Segment("TimeUpdate.WaitForLastPresentationAndUpdateTime");
+            long now = 0;
+            bool open = false; // a frame is open after the closing marker below; the next one continues it
+            void Frame(long scripts, long draw, long waiting)
+            {
+                if (!open)
+                    t.Mark(start, true, now);
+                open = false;
+                t.Mark(update, false, now += 0);
+                t.Mark(render, false, now += scripts);
+                t.Mark(wait, false, now += draw);
+                now += waiting;
+            }
+            Assert.Equal("", t.DescribeWindow(3), "nothing measured yet");
+            for (int i = 0; i < 10; i++)
+                Frame(2, 3, 9); // like 68 FPS at full resolution: mostly waiting on the GPU
+            t.Mark(start, true, now);
+            open = true;
+            string gpu = t.DescribeWindow(3);
+            Assert.True(gpu.StartsWith("frame 14.0 ms: wait for GPU/VR 9.0, render 3.0, Update 2.0") && gpu.EndsWith("(GPU-bound)"), gpu);
+            for (int i = 0; i < 10; i++)
+                Frame(9, 2, 1);
+            t.Mark(start, true, now);
+            string cpu = t.DescribeWindow(2);
+            Assert.True(cpu.StartsWith("frame 12.0 ms: Update 9.0, render 2.0") && cpu.EndsWith("(CPU-bound: scripts)"), cpu);
+            Assert.Equal("", t.DescribeWindow(3), "the window resets");
+        }
+    }
+}

@@ -259,11 +259,19 @@ namespace CRIXOptimizer.Configuration
             DeferredAssetUnloadMinIntervalMinutes = file.Bind("Memory", "DeferredAssetUnloadMinIntervalMinutes", 10f,
                 new ConfigDescription("Minimum minutes between deferred unloads.", new AcceptableValueRange<float>(1f, 240f)));
 
-            FollowPipelineAssetSwap = file.Bind("Compatibility", "FollowPipelineAssetSwap", false,
+            FollowPipelineAssetSwap = file.Bind("Compatibility", "FollowPipelineAssetSwap", true,
                 "When the game or a mod (Sakuraa/GTFX does, after loading) makes another URP render pipeline asset active, CRIX's render scale, eye " +
                 "resolution cap, shadow and light settings stay on the previous asset and stop working; the report says so. On: CRIX restores its " +
                 "values on the old asset and applies its profile to the new one too (that asset may belong to the mod; restored when CRIX stops). " +
-                "Off by default, because it changes values in another mod's asset.");
+                "On by default since the user asked for it (it changes values in another mod's asset); set false to leave that asset alone.");
+            // Builds of 2026-11-23 wrote this as false (the old default); turn it on once for them.
+            ConfigEntry<bool> followUpgraded = file.Bind("Meta", "FollowPipelineAssetSwapDefaultOn", false,
+                new ConfigDescription("Managed by CRIX: the one-time switch of FollowPipelineAssetSwap to its new default was done. Do not edit."));
+            if (!followUpgraded.Value)
+            {
+                FollowPipelineAssetSwap.Value = true;
+                followUpgraded.Value = true;
+            }
             WhenPotassiumInstalled = file.Bind("Compatibility", "WhenPotassiumInstalled", PotassiumCoexistence.DeferToPotassium,
                 "If Potassium is also installed, its patches overlap with CRIX's stutter fixes. DeferToPotassium skips CRIX's versions (no duplicate patches). Keeping only one of the two mods is recommended.");
             ExternalChanges = file.Bind("Compatibility", "ExternalChangePolicy", ExternalChangePolicy.Respect,

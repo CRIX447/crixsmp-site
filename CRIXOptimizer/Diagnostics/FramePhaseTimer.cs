@@ -17,7 +17,8 @@ namespace CRIXOptimizer.Diagnostics
     internal sealed class FramePhaseTimer
     {
         private readonly List<string> names = new List<string>();
-        private long[] acc = new long[8], last = new long[8];
+        private long[] acc = new long[8], last = new long[8], window = new long[8];
+        private long windowFrames, windowTicks;
         private int current = -1;
         private long lastTs, frameStartTs;
         private readonly double ticksPerMs;
@@ -43,6 +44,7 @@ namespace CRIXOptimizer.Diagnostics
             {
                 Array.Resize(ref acc, acc.Length * 2);
                 Array.Resize(ref last, last.Length * 2);
+                Array.Resize(ref window, window.Length * 2);
             }
             return names.Count - 1;
         }
@@ -61,12 +63,76 @@ namespace CRIXOptimizer.Diagnostics
                     acc = t;
                     LastFrameMs = (timestamp - frameStartTs) / ticksPerMs;
                     FramesCompleted++;
+                    for (int i = 0; i < names.Count; i++)
+                        window[i] += last[i];
+                    windowFrames++;
+                    windowTicks += timestamp - frameStartTs;
                 }
                 Array.Clear(acc, 0, acc.Length);
                 frameStartTs = timestamp;
             }
             current = segment;
             lastTs = timestamp;
+        }
+
+        /// <summary>
+        /// Where the average frame's time went since the last call, the biggest parts first, and what that means:
+        /// a frame mostly spent waiting for the previous one to be shown is GPU- (or VR-compositor-) bound, one mostly
+        /// spent in scripts or physics is CPU-bound. Resets the window. "" when no frame was measured.
+        /// </summary>
+        public string DescribeWindow(int top)
+        {
+            if (windowFrames == 0)
+                return "";
+            double frameMs = windowTicks / ticksPerMs / windowFrames;
+            var order = new List<int>();
+            for (int i = 0; i < names.Count; i++)
+                order.Add(i);
+            order.Sort((a, b) => window[b].CompareTo(window[a]));
+            double wait = 0, cpu = 0;
+            for (int i = 0; i < names.Count; i++)
+            {
+                double ms = window[i] / ticksPerMs / windowFrames;
+                if (IsWait(names[i]))
+                    wait += ms;
+                else if (IsScripts(names[i]) || names[i] == "FixedUpdate.PhysicsFixedUpdate")
+                    cpu += ms;
+            }
+            var sb = new System.Text.StringBuilder();
+            sb.Append("frame ").Append(frameMs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)).Append(" ms: ");
+            for (int k = 0; k < Math.Min(top, order.Count); k++)
+            {
+                if (k > 0)
+                    sb.Append(", ");
+                sb.Append(Short(names[order[k]])).Append(' ')
+                  .Append((window[order[k]] / ticksPerMs / windowFrames).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            sb.Append(wait >= frameMs * 0.35 ? " (GPU-bound)" : cpu >= frameMs * 0.35 ? " (CPU-bound: scripts)" : "");
+            Array.Clear(window, 0, window.Length);
+            windowFrames = 0;
+            windowTicks = 0;
+            return sb.ToString();
+        }
+
+        /// <summary>Short words for the timeline.</summary>
+        public static string Short(string segment)
+        {
+            switch (segment)
+            {
+                case "TimeUpdate.WaitForLastPresentationAndUpdateTime": return "wait for GPU/VR";
+                case "EarlyUpdate.XRUpdate": return "VR update";
+                case "FixedUpdate.ScriptRunBehaviourFixedUpdate": return "FixedUpdate";
+                case "FixedUpdate.PhysicsFixedUpdate": return "physics";
+                case "Update.ScriptRunBehaviourUpdate": return "Update";
+                case "Update.ScriptRunDelayedDynamicFrameRate": return "coroutines";
+                case "Update.ScriptRunDelayedTasks": return "tasks";
+                case "PreLateUpdate.ScriptRunBehaviourLateUpdate": return "LateUpdate";
+                case "PostLateUpdate.FinishFrameRendering": return "render";
+                case "PostLateUpdate.PresentAfterDraw": return "present";
+                case "PostLateUpdate.TriggerEndOfFrameCallbacks": return "end of frame";
+                case "EarlyUpdate.UpdatePreloading": return "loading";
+            }
+            return segment.EndsWith(" (other)", StringComparison.Ordinal) ? segment.Substring(0, segment.Length - 8) : segment;
         }
 
         /// <summary>The segment that took longest in the last completed frame, if that frame is the one that took

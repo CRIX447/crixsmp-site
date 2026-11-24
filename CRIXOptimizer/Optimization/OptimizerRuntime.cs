@@ -1569,6 +1569,7 @@ namespace CRIXOptimizer.Optimization
                     GfxBytes = MemoryStats.GfxUsedBytes,
                     TextureBytes = MemoryStats.TextureBytes,
                     Renders = renderCounter?.Counts.Describe() ?? "",
+                    Phases = FramePhases?.DescribeWindow(3) ?? "",
                 });
                 renderCounter?.Counts.Clear();
             }

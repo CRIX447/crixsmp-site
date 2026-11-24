@@ -203,6 +203,14 @@ are claimed.
     *Repeating hitches* names it.
   - Tested on Mono with real Harmony: a fake mod's postfix is wrapped, its result and run count are unchanged, and the
     wrappers are removed. Not yet run in the game.
+- Field result from build d6dce613: the switch is real. 35 s after start the active URP asset changes from 'URP
+  Standard Pipeline' to Sakuraa's 'GTGfx_URPAsset', and the eye textures go from 0.51 back to 0.95. The session then
+  ran at 66-70 FPS at 120 Hz in forest with 1-4 players. At the user's request `[Compatibility] FollowPipelineAssetSwap`
+  is now **on by default**, and switched on once in configs that the 11-23 builds saved as false. A value set later is
+  kept.
+- The timeline shows where the average frame goes every 10 s: the three biggest parts in ms, plus "GPU-bound" (35 %
+  or more of the frame spent waiting for the previous frame to be shown) or "CPU-bound: scripts" (35 % or more in
+  scripts or physics). This tells resolution limits apart from mod and game code limits.
 - **OBSStreaming caps the eye resolution at 10 MP** (preset revision 4; an existing profiles file still at the old
   0 is upgraded, a value the user set is kept). Field notes: a runtime asking for 27-30 MP per eye ran at about 100
   FPS uncapped, and at 112-117 FPS with the Discord profile's 8 MP. Under URP this also softens the recorded desktop

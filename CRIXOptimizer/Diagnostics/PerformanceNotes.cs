@@ -309,6 +309,8 @@ namespace CRIXOptimizer.Diagnostics
             public long TextureBytes;
             /// <summary>Camera renders per frame by kind (CameraRenderCounts.Describe); empty = not shown.</summary>
             public string Renders;
+            /// <summary>Where the average frame went (FramePhaseTimer.DescribeWindow); empty = not shown.</summary>
+            public string Phases;
         }
 
         public const int MaxEvents = 3000;
@@ -650,7 +652,7 @@ namespace CRIXOptimizer.Diagnostics
                     s.Profile ?? "", s.AdaptiveLevel, s.EyeScale, Mb(s.HeapBytes), Mb(s.UnityBytes),
                     s.GfxBytes > 0 ? ", gfx " + Mb(s.GfxBytes) : "", s.TextureBytes > 0 ? ", textures " + Mb(s.TextureBytes) : "",
                     s.VrActive ? "" : " | headset not active", startupOver ? "" : " | loading",
-                    string.IsNullOrEmpty(s.Renders) ? "" : " | " + s.Renders));
+                    (string.IsNullOrEmpty(s.Renders) ? "" : " | " + s.Renders) + (string.IsNullOrEmpty(s.Phases) ? "" : " | " + s.Phases)));
             }
             window.Clear();
             windowHitches = 0;

@@ -337,6 +337,20 @@ namespace CRIXOptimizer.Tests
         }
 
         [Test]
+        public void FollowPipelineAssetSwapIsSwitchedOnOnceThenLeftToTheUser()
+        {
+            string path = Path.Combine(TempDir(), "main.cfg");
+            var old = new ConfigFile(path, true);
+            old.Bind("Compatibility", "FollowPipelineAssetSwap", false); // what the 11-23 builds wrote
+            old.Save();
+            var cfg = new PluginConfig(new ConfigFile(path, true));
+            Assert.True(cfg.FollowPipelineAssetSwap.Value, "turned on for the old default");
+            cfg.FollowPipelineAssetSwap.Value = false; // the user turns it off again
+            cfg.File.Save();
+            Assert.False(new PluginConfig(new ConfigFile(path, true)).FollowPipelineAssetSwap.Value, "and that choice is kept");
+        }
+
+        [Test]
         public void ResetToDefaultsDoesNotRearmTheUpgrade()
         {
             string dir = TempDir();
